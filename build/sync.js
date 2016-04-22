@@ -49,7 +49,6 @@ config = require('./config');
  *
  * - `rsync`
  * - `ssh`
- * - `nc`
  *
  * Resin Sync **doesn't support Windows yet**, however it will work
  * under Cygwin.
@@ -60,7 +59,6 @@ config = require('./config');
  * 	$ cat $PWD/resin-sync.yml
  * 	source: src/
  * 	before: 'echo Hello'
- * 	exec: 'python main.py'
  * 	ignore:
  * 		- .git
  * 		- node_modules/
@@ -74,9 +72,8 @@ config = require('./config');
  * @param {String} [options.source=$PWD] - source path
  * @param {String[]} [options.ignore] - ignore paths
  * @param {String} [options.before] - command to execute before sync
- * @param {String} [options.exec] - command to execute after sync (on the device)
  * @param {Boolean} [options.progress=true] - display sync progress
- * @param {Number} [options.port=80] - ssh port
+ * @param {Number} [options.port=22] - ssh port
  *
  * @example
  * resinSync.sync('7a4e3dc', {
@@ -86,10 +83,10 @@ config = require('./config');
  */
 
 exports.sync = function(uuid, options) {
-  var performSync;
   options = _.merge(config.load(), options);
   _.defaults(options, {
-    source: process.cwd()
+    source: process.cwd(),
+    port: 22
   });
   utils.validateObject(options, {
     properties: {
@@ -103,11 +100,6 @@ exports.sync = function(uuid, options) {
         type: 'string',
         message: 'The before option should be a string'
       },
-      exec: {
-        description: 'exec',
-        type: 'string',
-        message: 'The exec option should be a string'
-      },
       progress: {
         description: 'progress',
         type: 'boolean',
@@ -116,36 +108,44 @@ exports.sync = function(uuid, options) {
     }
   });
   console.info("Connecting with: " + uuid);
-  performSync = function(fullUUID) {
-    return Promise["try"](function() {
-      if (options.before != null) {
-        return shell.runCommand(options.before);
-      }
-    }).then(function() {
-      var command;
-      command = rsync.getCommand(fullUUID, options);
-      return shell.runCommand(command);
-    }).then(function() {
-      var command;
-      if (options.exec != null) {
-        console.info('Synced, running command');
-        command = ssh.getConnectCommand({
-          uuid: fullUUID,
-          command: options.exec,
-          port: options.port
-        });
-        return shell.runCommand(command);
-      } else {
-        console.info('Synced, restarting device');
-        return resin.models.device.restart(uuid);
-      }
-    });
-  };
   return resin.models.device.isOnline(uuid).tap(function(isOnline) {
     if (!isOnline) {
       throw new Error('Device is not online');
     }
+    return Promise["try"](function() {
+      if (options.before != null) {
+        return shell.runCommand(options.before);
+      }
+    });
   }).then(function() {
-    return resin.models.device.get(uuid).get('uuid').then(performSync);
+    return Promise.props({
+      uuid: resin.models.device.get(uuid).get('uuid'),
+      username: resin.auth.whoami()
+    });
+  }).then(function(_arg) {
+    var username, uuid;
+    uuid = _arg.uuid, username = _arg.username;
+    console.log('Stopping application container...');
+    return resin.models.device.stopApplication(uuid).then(function(containerId) {
+      var command;
+      if (containerId == null) {
+        throw new Error('No stopped application container found');
+      }
+      options = _.merge(options, {
+        username: username,
+        uuid: uuid,
+        containerId: containerId
+      });
+      command = rsync.getCommand(options);
+      return shell.runCommand(command)["catch"](function(err) {
+        return console.log('rsync error: ', err);
+      });
+    }).tap(function() {
+      console.log('Starting application container...');
+      return resin.models.device.startApplication(uuid);
+    })["catch"](function(err) {
+      console.log('Rsync failed: application container could not be restarted', err);
+      return resin.models.device.startApplication(uuid);
+    });
   });
 };
