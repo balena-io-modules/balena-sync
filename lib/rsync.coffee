@@ -19,6 +19,7 @@ _.str = require('underscore.string')
 revalidator = require('revalidator')
 path = require('path')
 rsync = require('rsync')
+settings = require('resin-settings-client')
 utils = require('./utils')
 ssh = require('./ssh')
 
@@ -27,23 +28,49 @@ ssh = require('./ssh')
 # @function
 # @protected
 #
-# @param {String} uuid - uuid
 # @param {Object} options - rsync options
+# @param {String} options.username - username
+# @param {String} options.uuid - device uuid
+# @param {String} options.containerId - container id
 # @param {String} options.source - source path
 # @param {Boolean} [options.progress] - show progress
 # @param {String|String[]} [options.ignore] - pattern/s to ignore
+# @param {Number} [options.port=22] - ssh port
 #
 # @returns {String} rsync command
 #
 # @example
-# command = rsync.getCommand '...',
+# command = rsync.getCommand
+#		username: 'test',
+#		uuid: '1324'
+#		containerId: '6789',
 # 	source: 'foo/bar'
-# 	uuid: '1234567890'
 ###
-exports.getCommand = (uuid, options = {}) ->
+exports.getCommand = (options = {}) ->
 
 	utils.validateObject options,
 		properties:
+			username:
+				description: 'username'
+				type: 'string'
+				required: true
+				messages:
+					type: 'Not a string: username'
+					required: 'Missing username'
+			uuid:
+				description: 'uuid'
+				type: 'string'
+				required: true
+				messages:
+					type: 'Not a string: uuid'
+					required: 'Missing uuid'
+			containerId:
+				description: 'containerId'
+				type: 'string'
+				required: true
+				messages:
+					type: 'Not a string: containerId'
+					required: 'Missing containerId'
 			source:
 				description: 'source'
 				type: 'string'
@@ -65,19 +92,19 @@ exports.getCommand = (uuid, options = {}) ->
 	if not _.str.isBlank(options.source) and _.last(options.source) isnt '/'
 		options.source += '/'
 
+	{ username, uuid, containerId, port } = options
 	args =
 		source: options.source
-		destination: "root@#{uuid}.resin:/data/.resin-watch"
+		destination: "#{username}@ssh.#{settings.get('proxyUrl')}:"
 		progress: options.progress
-		shell: ssh.getConnectCommand(options)
+		shell: ssh.getConnectCommand({ username, uuid, containerId, port })
 
 		# a = archive mode.
 		# This makes sure rsync synchronizes the
 		# files, and not just copies them blindly.
 		#
 		# z = compress during transfer
-		# r = recursive
-		flags: 'azr'
+		flags: 'az'
 
 	if _.isEmpty(options.source.trim())
 		args.source = '.'
@@ -94,4 +121,5 @@ exports.getCommand = (uuid, options = {}) ->
 	# backslashes on Windows for some reason.
 	result = result.replace(/\\\\/g, '\\')
 
+	console.log result
 	return result

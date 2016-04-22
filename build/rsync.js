@@ -14,7 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
  */
-var path, revalidator, rsync, ssh, utils, _;
+var path, revalidator, rsync, settings, ssh, utils, _;
 
 _ = require('lodash');
 
@@ -26,6 +26,8 @@ path = require('path');
 
 rsync = require('rsync');
 
+settings = require('resin-settings-client');
+
 utils = require('./utils');
 
 ssh = require('./ssh');
@@ -36,27 +38,59 @@ ssh = require('./ssh');
  * @function
  * @protected
  *
- * @param {String} uuid - uuid
  * @param {Object} options - rsync options
+ * @param {String} options.username - username
+ * @param {String} options.uuid - device uuid
+ * @param {String} options.containerId - container id
  * @param {String} options.source - source path
  * @param {Boolean} [options.progress] - show progress
  * @param {String|String[]} [options.ignore] - pattern/s to ignore
+ * @param {Number} [options.port=22] - ssh port
  *
  * @returns {String} rsync command
  *
  * @example
- * command = rsync.getCommand '...',
+ * command = rsync.getCommand
+ *		username: 'test',
+ *		uuid: '1324'
+ *		containerId: '6789',
  * 	source: 'foo/bar'
- * 	uuid: '1234567890'
  */
 
-exports.getCommand = function(uuid, options) {
-  var args, result;
+exports.getCommand = function(options) {
+  var args, containerId, port, result, username, uuid;
   if (options == null) {
     options = {};
   }
   utils.validateObject(options, {
     properties: {
+      username: {
+        description: 'username',
+        type: 'string',
+        required: true,
+        messages: {
+          type: 'Not a string: username',
+          required: 'Missing username'
+        }
+      },
+      uuid: {
+        description: 'uuid',
+        type: 'string',
+        required: true,
+        messages: {
+          type: 'Not a string: uuid',
+          required: 'Missing uuid'
+        }
+      },
+      containerId: {
+        description: 'containerId',
+        type: 'string',
+        required: true,
+        messages: {
+          type: 'Not a string: containerId',
+          required: 'Missing containerId'
+        }
+      },
       source: {
         description: 'source',
         type: 'string',
@@ -81,12 +115,18 @@ exports.getCommand = function(uuid, options) {
   if (!_.str.isBlank(options.source) && _.last(options.source) !== '/') {
     options.source += '/';
   }
+  username = options.username, uuid = options.uuid, containerId = options.containerId, port = options.port;
   args = {
     source: options.source,
-    destination: "root@" + uuid + ".resin:/data/.resin-watch",
+    destination: "" + username + "@ssh." + (settings.get('proxyUrl')) + ":",
     progress: options.progress,
-    shell: ssh.getConnectCommand(options),
-    flags: 'azr'
+    shell: ssh.getConnectCommand({
+      username: username,
+      uuid: uuid,
+      containerId: containerId,
+      port: port
+    }),
+    flags: 'az'
   };
   if (_.isEmpty(options.source.trim())) {
     args.source = '.';
@@ -96,5 +136,6 @@ exports.getCommand = function(uuid, options) {
   }
   result = rsync.build(args).command();
   result = result.replace(/\\\\/g, '\\');
+  console.log(result);
   return result;
 };
