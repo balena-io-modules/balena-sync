@@ -39,7 +39,6 @@ config = require('./config')
 #
 # - `rsync`
 # - `ssh`
-# - `nc`
 #
 # Resin Sync **doesn't support Windows yet**, however it will work
 # under Cygwin.
@@ -50,7 +49,6 @@ config = require('./config')
 # 	$ cat $PWD/resin-sync.yml
 # 	source: src/
 # 	before: 'echo Hello'
-# 	exec: 'python main.py'
 # 	ignore:
 # 		- .git
 # 		- node_modules/
@@ -64,9 +62,8 @@ config = require('./config')
 # @param {String} [options.source=$PWD] - source path
 # @param {String[]} [options.ignore] - ignore paths
 # @param {String} [options.before] - command to execute before sync
-# @param {String} [options.exec] - command to execute after sync (on the device)
 # @param {Boolean} [options.progress=true] - display sync progress
-# @param {Number} [options.port=80] - ssh port
+# @param {Number} [options.port=22] - ssh port
 #
 # @example
 # resinSync.sync('7a4e3dc', {
@@ -79,6 +76,7 @@ exports.sync = (uuid, options) ->
 
 	_.defaults options,
 		source: process.cwd()
+		port: 22
 
 	utils.validateObject options,
 		properties:
@@ -90,10 +88,6 @@ exports.sync = (uuid, options) ->
 				description: 'before'
 				type: 'string'
 				message: 'The before option should be a string'
-			exec:
-				description: 'exec'
-				type: 'string'
-				message: 'The exec option should be a string'
 			progress:
 				description: 'progress'
 				type: 'boolean'
@@ -101,25 +95,32 @@ exports.sync = (uuid, options) ->
 
 	console.info("Connecting with: #{uuid}")
 
-	performSync = (fullUUID) ->
-		Promise.try ->
-			return shell.runCommand(options.before) if options.before?
-		.then ->
-			command = rsync.getCommand(fullUUID, options)
-			return shell.runCommand(command)
-		.then ->
-			if options.exec?
-				console.info('Synced, running command')
-				command = ssh.getConnectCommand
-					uuid: fullUUID
-					command: options.exec
-					port: options.port
-				return shell.runCommand(command)
-			else
-				console.info('Synced, restarting device')
-				return resin.models.device.restart(uuid)
-
 	resin.models.device.isOnline(uuid).tap (isOnline) ->
 		throw new Error('Device is not online') if not isOnline
+		Promise.try ->
+			shell.runCommand(options.before) if options.before?
 	.then ->
-		return resin.models.device.get(uuid).get('uuid').then(performSync)
+		Promise.props
+			uuid: resin.models.device.get(uuid).get('uuid')	# get full uuid
+			username: resin.auth.whoami()
+	.then ({ uuid, username }) ->
+		console.log('Stopping application container...')
+		resin.models.device.stopApplication(uuid)
+		.then (containerId) ->
+			if not containerId?
+				throw new Error('No stopped application container found')
+
+			options = _.merge(options, { username, uuid, containerId })
+			command = rsync.getCommand(options)
+			shell.runCommand(command)
+			.catch (err) ->
+				console.log('rsync error: ', err)
+		.tap ->
+			console.log('Starting application container...')
+			resin.models.device.startApplication(uuid)
+		.catch (err) ->
+			# TODO: Supervisor completely removes a stopped container that
+			# fails to start, so notify the user and run 'startApplication()'
+			# once again to make sure that a new app container will be started
+			console.log('Rsync failed: application container could not be restarted', err)
+			resin.models.device.startApplication(uuid)

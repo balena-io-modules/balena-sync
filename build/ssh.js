@@ -14,9 +14,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
  */
-var _;
+var settings, utils, _;
 
 _ = require('lodash');
+
+settings = require('resin-settings-client');
+
+utils = require('./utils');
 
 
 /**
@@ -25,32 +29,61 @@ _ = require('lodash');
  * @protected
  *
  * @param {Object} [options] - options
+ * @param {String} [options.username] - username
  * @param {String} [options.uuid] - device uuid
- * @param {String} [options.command] - command to execute
- * @param {Number} [options.port] - ssh port
+ * @param {String} [options.containerId] - container id
+ * @param {Number} [options.port] - resin ssh gateway port
  *
  * @returns {String} ssh command
  *
  * @example
  * ssh.getConnectCommand
+ *		username: 'test'
  * 	uuid: '1234'
+ * 	containerId: '4567'
  * 	command: 'date'
  */
 
 exports.getConnectCommand = function(options) {
-  var result;
+  var containerId, port, result, username, uuid;
   if (options == null) {
     options = {};
   }
-  _.defaults(options, {
-    port: 80
+  utils.validateObject(options, {
+    properties: {
+      username: {
+        description: 'username',
+        type: 'string',
+        required: true,
+        messages: {
+          type: 'Not a string: username',
+          required: 'Missing username'
+        }
+      },
+      uuid: {
+        description: 'uuid',
+        type: 'string',
+        required: true,
+        messages: {
+          type: 'Not a string: uuid',
+          required: 'Missing uuid'
+        }
+      },
+      containerId: {
+        description: 'containerId',
+        type: 'string',
+        required: true,
+        messages: {
+          type: 'Not a string: containerId',
+          required: 'Missing containerId'
+        }
+      }
+    }
   });
-  result = "ssh -p " + options.port + " -o \"ProxyCommand nc -X connect -x vpn.resin.io:3128 %h %p\" -o StrictHostKeyChecking=no";
-  if (options.uuid != null) {
-    result += " root@" + options.uuid + ".resin";
-  }
-  if (options.command != null) {
-    result += " \"" + options.command + "\"";
-  }
+  _.defaults(options, {
+    port: 22
+  });
+  username = options.username, uuid = options.uuid, containerId = options.containerId, port = options.port;
+  result = "ssh -p " + port + " -o LogLevel=QUIET -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null " + username + "@ssh." + (settings.get('proxyUrl')) + " rsync " + uuid + " " + containerId;
   return result;
 };
