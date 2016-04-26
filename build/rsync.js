@@ -136,6 +136,5 @@ exports.getCommand = function(options) {
   }
   result = rsync.build(args).command();
   result = result.replace(/\\\\/g, '\\');
-  console.log(result);
   return result;
 };

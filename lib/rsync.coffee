@@ -121,5 +121,4 @@ exports.getCommand = (options = {}) ->
 	# backslashes on Windows for some reason.
 	result = result.replace(/\\\\/g, '\\')
 
-	console.log result
 	return result
