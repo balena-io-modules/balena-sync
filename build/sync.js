@@ -18,13 +18,17 @@ limitations under the License.
 /**
  * @module resinSync
  */
-var Promise, config, resin, rsync, shell, ssh, utils, _;
+var Promise, Spinner, chalk, config, resin, rsync, shell, ssh, utils, _;
 
 Promise = require('bluebird');
 
 _ = require('lodash');
 
+chalk = require('chalk');
+
 resin = require('resin-sdk');
+
+Spinner = require('resin-cli-visuals').Spinner;
 
 rsync = require('./rsync');
 
@@ -123,14 +127,19 @@ exports.sync = function(uuid, options) {
       username: resin.auth.whoami()
     });
   }).then(function(_arg) {
-    var username, uuid;
+    var spinner, username, uuid;
     uuid = _arg.uuid, username = _arg.username;
-    console.log('Stopping application container...');
+    spinner = new Spinner('Stopping application container...');
+    spinner.start();
     return resin.models.device.stopApplication(uuid).then(function(containerId) {
       var command;
+      spinner.stop();
+      console.log('Application container stopped.');
       if (containerId == null) {
         throw new Error('No stopped application container found');
       }
+      spinner = new Spinner("Syncing to /usr/src/app on " + (uuid.substring(0, 7)) + "...");
+      spinner.start();
       options = _.merge(options, {
         username: username,
         uuid: uuid,
@@ -141,11 +150,18 @@ exports.sync = function(uuid, options) {
         return console.log('rsync error: ', err);
       });
     }).tap(function() {
-      console.log('Starting application container...');
+      spinner.stop();
+      console.log("Synced /usr/src/app on " + (uuid.substring(0, 7)) + ".");
+      spinner = new Spinner('Starting application container...');
+      spinner.start();
       return resin.models.device.startApplication(uuid);
     })["catch"](function(err) {
       console.log('Rsync failed: application container could not be restarted', err);
       return resin.models.device.startApplication(uuid);
+    })["finally"](function() {
+      spinner.stop();
+      console.log('Application container started.');
+      return console.log(chalk.green.bold('\nresin sync completed successfully!'));
     });
   });
 };
