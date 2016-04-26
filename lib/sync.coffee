@@ -20,7 +20,9 @@ limitations under the License.
 
 Promise = require('bluebird')
 _ = require('lodash')
+chalk = require('chalk')
 resin = require('resin-sdk')
+Spinner = require('resin-cli-visuals').Spinner
 rsync = require('./rsync')
 utils = require('./utils')
 shell = require('./shell')
@@ -104,11 +106,19 @@ exports.sync = (uuid, options) ->
 			uuid: resin.models.device.get(uuid).get('uuid')	# get full uuid
 			username: resin.auth.whoami()
 	.then ({ uuid, username }) ->
-		console.log('Stopping application container...')
+		spinner = new Spinner('Stopping application container...')
+		spinner.start()
+
 		resin.models.device.stopApplication(uuid)
 		.then (containerId) ->
+			spinner.stop()
+			console.log('Application container stopped.')
+
 			if not containerId?
 				throw new Error('No stopped application container found')
+
+			spinner = new Spinner("Syncing to /usr/src/app on #{uuid.substring(0,7)}...")
+			spinner.start()
 
 			options = _.merge(options, { username, uuid, containerId })
 			command = rsync.getCommand(options)
@@ -116,7 +126,12 @@ exports.sync = (uuid, options) ->
 			.catch (err) ->
 				console.log('rsync error: ', err)
 		.tap ->
-			console.log('Starting application container...')
+			spinner.stop()
+			console.log("Synced /usr/src/app on #{uuid.substring(0,7)}.")
+
+			spinner = new Spinner('Starting application container...')
+			spinner.start()
+
 			resin.models.device.startApplication(uuid)
 		.catch (err) ->
 			# TODO: Supervisor completely removes a stopped container that
@@ -124,3 +139,8 @@ exports.sync = (uuid, options) ->
 			# once again to make sure that a new app container will be started
 			console.log('Rsync failed: application container could not be restarted', err)
 			resin.models.device.startApplication(uuid)
+		.finally ->
+			spinner.stop()
+			console.log('Application container started.')
+
+			console.log(chalk.green.bold('\nresin sync completed successfully!'))
