@@ -146,22 +146,26 @@ exports.sync = function(uuid, options) {
         containerId: containerId
       });
       command = rsync.getCommand(options);
-      return shell.runCommand(command)["catch"](function(err) {
-        return console.log('rsync error: ', err);
+      return shell.runCommand(command).then(function() {
+        spinner.stop();
+        console.log("Synced /usr/src/app on " + (uuid.substring(0, 7)) + ".");
+        spinner = new Spinner('Starting application container...');
+        spinner.start();
+        return resin.models.device.startApplication(uuid);
+      }).then(function() {
+        spinner.stop();
+        console.log('Application container started.');
+        return console.log(chalk.green.bold('\nresin sync completed successfully!'));
+      })["catch"](function(err) {
+        spinner.stop();
+        console.log('resin sync failed', err);
+        return resin.models.device.startApplication(uuid)["catch"](function(err) {
+          return console.log('Could not restart application container', err);
+        });
       });
-    }).tap(function() {
-      spinner.stop();
-      console.log("Synced /usr/src/app on " + (uuid.substring(0, 7)) + ".");
-      spinner = new Spinner('Starting application container...');
-      spinner.start();
-      return resin.models.device.startApplication(uuid);
     })["catch"](function(err) {
-      console.log('Rsync failed: application container could not be restarted', err);
-      return resin.models.device.startApplication(uuid);
-    })["finally"](function() {
       spinner.stop();
-      console.log('Application container started.');
-      return console.log(chalk.green.bold('\nresin sync completed successfully!'));
+      return console.log('resin sync failed', err);
     });
   });
 };

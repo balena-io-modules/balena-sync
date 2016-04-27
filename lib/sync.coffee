@@ -123,24 +123,27 @@ exports.sync = (uuid, options) ->
 			options = _.merge(options, { username, uuid, containerId })
 			command = rsync.getCommand(options)
 			shell.runCommand(command)
+			.then ->
+				spinner.stop()
+				console.log("Synced /usr/src/app on #{uuid.substring(0,7)}.")
+
+				spinner = new Spinner('Starting application container...')
+				spinner.start()
+
+				resin.models.device.startApplication(uuid)
+			.then ->
+				spinner.stop()
+				console.log('Application container started.')
+				console.log(chalk.green.bold('\nresin sync completed successfully!'))
 			.catch (err) ->
-				console.log('rsync error: ', err)
-		.tap ->
-			spinner.stop()
-			console.log("Synced /usr/src/app on #{uuid.substring(0,7)}.")
-
-			spinner = new Spinner('Starting application container...')
-			spinner.start()
-
-			resin.models.device.startApplication(uuid)
+				# TODO: Supervisor completely removes a stopped container that
+				# fails to start, so notify the user and run 'startApplication()'
+				# once again to make sure that a new app container will be started
+				spinner.stop()
+				console.log('resin sync failed', err)
+				resin.models.device.startApplication(uuid)
+				.catch (err) ->
+					console.log('Could not restart application container', err)
 		.catch (err) ->
-			# TODO: Supervisor completely removes a stopped container that
-			# fails to start, so notify the user and run 'startApplication()'
-			# once again to make sure that a new app container will be started
-			console.log('Rsync failed: application container could not be restarted', err)
-			resin.models.device.startApplication(uuid)
-		.finally ->
 			spinner.stop()
-			console.log('Application container started.')
-
-			console.log(chalk.green.bold('\nresin sync completed successfully!'))
+			console.log('resin sync failed', err)
