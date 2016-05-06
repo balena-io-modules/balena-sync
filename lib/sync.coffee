@@ -42,9 +42,6 @@ config = require('./config')
 # - `rsync`
 # - `ssh`
 #
-# Resin Sync **doesn't support Windows yet**, however it will work
-# under Cygwin.
-#
 # You can save all the options mentioned below in a `resin-sync.yml`
 # file, by using the same option names as keys. For example:
 #
@@ -100,7 +97,7 @@ exports.sync = (uuid, options) ->
 	resin.models.device.isOnline(uuid).tap (isOnline) ->
 		throw new Error('Device is not online') if not isOnline
 		Promise.try ->
-			shell.runCommand(options.before) if options.before?
+			shell.runCommand(options.before, cwd: options.source) if options.before?
 	.then ->
 		Promise.props
 			uuid: resin.models.device.get(uuid).get('uuid')	# get full uuid
@@ -122,7 +119,7 @@ exports.sync = (uuid, options) ->
 
 			options = _.merge(options, { username, uuid, containerId })
 			command = rsync.getCommand(options)
-			shell.runCommand(command)
+			shell.runCommand(command, cwd: options.source)
 			.then ->
 				spinner.stop()
 				console.log("Synced /usr/src/app on #{uuid.substring(0,7)}.")

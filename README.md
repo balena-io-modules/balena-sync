@@ -36,10 +36,6 @@ being installed in the system:
 
 - `rsync`
 - `ssh`
-- `nc`
-
-Resin Sync **doesn't support Windows yet**, however it will work
-under Cygwin.
 
 You can save all the options mentioned below in a `resin-sync.yml`
 file, by using the same option names as keys. For example:
@@ -47,7 +43,6 @@ file, by using the same option names as keys. For example:
 	$ cat $PWD/resin-sync.yml
 	source: src/
 	before: 'echo Hello'
-	exec: 'python main.py'
 	ignore:
 		- .git
 		- node_modules/
@@ -67,9 +62,8 @@ set in the configuration file.
 | [options.source] | <code>String</code> | <code>$PWD</code> | source path |
 | [options.ignore] | <code>Array.&lt;String&gt;</code> |  | ignore paths |
 | [options.before] | <code>String</code> |  | command to execute before sync |
-| [options.exec] | <code>String</code> |  | command to execute after sync (on the device) |
 | [options.progress] | <code>Boolean</code> | <code>true</code> | display sync progress |
-| [options.port] | <code>Number</code> | <code>80</code> | ssh port |
+| [options.port] | <code>Number</code> | <code>22</code> | ssh port |
 
 **Example**  
 ```js
@@ -78,6 +72,14 @@ resinSync.sync('7a4e3dc', {
   progress: false
 });
 ```
+
+Windows
+-------
+
+1. Install [MinGW](http://www.mingw.org).
+2. Install the `msys-rsync` and `msys-openssh` packages.
+3. Add MinGW to the `%PATH%` if this hasn't been done by the installer already. The location where the binaries are places is usually `C:\MinGW\msys\1.0\bin`, but it can vary if you selected a different location in the installer.
+4. Copy your SSH keys to `%homedrive%%homepath\.ssh`.
 
 Support
 -------

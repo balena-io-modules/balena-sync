@@ -54,9 +54,6 @@ config = require('./config');
  * - `rsync`
  * - `ssh`
  *
- * Resin Sync **doesn't support Windows yet**, however it will work
- * under Cygwin.
- *
  * You can save all the options mentioned below in a `resin-sync.yml`
  * file, by using the same option names as keys. For example:
  *
@@ -118,7 +115,9 @@ exports.sync = function(uuid, options) {
     }
     return Promise["try"](function() {
       if (options.before != null) {
-        return shell.runCommand(options.before);
+        return shell.runCommand(options.before, {
+          cwd: options.source
+        });
       }
     });
   }).then(function() {
@@ -146,7 +145,9 @@ exports.sync = function(uuid, options) {
         containerId: containerId
       });
       command = rsync.getCommand(options);
-      return shell.runCommand(command).then(function() {
+      return shell.runCommand(command, {
+        cwd: options.source
+      }).then(function() {
         spinner.stop();
         console.log("Synced /usr/src/app on " + (uuid.substring(0, 7)) + ".");
         spinner = new Spinner('Starting application container...');
