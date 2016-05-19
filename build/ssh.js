@@ -84,6 +84,6 @@ exports.getConnectCommand = function(options) {
     port: 22
   });
   username = options.username, uuid = options.uuid, containerId = options.containerId, port = options.port;
-  result = "ssh -p " + port + " -o LogLevel=QUIET -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null " + username + "@ssh." + (settings.get('proxyUrl')) + " rsync " + uuid + " " + containerId;
+  result = "ssh -p " + port + " -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null " + username + "@ssh." + (settings.get('proxyUrl')) + " rsync " + uuid + " " + containerId;
   return result;
 };
