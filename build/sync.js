@@ -18,7 +18,7 @@ limitations under the License.
 /**
  * @module resinSync
  */
-var Promise, Spinner, chalk, config, resin, rsync, shell, ssh, utils, _;
+var MIN_HOSTOS_RSYNC, Promise, Spinner, chalk, config, ensureHostOSCompatibility, resin, rsync, semver, shell, ssh, utils, _;
 
 Promise = require('bluebird');
 
@@ -39,6 +39,39 @@ shell = require('./shell');
 ssh = require('./ssh');
 
 config = require('./config');
+
+semver = require('semver');
+
+MIN_HOSTOS_RSYNC = '1.1.4';
+
+
+/**
+ * @summary Ensure HostOS compatibility
+ * @function
+ * @private
+ *
+ * @description
+ * Ensures 'rsync' is installed on the target device by checking
+ * HostOS version. Fullfills promise if device is compatible or
+ * rejects it otherwise. Version checks are based on semver.
+ *
+ * @param {String} version - HostOS version to check
+ * @param {String} minVersion - Minimum accepted version
+ * @returns {Promise}
+ *
+ * @example
+ * ensureHostOSCompatibility(device.os_version, MIN_HOSTOS_RSYNC)
+ * .then ->
+ *		console.log('Is compatible')
+ * .catch ->
+ *		console.log('Is incompatible')
+ */
+
+exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method(function(version, minVersion) {
+  if (semver.lt(version, minVersion)) {
+    throw new Error("Incompatible HostOS version: " + version + " - must be >= " + minVersion);
+  }
+});
 
 
 /**
