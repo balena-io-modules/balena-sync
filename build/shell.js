@@ -14,9 +14,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
  */
-var child_process, os, rindle;
+var child_process, os, rindle, _;
 
 child_process = require('child_process');
+
+_ = require('lodash');
 
 os = require('os');
 
@@ -38,8 +40,8 @@ rindle = require('rindle');
 exports.getSubShellCommand = function(command) {
   if (os.platform() === 'win32') {
     return {
-      program: 'sh',
-      args: ['-c', command]
+      program: 'cmd.exe',
+      args: ['/s', '/c', command]
     };
   } else {
     return {
@@ -59,6 +61,8 @@ exports.getSubShellCommand = function(command) {
  * stdin is inherited from the parent process.
  *
  * @param {String} command - command
+ * @param {Object} [options] - options
+ * @param {String} [options.cwd] - current working directory
  * @returns {Promise}
  *
  * @example
@@ -66,11 +70,23 @@ exports.getSubShellCommand = function(command) {
  * 	console.log('Done!')
  */
 
-exports.runCommand = function(command) {
-  var spawn, subShellCommand;
+exports.runCommand = function(command, options) {
+  var env, homedrive, homepath, spawn, subShellCommand;
+  if (options == null) {
+    options = {};
+  }
+  env = {};
+  if (os.platform() === 'win32') {
+    homedrive = _.get(process, 'env.homedrive', 'C:').slice(0, 1).toLowerCase();
+    homepath = _.get(process, 'env.homepath', '').replace(/\\/g, '/');
+    env.HOME = "/" + homedrive + homepath;
+  }
   subShellCommand = exports.getSubShellCommand(command);
   spawn = child_process.spawn(subShellCommand.program, subShellCommand.args, {
-    stdio: 'inherit'
+    stdio: 'inherit',
+    env: _.merge(env, process.env),
+    cwd: options.cwd,
+    windowsVerbatimArguments: true
   });
   return rindle.wait(spawn).spread(function(code) {
     if (code === 0) {

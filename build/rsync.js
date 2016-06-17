@@ -42,7 +42,6 @@ ssh = require('./ssh');
  * @param {String} options.username - username
  * @param {String} options.uuid - device uuid
  * @param {String} options.containerId - container id
- * @param {String} options.source - source path
  * @param {Boolean} [options.progress] - show progress
  * @param {String|String[]} [options.ignore] - pattern/s to ignore
  * @param {Number} [options.port=22] - ssh port
@@ -53,8 +52,7 @@ ssh = require('./ssh');
  * command = rsync.getCommand
  *		username: 'test',
  *		uuid: '1324'
- *		containerId: '6789',
- * 	source: 'foo/bar'
+ *		containerId: '6789'
  */
 
 exports.getCommand = function(options) {
@@ -91,15 +89,6 @@ exports.getCommand = function(options) {
           required: 'Missing containerId'
         }
       },
-      source: {
-        description: 'source',
-        type: 'string',
-        required: true,
-        messages: {
-          type: 'Not a string: source',
-          required: 'Missing source'
-        }
-      },
       progress: {
         description: 'progress',
         type: 'boolean',
@@ -112,12 +101,9 @@ exports.getCommand = function(options) {
       }
     }
   });
-  if (!_.str.isBlank(options.source) && _.last(options.source) !== '/') {
-    options.source += '/';
-  }
   username = options.username, uuid = options.uuid, containerId = options.containerId, port = options.port;
   args = {
-    source: options.source,
+    source: '.',
     destination: "" + username + "@ssh." + (settings.get('proxyUrl')) + ":",
     progress: options.progress,
     shell: ssh.getConnectCommand({
@@ -128,9 +114,6 @@ exports.getCommand = function(options) {
     }),
     flags: 'az'
   };
-  if (_.isEmpty(options.source.trim())) {
-    args.source = '.';
-  }
   if (options.ignore != null) {
     args.exclude = options.ignore;
   }

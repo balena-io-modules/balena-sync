@@ -32,7 +32,6 @@ ssh = require('./ssh')
 # @param {String} options.username - username
 # @param {String} options.uuid - device uuid
 # @param {String} options.containerId - container id
-# @param {String} options.source - source path
 # @param {Boolean} [options.progress] - show progress
 # @param {String|String[]} [options.ignore] - pattern/s to ignore
 # @param {Number} [options.port=22] - ssh port
@@ -43,8 +42,7 @@ ssh = require('./ssh')
 # command = rsync.getCommand
 #		username: 'test',
 #		uuid: '1324'
-#		containerId: '6789',
-# 	source: 'foo/bar'
+#		containerId: '6789'
 ###
 exports.getCommand = (options = {}) ->
 
@@ -71,13 +69,6 @@ exports.getCommand = (options = {}) ->
 				messages:
 					type: 'Not a string: containerId'
 					required: 'Missing containerId'
-			source:
-				description: 'source'
-				type: 'string'
-				required: true
-				messages:
-					type: 'Not a string: source'
-					required: 'Missing source'
 			progress:
 				description: 'progress'
 				type: 'boolean'
@@ -87,14 +78,9 @@ exports.getCommand = (options = {}) ->
 				type: [ 'string', 'array' ]
 				message: 'Not a string or array: ignore'
 
-	# A trailing slash on the source avoids creating
-	# an additional directory level at the destination.
-	if not _.str.isBlank(options.source) and _.last(options.source) isnt '/'
-		options.source += '/'
-
 	{ username, uuid, containerId, port } = options
 	args =
-		source: options.source
+		source: '.'
 		destination: "#{username}@ssh.#{settings.get('proxyUrl')}:"
 		progress: options.progress
 		shell: ssh.getConnectCommand({ username, uuid, containerId, port })
@@ -105,9 +91,6 @@ exports.getCommand = (options = {}) ->
 		#
 		# z = compress during transfer
 		flags: 'az'
-
-	if _.isEmpty(options.source.trim())
-		args.source = '.'
 
 	# For some reason, adding `exclude: undefined` adds an `--exclude`
 	# with nothing in it right before the source, which makes rsync
