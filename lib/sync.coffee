@@ -32,6 +32,10 @@ semver = require('semver')
 
 MIN_HOSTOS_RSYNC = '1.1.4'
 
+# Extract semver from device.os_version, since its format
+# can be in a form similar to 'Resin OS 1.1.0 (fido)'
+semverRegExp = /[0-9]+\.[0-9]+\.[0-9]+(?:(-|\+)[^\s]+)?/
+
 ###*
 # @summary Ensure HostOS compatibility
 # @function
@@ -42,8 +46,8 @@ MIN_HOSTOS_RSYNC = '1.1.4'
 # HostOS version. Fullfills promise if device is compatible or
 # rejects it otherwise. Version checks are based on semver.
 #
-# @param {String} version - HostOS version to check
-# @param {String} minVersion - Minimum accepted version
+# @param {String} osRelease - HostOS version as returned from the API (device.os_release field)
+# @param {String} minVersion - Minimum accepted HostOS version
 # @returns {Promise}
 #
 # @example
@@ -53,9 +57,13 @@ MIN_HOSTOS_RSYNC = '1.1.4'
 # .catch ->
 #		console.log('Is incompatible')
 ###
-exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method (version, minVersion) ->
+exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method (osRelease, minVersion) ->
+	version = osRelease?.match(semverRegExp)?[0]
+	if not version?
+		throw new Error("Could not parse semantic version from HostOS release info: #{osRelease}")
+
 	if semver.lt(version, minVersion)
-		throw new Error("Incompatible HostOS version: #{version} - must be >= #{minVersion}")
+		throw new Error("Incompatible HostOS version: #{osRelease} - must be >= #{minVersion}")
 
 ###*
 # @summary Sync your changes with a device
@@ -122,13 +130,17 @@ exports.sync = (uuid, options) ->
 
 	console.info("Connecting with: #{uuid}")
 
-	resin.models.device.isOnline(uuid).tap (isOnline) ->
+	resin.models.device.isOnline(uuid).then (isOnline) ->
 		throw new Error('Device is not online') if not isOnline
+		resin.models.device.get(uuid)
+	.tap (device) ->
+		ensureHostOSCompatibility(device.os_version, MIN_HOSTOS_RSYNC)
+	.tap (device) ->
 		Promise.try ->
 			shell.runCommand(options.before, cwd: options.source) if options.before?
-	.then ->
+	.then (device) ->
 		Promise.props
-			uuid: resin.models.device.get(uuid).get('uuid')	# get full uuid
+			uuid: device.uuid	# get full uuid
 			username: resin.auth.whoami()
 	.then ({ uuid, username }) ->
 		spinner = new Spinner('Stopping application container...')

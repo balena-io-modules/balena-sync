@@ -18,7 +18,7 @@ limitations under the License.
 /**
  * @module resinSync
  */
-var MIN_HOSTOS_RSYNC, Promise, Spinner, chalk, config, ensureHostOSCompatibility, resin, rsync, semver, shell, ssh, utils, _;
+var MIN_HOSTOS_RSYNC, Promise, Spinner, chalk, config, ensureHostOSCompatibility, resin, rsync, semver, semverRegExp, shell, ssh, utils, _;
 
 Promise = require('bluebird');
 
@@ -44,6 +44,8 @@ semver = require('semver');
 
 MIN_HOSTOS_RSYNC = '1.1.4';
 
+semverRegExp = /[0-9]+\.[0-9]+\.[0-9]+(?:(-|\+)[^\s]+)?/;
+
 
 /**
  * @summary Ensure HostOS compatibility
@@ -55,8 +57,8 @@ MIN_HOSTOS_RSYNC = '1.1.4';
  * HostOS version. Fullfills promise if device is compatible or
  * rejects it otherwise. Version checks are based on semver.
  *
- * @param {String} version - HostOS version to check
- * @param {String} minVersion - Minimum accepted version
+ * @param {String} osRelease - HostOS version as returned from the API (device.os_release field)
+ * @param {String} minVersion - Minimum accepted HostOS version
  * @returns {Promise}
  *
  * @example
@@ -67,9 +69,14 @@ MIN_HOSTOS_RSYNC = '1.1.4';
  *		console.log('Is incompatible')
  */
 
-exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method(function(version, minVersion) {
+exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method(function(osRelease, minVersion) {
+  var version, _ref;
+  version = osRelease != null ? (_ref = osRelease.match(semverRegExp)) != null ? _ref[0] : void 0 : void 0;
+  if (version == null) {
+    throw new Error("Could not parse semantic version from HostOS release info: " + osRelease);
+  }
   if (semver.lt(version, minVersion)) {
-    throw new Error("Incompatible HostOS version: " + version + " - must be >= " + minVersion);
+    throw new Error("Incompatible HostOS version: " + osRelease + " - must be >= " + minVersion);
   }
 });
 
@@ -142,10 +149,14 @@ exports.sync = function(uuid, options) {
     }
   });
   console.info("Connecting with: " + uuid);
-  return resin.models.device.isOnline(uuid).tap(function(isOnline) {
+  return resin.models.device.isOnline(uuid).then(function(isOnline) {
     if (!isOnline) {
       throw new Error('Device is not online');
     }
+    return resin.models.device.get(uuid);
+  }).tap(function(device) {
+    return ensureHostOSCompatibility(device.os_version, MIN_HOSTOS_RSYNC);
+  }).tap(function(device) {
     return Promise["try"](function() {
       if (options.before != null) {
         return shell.runCommand(options.before, {
@@ -153,9 +164,9 @@ exports.sync = function(uuid, options) {
         });
       }
     });
-  }).then(function() {
+  }).then(function(device) {
     return Promise.props({
-      uuid: resin.models.device.get(uuid).get('uuid'),
+      uuid: device.uuid,
       username: resin.auth.whoami()
     });
   }).then(function(_arg) {
