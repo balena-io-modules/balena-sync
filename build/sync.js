@@ -18,7 +18,7 @@ limitations under the License.
 /**
  * @module resinSync
  */
-var MIN_HOSTOS_RSYNC, Promise, Spinner, chalk, config, ensureHostOSCompatibility, resin, rsync, semver, semverRegExp, shell, ssh, utils, _;
+var MIN_HOSTOS_RSYNC, Promise, Spinner, chalk, config, ensureHostOSCompatibility, resin, rsync, semver, semverRegExp, shell, utils, _;
 
 Promise = require('bluebird');
 
@@ -35,8 +35,6 @@ rsync = require('./rsync');
 utils = require('./utils');
 
 shell = require('./shell');
-
-ssh = require('./ssh');
 
 config = require('./config');
 
@@ -103,7 +101,7 @@ exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method(f
  * 	ignore:
  * 		- .git
  * 		- node_modules/
- * 	progress: true
+ * 	progress: false
  *
  * Notice that explicitly passed command options override the ones
  * set in the configuration file.
@@ -113,7 +111,7 @@ exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method(f
  * @param {String} [options.source=$PWD] - source path
  * @param {String[]} [options.ignore] - ignore paths
  * @param {String} [options.before] - command to execute before sync
- * @param {Boolean} [options.progress=true] - display sync progress
+ * @param {Boolean} [options.progress] - display rsync progress
  * @param {Number} [options.port=22] - ssh port
  *
  * @example
@@ -131,20 +129,10 @@ exports.sync = function(uuid, options) {
   });
   utils.validateObject(options, {
     properties: {
-      ignore: {
-        description: 'ignore',
-        type: 'array',
-        message: 'The ignore option should be an array'
-      },
       before: {
         description: 'before',
         type: 'string',
         message: 'The before option should be a string'
-      },
-      progress: {
-        description: 'progress',
-        type: 'boolean',
-        message: 'The progress option should be a boolean'
       }
     }
   });

@@ -49,6 +49,9 @@ exports.getConnectCommand = function(options) {
   if (options == null) {
     options = {};
   }
+  _.defaults(options, {
+    port: 22
+  });
   utils.validateObject(options, {
     properties: {
       username: {
@@ -77,11 +80,16 @@ exports.getConnectCommand = function(options) {
           type: 'Not a string: containerId',
           required: 'Missing containerId'
         }
+      },
+      port: {
+        description: 'port',
+        type: 'number',
+        required: false,
+        messages: {
+          type: 'Not a number: port'
+        }
       }
     }
-  });
-  _.defaults(options, {
-    port: 22
   });
   username = options.username, uuid = options.uuid, containerId = options.containerId, port = options.port;
   result = "ssh -p " + port + " -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null " + username + "@ssh." + (settings.get('proxyUrl')) + " rsync " + uuid + " " + containerId;

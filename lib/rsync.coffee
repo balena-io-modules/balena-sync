@@ -16,8 +16,6 @@ limitations under the License.
 
 _ = require('lodash')
 _.str = require('underscore.string')
-revalidator = require('revalidator')
-path = require('path')
 rsync = require('rsync')
 settings = require('resin-settings-client')
 utils = require('./utils')
@@ -55,20 +53,6 @@ exports.getCommand = (options = {}) ->
 				messages:
 					type: 'Not a string: username'
 					required: 'Missing username'
-			uuid:
-				description: 'uuid'
-				type: 'string'
-				required: true
-				messages:
-					type: 'Not a string: uuid'
-					required: 'Missing uuid'
-			containerId:
-				description: 'containerId'
-				type: 'string'
-				required: true
-				messages:
-					type: 'Not a string: containerId'
-					required: 'Missing containerId'
 			progress:
 				description: 'progress'
 				type: 'boolean'
@@ -78,12 +62,12 @@ exports.getCommand = (options = {}) ->
 				type: [ 'string', 'array' ]
 				message: 'Not a string or array: ignore'
 
-	{ username, uuid, containerId, port } = options
+	{ username } = options
 	args =
 		source: '.'
 		destination: "#{username}@ssh.#{settings.get('proxyUrl')}:"
 		progress: options.progress
-		shell: ssh.getConnectCommand({ username, uuid, containerId, port })
+		shell: ssh.getConnectCommand(options)
 
 		# a = archive mode.
 		# This makes sure rsync synchronizes the

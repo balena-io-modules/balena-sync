@@ -40,6 +40,9 @@ utils = require('./utils')
 ###
 exports.getConnectCommand = (options = {}) ->
 
+	_.defaults options,
+		port: 22
+
 	utils.validateObject options,
 		properties:
 			username:
@@ -63,9 +66,12 @@ exports.getConnectCommand = (options = {}) ->
 				messages:
 					type: 'Not a string: containerId'
 					required: 'Missing containerId'
-
-	_.defaults options,
-		port: 22
+			port:
+				description: 'port'
+				type: 'number'
+				required: false
+				messages:
+					type: 'Not a number: port'
 
 	{ username, uuid, containerId, port } = options
 

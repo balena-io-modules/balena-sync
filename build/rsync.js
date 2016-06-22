@@ -14,15 +14,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
  */
-var path, revalidator, rsync, settings, ssh, utils, _;
+var rsync, settings, ssh, utils, _;
 
 _ = require('lodash');
 
 _.str = require('underscore.string');
-
-revalidator = require('revalidator');
-
-path = require('path');
 
 rsync = require('rsync');
 
@@ -56,7 +52,7 @@ ssh = require('./ssh');
  */
 
 exports.getCommand = function(options) {
-  var args, containerId, port, result, username, uuid;
+  var args, result, username;
   if (options == null) {
     options = {};
   }
@@ -71,24 +67,6 @@ exports.getCommand = function(options) {
           required: 'Missing username'
         }
       },
-      uuid: {
-        description: 'uuid',
-        type: 'string',
-        required: true,
-        messages: {
-          type: 'Not a string: uuid',
-          required: 'Missing uuid'
-        }
-      },
-      containerId: {
-        description: 'containerId',
-        type: 'string',
-        required: true,
-        messages: {
-          type: 'Not a string: containerId',
-          required: 'Missing containerId'
-        }
-      },
       progress: {
         description: 'progress',
         type: 'boolean',
@@ -101,17 +79,12 @@ exports.getCommand = function(options) {
       }
     }
   });
-  username = options.username, uuid = options.uuid, containerId = options.containerId, port = options.port;
+  username = options.username;
   args = {
     source: '.',
     destination: "" + username + "@ssh." + (settings.get('proxyUrl')) + ":",
     progress: options.progress,
-    shell: ssh.getConnectCommand({
-      username: username,
-      uuid: uuid,
-      containerId: containerId,
-      port: port
-    }),
+    shell: ssh.getConnectCommand(options),
     flags: 'az'
   };
   if (options.ignore != null) {
