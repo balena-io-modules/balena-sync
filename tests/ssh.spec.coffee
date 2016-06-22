@@ -19,5 +19,6 @@ describe 'SSH:', ->
 					uuid: '1234'
 					containerId: '4567'
 					port: 8080
+					verbose: true
 
-				m.chai.expect(command).to.equal('ssh -p 8080 -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null test@ssh.resindevice.io rsync 1234 4567')
+				m.chai.expect(command).to.equal('ssh -vv -p 8080 -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null test@ssh.resindevice.io rsync 1234 4567')

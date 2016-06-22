@@ -45,7 +45,7 @@ utils = require('./utils');
  */
 
 exports.getConnectCommand = function(options) {
-  var containerId, port, result, username, uuid;
+  var containerId, port, result, username, uuid, verbose;
   if (options == null) {
     options = {};
   }
@@ -92,6 +92,7 @@ exports.getConnectCommand = function(options) {
     }
   });
   username = options.username, uuid = options.uuid, containerId = options.containerId, port = options.port;
-  result = "ssh -p " + port + " -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null " + username + "@ssh." + (settings.get('proxyUrl')) + " rsync " + uuid + " " + containerId;
+  verbose = options.verbose ? '-vv ' : '';
+  result = "ssh " + verbose + "-p " + port + " -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null " + username + "@ssh." + (settings.get('proxyUrl')) + " rsync " + uuid + " " + containerId;
   return result;
 };

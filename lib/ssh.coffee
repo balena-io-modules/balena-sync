@@ -75,6 +75,16 @@ exports.getConnectCommand = (options = {}) ->
 
 	{ username, uuid, containerId, port } = options
 
-	result = "ssh -p #{port} -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null #{username}@ssh.#{settings.get('proxyUrl')} rsync #{uuid} #{containerId}"
+	verbose = if options.verbose then '-vv ' else ''
+	result = """
+		ssh \
+		#{verbose}\
+		-p #{port} \
+		-o LogLevel=ERROR \
+		-o StrictHostKeyChecking=no \
+		-o UserKnownHostsFile=/dev/null \
+		#{username}@ssh.#{settings.get('proxyUrl')} \
+		rsync #{uuid} #{containerId}
+	"""
 
 	return result
