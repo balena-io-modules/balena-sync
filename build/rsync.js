@@ -76,6 +76,11 @@ exports.getCommand = function(options) {
         description: 'ignore',
         type: ['string', 'array'],
         message: 'Not a string or array: ignore'
+      },
+      verbose: {
+        description: 'verbose',
+        type: 'boolean',
+        message: 'Not a boolean: verbose'
       }
     }
   });
@@ -85,12 +90,19 @@ exports.getCommand = function(options) {
     destination: "" + username + "@ssh." + (settings.get('proxyUrl')) + ":",
     progress: options.progress,
     shell: ssh.getConnectCommand(options),
-    flags: 'az'
+    flags: {
+      'a': true,
+      'z': true,
+      'v': options.verbose
+    }
   };
   if (options.ignore != null) {
     args.exclude = options.ignore;
   }
   result = rsync.build(args).command();
   result = result.replace(/\\\\/g, '\\');
+  if (options.verbose) {
+    console.log("resin sync command: " + result);
+  }
   return result;
 };

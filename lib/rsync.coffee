@@ -61,6 +61,10 @@ exports.getCommand = (options = {}) ->
 				description: 'ignore'
 				type: [ 'string', 'array' ]
 				message: 'Not a string or array: ignore'
+			verbose:
+				description: 'verbose'
+				type: 'boolean'
+				message: 'Not a boolean: verbose'
 
 	{ username } = options
 	args =
@@ -74,7 +78,11 @@ exports.getCommand = (options = {}) ->
 		# files, and not just copies them blindly.
 		#
 		# z = compress during transfer
-		flags: 'az'
+		# v = increase verbosity
+		flags:
+			'a': true
+			'z': true
+			'v': options.verbose
 
 	# For some reason, adding `exclude: undefined` adds an `--exclude`
 	# with nothing in it right before the source, which makes rsync
@@ -87,5 +95,7 @@ exports.getCommand = (options = {}) ->
 	# Workaround to the fact that node-rsync duplicates
 	# backslashes on Windows for some reason.
 	result = result.replace(/\\\\/g, '\\')
+
+	console.log("resin sync command: #{result}") if options.verbose
 
 	return result
