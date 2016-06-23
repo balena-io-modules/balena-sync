@@ -26,7 +26,6 @@ Spinner = require('resin-cli-visuals').Spinner
 rsync = require('./rsync')
 utils = require('./utils')
 shell = require('./shell')
-ssh = require('./ssh')
 config = require('./config')
 semver = require('semver')
 
@@ -87,7 +86,7 @@ exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method (
 # 	ignore:
 # 		- .git
 # 		- node_modules/
-# 	progress: true
+# 	progress: false
 #
 # Notice that explicitly passed command options override the ones
 # set in the configuration file.
@@ -97,7 +96,7 @@ exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method (
 # @param {String} [options.source=$PWD] - source path
 # @param {String[]} [options.ignore] - ignore paths
 # @param {String} [options.before] - command to execute before sync
-# @param {Boolean} [options.progress=true] - display sync progress
+# @param {Boolean} [options.progress] - display rsync progress
 # @param {Number} [options.port=22] - ssh port
 #
 # @example
@@ -115,18 +114,10 @@ exports.sync = (uuid, options) ->
 
 	utils.validateObject options,
 		properties:
-			ignore:
-				description: 'ignore'
-				type: 'array'
-				message: 'The ignore option should be an array'
 			before:
 				description: 'before'
 				type: 'string'
 				message: 'The before option should be a string'
-			progress:
-				description: 'progress'
-				type: 'boolean'
-				message: 'The progress option should be a boolean'
 
 	console.info("Connecting with: #{uuid}")
 
@@ -154,7 +145,7 @@ exports.sync = (uuid, options) ->
 			if not containerId?
 				throw new Error('No stopped application container found')
 
-			spinner = new Spinner("Syncing to /usr/src/app on #{uuid.substring(0,7)}...")
+			spinner = new Spinner("Syncing to /usr/src/app on #{uuid.substring(0, 7)}...")
 			spinner.start()
 
 			options = _.merge(options, { username, uuid, containerId })
@@ -162,7 +153,7 @@ exports.sync = (uuid, options) ->
 			shell.runCommand(command, cwd: options.source)
 			.then ->
 				spinner.stop()
-				console.log("Synced /usr/src/app on #{uuid.substring(0,7)}.")
+				console.log("Synced /usr/src/app on #{uuid.substring(0, 7)}.")
 
 				spinner = new Spinner('Starting application container...')
 				spinner.start()
