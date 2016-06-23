@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+# v2.2.0
+
+* Code refactor, clean up unsused variables
+* Support verbose flag for rsync and its ssh remote shell command
+
 # v2.1.1
 
 * HostOS version check before attempting rsync
