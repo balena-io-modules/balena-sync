@@ -82,6 +82,7 @@ exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method (
 #
 # 	$ cat $PWD/resin-sync.yml
 # 	source: src/
+# 	dest: /usr/src/app/
 # 	before: 'echo Hello'
 # 	ignore:
 # 		- .git
@@ -94,6 +95,7 @@ exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method (
 # @param {String} uuid - device uuid
 # @param {Object} [options] - options
 # @param {String} [options.source=$PWD] - source path
+# @param {String} [options.dest=/usr/src/app] - destination path
 # @param {String[]} [options.ignore] - ignore paths
 # @param {String} [options.before] - command to execute before sync
 # @param {Boolean} [options.progress] - display rsync progress

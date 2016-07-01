@@ -33,6 +33,7 @@ ssh = require('./ssh')
 # @param {Boolean} [options.progress] - show progress
 # @param {String|String[]} [options.ignore] - pattern/s to ignore
 # @param {Number} [options.port=22] - ssh port
+# @param {String} [options.dest=/usr/src/app] - destination path
 #
 # @returns {String} rsync command
 #
@@ -43,6 +44,9 @@ ssh = require('./ssh')
 #		containerId: '6789'
 ###
 exports.getCommand = (options = {}) ->
+
+	_.defaults options,
+		dest: '/usr/src/app/'
 
 	utils.validateObject options,
 		properties:
@@ -65,11 +69,15 @@ exports.getCommand = (options = {}) ->
 				description: 'verbose'
 				type: 'boolean'
 				message: 'Not a boolean: verbose'
+			dest:
+				description: 'destination'
+				type: 'string'
+				message: 'Not a string: destination'
 
 	{ username } = options
 	args =
 		source: '.'
-		destination: "#{username}@ssh.#{settings.get('proxyUrl')}:"
+		destination: "#{username}@ssh.#{settings.get('proxyUrl')}:#{options.dest}"
 		progress: options.progress
 		shell: ssh.getConnectCommand(options)
 
