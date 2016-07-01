@@ -18,7 +18,7 @@ limitations under the License.
 /**
  * @module resinSync
  */
-var MIN_HOSTOS_RSYNC, Promise, Spinner, chalk, config, ensureHostOSCompatibility, resin, rsync, semver, semverRegExp, shell, utils, _;
+var MIN_HOSTOS_RSYNC, Promise, Spinner, chalk, config, ensureHostOSCompatibility, form, resin, rsync, semver, semverRegExp, shell, utils, _;
 
 Promise = require('bluebird');
 
@@ -29,6 +29,8 @@ chalk = require('chalk');
 resin = require('resin-sdk');
 
 Spinner = require('resin-cli-visuals').Spinner;
+
+form = require('resin-cli-form');
 
 rsync = require('./rsync');
 
@@ -96,7 +98,7 @@ exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method(f
  * file, by using the same option names as keys. For example:
  *
  * 	$ cat $PWD/resin-sync.yml
- * 	source: src/
+ * 	destination: '/usr/src/app/'
  * 	before: 'echo Hello'
  * 	ignore:
  * 		- .git
@@ -108,7 +110,8 @@ exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method(f
  *
  * @param {String} uuid - device uuid
  * @param {Object} [options] - options
- * @param {String} [options.source=$PWD] - source path
+ * @param {String[]} [options.source] - source directory on local host
+ * @param {String[]} [options.destination] - destination directory on device
  * @param {String[]} [options.ignore] - ignore paths
  * @param {String} [options.before] - command to execute before sync
  * @param {Boolean} [options.progress] - display rsync progress
@@ -116,19 +119,22 @@ exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method(f
  *
  * @example
  * resinSync.sync('7a4e3dc', {
+ *		source: '.',
+ *		destination: '/usr/src/app',
  *   ignore: [ '.git', 'node_modules' ],
  *   progress: false
  * });
  */
 
 exports.sync = function(uuid, options) {
-  options = _.merge(config.load(), options);
-  _.defaults(options, {
-    source: process.cwd(),
-    port: 22
-  });
   utils.validateObject(options, {
     properties: {
+      source: {
+        description: 'source',
+        type: 'any',
+        required: true,
+        message: 'The source option should be a string'
+      },
       before: {
         description: 'before',
         type: 'string',
@@ -136,41 +142,61 @@ exports.sync = function(uuid, options) {
       }
     }
   });
-  console.info("Connecting with: " + uuid);
-  return resin.models.device.isOnline(uuid).then(function(isOnline) {
-    if (!isOnline) {
-      throw new Error('Device is not online');
+  options = _.merge(config.load(options.source), options, {
+    uuid: uuid
+  });
+  return form.run([
+    {
+      message: 'Destination directory on device [\'/usr/src/app\']',
+      name: 'destination',
+      type: 'input'
     }
-    return resin.models.device.get(uuid);
-  }).tap(function(device) {
-    return ensureHostOSCompatibility(device.os_version, MIN_HOSTOS_RSYNC);
-  }).tap(function(device) {
-    return Promise["try"](function() {
-      if (options.before != null) {
-        return shell.runCommand(options.before, {
-          cwd: options.source
-        });
-      }
-    });
-  }).then(function(device) {
-    return Promise.props({
-      uuid: device.uuid,
-      username: resin.auth.whoami()
-    });
+  ], {
+    override: {
+      destination: options.destination
+    }
   }).then(function(_arg) {
-    var spinner, username, uuid;
-    uuid = _arg.uuid, username = _arg.username;
-    spinner = new Spinner('Stopping application container...');
-    spinner.start();
-    return resin.models.device.stopApplication(uuid).then(function(containerId) {
-      spinner.stop();
-      if (containerId == null) {
-        throw new Error('No application container id found');
+    var destination;
+    destination = _arg.destination;
+    _.defaults(options, {
+      destination: destination != null ? destination : '/usr/src/app',
+      port: 22,
+      ignore: ['.git', 'node_modules/']
+    });
+    console.info("Connecting with: " + uuid);
+    return resin.models.device.isOnline(uuid).then(function(isOnline) {
+      if (!isOnline) {
+        throw new Error('Device is not online');
       }
+      return resin.models.device.get(uuid);
+    }).tap(function(device) {
+      return ensureHostOSCompatibility(device.os_version, MIN_HOSTOS_RSYNC);
+    }).tap(function(device) {
       return Promise["try"](function() {
+        if (options.before != null) {
+          return shell.runCommand(options.before, {
+            cwd: options.source
+          });
+        }
+      });
+    }).then(function(device) {
+      return Promise.props({
+        uuid: device.uuid,
+        username: resin.auth.whoami()
+      });
+    }).then(function(_arg1) {
+      var spinner, username, uuid;
+      uuid = _arg1.uuid, username = _arg1.username;
+      spinner = new Spinner('Stopping application container...');
+      spinner.start();
+      return resin.models.device.stopApplication(uuid).then(function(containerId) {
         var command;
+        spinner.stop();
         console.log('Application container stopped.');
-        spinner = new Spinner("Syncing to /usr/src/app on " + (uuid.substring(0, 7)) + "...");
+        if (containerId == null) {
+          throw new Error('No stopped application container found');
+        }
+        spinner = new Spinner("Syncing to " + options.destination + " on " + (uuid.substring(0, 7)) + "...");
         spinner.start();
         options = _.merge(options, {
           username: username,
@@ -180,36 +206,36 @@ exports.sync = function(uuid, options) {
         command = rsync.getCommand(options);
         return shell.runCommand(command, {
           cwd: options.source
-        });
-      }).then(function() {
-        spinner.stop();
-        console.log("Synced /usr/src/app on " + (uuid.substring(0, 7)) + ".");
-        spinner = new Spinner('Starting application container...');
-        spinner.start();
-        return resin.models.device.startApplication(uuid);
-      }).then(function() {
-        spinner.stop();
-        console.log('Application container started.');
-        return console.log(chalk.green.bold('\nresin sync completed successfully!'));
-      })["catch"](function(err) {
-        spinner.stop();
-        spinner = new Spinner('Attempting to restart stopped application container after failed \'resin sync\'...');
-        spinner.start();
-        return resin.models.device.startApplication(uuid).then(function() {
+        }).then(function() {
           spinner.stop();
-          return console.log('Application container restarted after failed \'resin sync\'.');
+          console.log("Synced " + options.destination + " on " + (uuid.substring(0, 7)) + ".");
+          spinner = new Spinner('Starting application container...');
+          spinner.start();
+          return resin.models.device.startApplication(uuid);
+        }).then(function() {
+          spinner.stop();
+          console.log('Application container started.');
+          return console.log(chalk.green.bold('\nresin sync completed successfully!'));
         })["catch"](function(err) {
           spinner.stop();
-          return console.log('Could not restart application container', err);
-        })["finally"](function() {
-          console.log(chalk.red.bold('resin sync failed.', err));
-          return process.exit(1);
+          spinner = new Spinner('Attempting to restart stopped application container after failed \'resin sync\'...');
+          spinner.start();
+          return resin.models.device.startApplication(uuid).then(function() {
+            spinner.stop();
+            return console.log('Application container restarted after failed \'resin sync\'.');
+          })["catch"](function(err) {
+            spinner.stop();
+            return console.log('Could not restart application container', err);
+          })["finally"](function() {
+            console.log(chalk.red.bold('resin sync failed.', err));
+            return process.exit(1);
+          });
         });
+      })["catch"](function(err) {
+        spinner.stop();
+        console.log(chalk.red.bold('resin sync failed.', err));
+        return process.exit(1);
       });
-    })["catch"](function(err) {
-      spinner.stop();
-      console.log(chalk.red.bold('resin sync failed.', err));
-      return process.exit(1);
     });
   });
 };

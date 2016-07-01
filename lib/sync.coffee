@@ -23,6 +23,7 @@ _ = require('lodash')
 chalk = require('chalk')
 resin = require('resin-sdk')
 Spinner = require('resin-cli-visuals').Spinner
+form = require('resin-cli-form')
 rsync = require('./rsync')
 utils = require('./utils')
 shell = require('./shell')
@@ -81,7 +82,7 @@ exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method (
 # file, by using the same option names as keys. For example:
 #
 # 	$ cat $PWD/resin-sync.yml
-# 	source: src/
+# 	destination: '/usr/src/app/'
 # 	before: 'echo Hello'
 # 	ignore:
 # 		- .git
@@ -93,7 +94,8 @@ exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method (
 #
 # @param {String} uuid - device uuid
 # @param {Object} [options] - options
-# @param {String} [options.source=$PWD] - source path
+# @param {String[]} [options.source] - source directory on local host
+# @param {String[]} [options.destination] - destination directory on device
 # @param {String[]} [options.ignore] - ignore paths
 # @param {String} [options.before] - command to execute before sync
 # @param {Boolean} [options.progress] - display rsync progress
@@ -101,88 +103,104 @@ exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method (
 #
 # @example
 # resinSync.sync('7a4e3dc', {
+#		source: '.',
+#		destination: '/usr/src/app',
 #   ignore: [ '.git', 'node_modules' ],
 #   progress: false
 # });
 ###
 exports.sync = (uuid, options) ->
-	options = _.merge(config.load(), options)
-
-	_.defaults options,
-		source: process.cwd()
-		port: 22
 
 	utils.validateObject options,
 		properties:
+			source:
+				description: 'source'
+				type: 'any'
+				required: true
+				message: 'The source option should be a string'
 			before:
 				description: 'before'
 				type: 'string'
 				message: 'The before option should be a string'
 
-	console.info("Connecting with: #{uuid}")
+	options = _.merge(config.load(options.source), options, { uuid })
 
-	resin.models.device.isOnline(uuid).then (isOnline) ->
-		throw new Error('Device is not online') if not isOnline
-		resin.models.device.get(uuid)
-	.tap (device) ->
-		ensureHostOSCompatibility(device.os_version, MIN_HOSTOS_RSYNC)
-	.tap (device) ->
-		Promise.try ->
-			shell.runCommand(options.before, cwd: options.source) if options.before?
-	.then (device) ->
-		Promise.props
-			uuid: device.uuid	# get full uuid
-			username: resin.auth.whoami()
-	.then ({ uuid, username }) ->
-		spinner = new Spinner('Stopping application container...')
-		spinner.start()
+	form.run [
+		message: 'Destination directory on device [\'/usr/src/app\']'
+		name: 'destination'
+		type: 'input'
+	],
+		override:
+			destination: options.destination
+	.then ({ destination }) ->
 
-		resin.models.device.stopApplication(uuid)
-		.then (containerId) ->
-			spinner.stop()
+		_.defaults options,
+			destination: destination ? '/usr/src/app'
+			port: 22
+			ignore: [ '.git', 'node_modules/' ]
 
-			if not containerId?
-				throw new Error('No application container id found')
+		console.info("Connecting with: #{uuid}")
 
+		resin.models.device.isOnline(uuid).then (isOnline) ->
+			throw new Error('Device is not online') if not isOnline
+			resin.models.device.get(uuid)
+		.tap (device) ->
+			ensureHostOSCompatibility(device.os_version, MIN_HOSTOS_RSYNC)
+		.tap (device) ->
 			Promise.try ->
+				shell.runCommand(options.before, cwd: options.source) if options.before?
+		.then (device) ->
+			Promise.props
+				uuid: device.uuid	# get full uuid
+				username: resin.auth.whoami()
+		.then ({ uuid, username }) ->
+			spinner = new Spinner('Stopping application container...')
+			spinner.start()
+
+			resin.models.device.stopApplication(uuid)
+			.then (containerId) ->
+				spinner.stop()
 				console.log('Application container stopped.')
 
-				spinner = new Spinner("Syncing to /usr/src/app on #{uuid.substring(0, 7)}...")
+				if not containerId?
+					throw new Error('No stopped application container found')
+
+				spinner = new Spinner("Syncing to #{options.destination} on #{uuid.substring(0, 7)}...")
 				spinner.start()
 
 				options = _.merge(options, { username, uuid, containerId })
 				command = rsync.getCommand(options)
 				shell.runCommand(command, cwd: options.source)
-			.then ->
-				spinner.stop()
-				console.log("Synced /usr/src/app on #{uuid.substring(0, 7)}.")
-
-				spinner = new Spinner('Starting application container...')
-				spinner.start()
-
-				resin.models.device.startApplication(uuid)
-			.then ->
-				spinner.stop()
-				console.log('Application container started.')
-				console.log(chalk.green.bold('\nresin sync completed successfully!'))
-			.catch (err) ->
-				# TODO: Supervisor completely removes a stopped container that
-				# fails to start, so notify the user and run 'startApplication()'
-				# once again to make sure that a new app container will be started
-				spinner.stop()
-				spinner = new Spinner('Attempting to restart stopped application container after failed \'resin sync\'...')
-				spinner.start()
-				resin.models.device.startApplication(uuid)
 				.then ->
 					spinner.stop()
-					console.log('Application container restarted after failed \'resin sync\'.')
-				.catch (err) ->
+					console.log("Synced #{options.destination} on #{uuid.substring(0, 7)}.")
+
+					spinner = new Spinner('Starting application container...')
+					spinner.start()
+
+					resin.models.device.startApplication(uuid)
+				.then ->
 					spinner.stop()
-					console.log('Could not restart application container', err)
-				.finally ->
-					console.log(chalk.red.bold('resin sync failed.', err))
-					process.exit(1)
-		.catch (err) ->
-			spinner.stop()
-			console.log(chalk.red.bold('resin sync failed.', err))
-			process.exit(1)
+					console.log('Application container started.')
+					console.log(chalk.green.bold('\nresin sync completed successfully!'))
+				.catch (err) ->
+					# TODO: Supervisor completely removes a stopped container that
+					# fails to start, so notify the user and run 'startApplication()'
+					# once again to make sure that a new app container will be started
+					spinner.stop()
+					spinner = new Spinner('Attempting to restart stopped application container after failed \'resin sync\'...')
+					spinner.start()
+					resin.models.device.startApplication(uuid)
+					.then ->
+						spinner.stop()
+						console.log('Application container restarted after failed \'resin sync\'.')
+					.catch (err) ->
+						spinner.stop()
+						console.log('Could not restart application container', err)
+					.finally ->
+						console.log(chalk.red.bold('resin sync failed.', err))
+						process.exit(1)
+			.catch (err) ->
+				spinner.stop()
+				console.log(chalk.red.bold('resin sync failed.', err))
+				process.exit(1)

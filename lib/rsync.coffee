@@ -30,6 +30,7 @@ ssh = require('./ssh')
 # @param {String} options.username - username
 # @param {String} options.uuid - device uuid
 # @param {String} options.containerId - container id
+# @param {String} options.destination - destination directory on device
 # @param {Boolean} [options.progress] - show progress
 # @param {String|String[]} [options.ignore] - pattern/s to ignore
 # @param {Number} [options.port=22] - ssh port
@@ -65,11 +66,16 @@ exports.getCommand = (options = {}) ->
 				description: 'verbose'
 				type: 'boolean'
 				message: 'Not a boolean: verbose'
+			destination:
+				description: 'destination'
+				type: 'any'
+				required: true
+				message: 'Not a string: destination'
 
 	{ username } = options
 	args =
 		source: '.'
-		destination: "#{username}@ssh.#{settings.get('proxyUrl')}:"
+		destination: "#{username}@ssh.#{settings.get('proxyUrl')}:#{options.destination}"
 		progress: options.progress
 		shell: ssh.getConnectCommand(options)
 
