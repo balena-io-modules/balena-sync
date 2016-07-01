@@ -99,7 +99,7 @@ exports.getCommand = function(options) {
   if (options.ignore != null) {
     args.exclude = options.ignore;
   }
-  result = rsync.build(args).command();
+  result = rsync.build(args)["delete"]().command();
   result = result.replace(/\\\\/g, '\\');
   if (options.verbose) {
     console.log("resin sync command: " + result);
