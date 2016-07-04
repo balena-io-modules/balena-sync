@@ -17,7 +17,7 @@ assertCommand = (command, options) ->
 			return "--exclude=#{pattern}"
 		.join(' ')
 
-	expected += " . #{options.username}@ssh.resindevice.io:"
+	expected += " . #{options.username}@ssh.resindevice.io:/usr/src/app/"
 
 	m.chai.expect(command).to.equal(expected)
 
