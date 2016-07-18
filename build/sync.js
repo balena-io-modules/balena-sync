@@ -163,22 +163,24 @@ exports.sync = function(uuid, options) {
     spinner = new Spinner('Stopping application container...');
     spinner.start();
     return resin.models.device.stopApplication(uuid).then(function(containerId) {
-      var command;
       spinner.stop();
-      console.log('Application container stopped.');
       if (containerId == null) {
-        throw new Error('No stopped application container found');
+        throw new Error('No application container id found');
       }
-      spinner = new Spinner("Syncing to /usr/src/app on " + (uuid.substring(0, 7)) + "...");
-      spinner.start();
-      options = _.merge(options, {
-        username: username,
-        uuid: uuid,
-        containerId: containerId
-      });
-      command = rsync.getCommand(options);
-      return shell.runCommand(command, {
-        cwd: options.source
+      return Promise["try"](function() {
+        var command;
+        console.log('Application container stopped.');
+        spinner = new Spinner("Syncing to /usr/src/app on " + (uuid.substring(0, 7)) + "...");
+        spinner.start();
+        options = _.merge(options, {
+          username: username,
+          uuid: uuid,
+          containerId: containerId
+        });
+        command = rsync.getCommand(options);
+        return shell.runCommand(command, {
+          cwd: options.source
+        });
       }).then(function() {
         spinner.stop();
         console.log("Synced /usr/src/app on " + (uuid.substring(0, 7)) + ".");
@@ -191,14 +193,23 @@ exports.sync = function(uuid, options) {
         return console.log(chalk.green.bold('\nresin sync completed successfully!'));
       })["catch"](function(err) {
         spinner.stop();
-        console.log('resin sync failed', err);
-        return resin.models.device.startApplication(uuid)["catch"](function(err) {
+        spinner = new Spinner('Attempting to restart stopped application container after failed \'resin sync\'...');
+        spinner.start();
+        return resin.models.device.startApplication(uuid).then(function() {
+          spinner.stop();
+          return console.log('Application container restarted after failed \'resin sync\'.');
+        })["catch"](function(err) {
+          spinner.stop();
           return console.log('Could not restart application container', err);
+        })["finally"](function() {
+          console.log(chalk.red.bold('resin sync failed.', err));
+          return process.exit(1);
         });
       });
     })["catch"](function(err) {
       spinner.stop();
-      return console.log('resin sync failed', err);
+      console.log(chalk.red.bold('resin sync failed.', err));
+      return process.exit(1);
     });
   });
 };
