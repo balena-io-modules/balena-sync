@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ###
 
+path = require('path')
 _ = require('lodash')
 _.str = require('underscore.string')
 rsync = require('rsync')
@@ -32,7 +33,7 @@ ssh = require('./ssh')
 # @param {String} options.containerId - container id
 # @param {String} options.destination - destination directory on device
 # @param {Boolean} [options.progress] - show progress
-# @param {String|String[]} [options.ignore] - pattern/s to ignore
+# @param {String|String[]} [options.ignore] - pattern/s to ignore. Note that '.gitignore' is always used as a filter if it exists
 # @param {Number} [options.port=22] - ssh port
 #
 # @returns {String} rsync command
@@ -62,10 +63,19 @@ exports.getCommand = (options = {}) ->
 				description: 'ignore'
 				type: [ 'string', 'array' ]
 				message: 'Not a string or array: ignore'
+			'skip-gitignore':
+				description: 'skip-gitignore'
+				type: 'boolean'
+				message: 'Not a boolean: skip-gitignore'
 			verbose:
 				description: 'verbose'
 				type: 'boolean'
 				message: 'Not a boolean: verbose'
+			source:
+				description: 'source'
+				type: 'any'
+				required: true
+				message: 'Not a string: source'
 			destination:
 				description: 'destination'
 				type: 'any'
@@ -90,13 +100,26 @@ exports.getCommand = (options = {}) ->
 			'z': true
 			'v': options.verbose
 
+	rsyncCmd = rsync.build(args).delete()
+
+	if not options['skip-gitignore']
+		try
+			patterns = utils.gitignoreToRsyncPatterns(path.join(options.source, '.gitignore'))
+
+			# rsync 'include' options MUST be set before 'exclude's
+			rsyncCmd.include(patterns.include)
+			rsyncCmd.exclude(patterns.exclude)
+
 	# For some reason, adding `exclude: undefined` adds an `--exclude`
 	# with nothing in it right before the source, which makes rsync
 	# think that we want to ignore the source instead of transfer it.
 	if options.ignore?
-		args.exclude = options.ignore
+		# Only exclude files that have not already been exlcuded to avoid passing
+		# identical '--exclude' options
+		gitignoreExclude = patterns?.exclude ? []
+		rsyncCmd.exclude(_.difference(options.ignore, gitignoreExclude))
 
-	result = rsync.build(args).delete().command()
+	result = rsyncCmd.command()
 
 	# Workaround to the fact that node-rsync duplicates
 	# backslashes on Windows for some reason.

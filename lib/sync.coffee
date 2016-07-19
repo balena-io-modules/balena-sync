@@ -95,8 +95,9 @@ exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method (
 # @param {String} uuid - device uuid
 # @param {Object} [options] - options
 # @param {String[]} [options.source] - source directory on local host
-# @param {String[]} [options.destination] - destination directory on device
+# @param {String[]} [options.destination=/usr/src/app] - destination directory on device
 # @param {String[]} [options.ignore] - ignore paths
+# @param {String[]} [options.skip-gitignore] - skip .gitignore when parsing exclude/include files
 # @param {String} [options.before] - command to execute before sync
 # @param {Boolean} [options.progress] - display rsync progress
 # @param {Number} [options.port=22] - ssh port

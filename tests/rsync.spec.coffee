@@ -1,8 +1,20 @@
 m = require('mochainon')
 _ = require('lodash')
+fs = require('fs')
 path = require('path')
 os = require('os')
 rsync = require('../lib/rsync')
+mockFs = require('mock-fs')
+
+filesystem = {}
+filesystem['/.gitignore'] = '''
+	npm-debug.log
+	node_modules/
+	lib/*
+	!lib/include\\ me.txt
+	# comment
+	\\#notacomment
+'''
 
 assertCommand = (command, options) ->
 	expected = 'rsync -az'
@@ -11,9 +23,10 @@ assertCommand = (command, options) ->
 		expected += ' --progress'
 
 	expected += ' --rsh=\"ssh -p 22 -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null test@ssh.resindevice.io rsync 1234 4567\" --delete'
+	expected += ' --include=\"lib/include\\ me.txt\" --exclude=npm-debug.log --exclude=node_modules/ --exclude=lib/* --exclude=#notacomment'
 
-	if options.exclude?
-		expected += ' ' + _.map options.exclude, (pattern) ->
+	if options.ignore?
+		expected += ' ' + _.map options.ignore, (pattern) ->
 			return "--exclude=#{pattern}"
 		.join(' ')
 
@@ -23,81 +36,45 @@ assertCommand = (command, options) ->
 
 describe 'Rsync:', ->
 
+	defaultOpts =
+		username: 'test'
+		uuid: '1234'
+		source: '/'
+		destination: '/usr/src/app/'
+		containerId: '4567'
+
+	beforeEach ->
+		mockFs(filesystem)
+
+	afterEach ->
+		mockFs.restore()
+
 	it 'should throw if progress is not a boolean', ->
 		m.chai.expect ->
-			rsync.getCommand
-				username: 'test'
-				uuid: '1234'
-				destination: '/usr/src/app/'
-				containerId: '4567'
-				progress: 'true'
+			rsync.getCommand(_.merge({}, defaultOpts, progress: 'true'))
 		.to.throw('Not a boolean: progress')
 
 	it 'should throw if ignore is not a string nor array', ->
 		m.chai.expect ->
-			rsync.getCommand
-				username: 'test'
-				uuid: '1234'
-				destination: '/usr/src/app/'
-				containerId: '4567'
-				ignore: 1234
+			rsync.getCommand(_.merge({}, defaultOpts, ignore: 1234))
 		.to.throw('Not a string or array: ignore')
 
 	it 'should be able to set progress to true', ->
-		command = rsync.getCommand
-			username: 'test'
-			uuid: '1234'
-			destination: '/usr/src/app/'
-			containerId: '4567'
-			progress: true
-
-		assertCommand command,
-			username: 'test'
-			uuid: '1234'
-			destination: '/usr/src/app/'
-			containerId: '4567'
-			progress: true
+		opts = _.merge({}, defaultOpts, progress: true)
+		command = rsync.getCommand(opts)
+		assertCommand(command, opts)
 
 	it 'should be able to set progress to false', ->
-		command = rsync.getCommand
-			username: 'test'
-			uuid: '1234'
-			destination: '/usr/src/app/'
-			containerId: '4567'
-			progress: false
-
-		assertCommand command,
-			username: 'test'
-			uuid: '1234'
-			destination: '/usr/src/app/'
-			containerId: '4567'
+		opts = _.merge({}, defaultOpts, progress: false)
+		command = rsync.getCommand(opts)
+		assertCommand(command, opts)
 
 	it 'should be able to exclute a single pattern', ->
-		command = rsync.getCommand
-			username: 'test'
-			uuid: '1234'
-			destination: '/usr/src/app/'
-			containerId: '4567'
-			ignore: '.git'
-
-		assertCommand command,
-			username: 'test'
-			uuid: '1234'
-			destination: '/usr/src/app/'
-			containerId: '4567'
-			exclude: [ '.git' ]
+		opts = _.merge({}, defaultOpts, ignore: [ '.git' ])
+		command = rsync.getCommand(opts)
+		assertCommand(command, opts)
 
 	it 'should be able to exclute a multiple patterns', ->
-		command = rsync.getCommand
-			username: 'test'
-			uuid: '1234'
-			destination: '/usr/src/app/'
-			containerId: '4567'
-			ignore: [ '.git', 'node_modules' ]
-
-		assertCommand command,
-			username: 'test'
-			uuid: '1234'
-			destination: '/usr/src/app/'
-			containerId: '4567'
-			exclude: [ '.git', 'node_modules' ]
+		opts = _.merge({}, defaultOpts, ignore: [ '.git', 'node_modules' ])
+		command = rsync.getCommand(opts)
+		assertCommand(command, opts)
