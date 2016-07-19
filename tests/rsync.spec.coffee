@@ -10,7 +10,7 @@ assertCommand = (command, options) ->
 	if options.progress
 		expected += ' --progress'
 
-	expected += ' --rsh=\"ssh -p 22 -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null test@ssh.resindevice.io rsync 1234 4567\" --delete'
+	expected += ' --rsh=\"ssh -p 22 -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null test@ssh.resindevice.io rsync 1234 4567\" --delete-excluded'
 
 	if options.exclude?
 		expected += ' ' + _.map options.exclude, (pattern) ->
