@@ -14,7 +14,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
  */
-var rsync, settings, ssh, utils, _;
+var fs, path, rsync, settings, ssh, utils, _;
+
+fs = require('fs');
+
+path = require('path');
 
 _ = require('lodash');
 
@@ -40,7 +44,7 @@ ssh = require('./ssh');
  * @param {String} options.containerId - container id
  * @param {String} options.destination - destination directory on device
  * @param {Boolean} [options.progress] - show progress
- * @param {String|String[]} [options.ignore] - pattern/s to ignore
+ * @param {String|String[]} [options.ignore] - pattern/s to ignore. Note that '.gitignore' is always used as a filter if it exists
  * @param {Number} [options.port=22] - ssh port
  *
  * @returns {String} rsync command
@@ -53,7 +57,7 @@ ssh = require('./ssh');
  */
 
 exports.getCommand = function(options) {
-  var args, result, username;
+  var args, result, rsyncCmd, username;
   if (options == null) {
     options = {};
   }
@@ -83,6 +87,12 @@ exports.getCommand = function(options) {
         type: 'boolean',
         message: 'Not a boolean: verbose'
       },
+      source: {
+        description: 'source',
+        type: 'any',
+        required: true,
+        message: 'Not a string: source'
+      },
       destination: {
         description: 'destination',
         type: 'any',
@@ -106,7 +116,12 @@ exports.getCommand = function(options) {
   if (options.ignore != null) {
     args.exclude = options.ignore;
   }
-  result = rsync.build(args).set('delete-excluded').command();
+  rsyncCmd = rsync.build(args).set('delete-excluded');
+  try {
+    fs.accessSync(path.join(options.source, '.gitignore'));
+    rsyncCmd.set('filter', ':- .gitignore');
+  } catch (_error) {}
+  result = rsyncCmd.command();
   result = result.replace(/\\\\/g, '\\');
   if (options.verbose) {
     console.log("resin sync command: " + result);
