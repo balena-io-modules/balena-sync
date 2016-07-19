@@ -142,8 +142,12 @@ exports.sync = function(uuid, options) {
       }
     }
   });
-  options = _.merge(config.load(options.source), options, {
+  options = _.mergeWith(config.load(options.source), options, {
     uuid: uuid
+  }, function(objVal, srcVal) {
+    if (_.isArray(objVal)) {
+      return srcVal;
+    }
   });
   return form.run([
     {
@@ -157,12 +161,18 @@ exports.sync = function(uuid, options) {
     }
   }).then(function(_arg) {
     var destination;
-    destination = _arg.destination;
+    destination = _arg.options;
     _.defaults(options, {
-      destination: destination != null ? destination : '/usr/src/app',
-      port: 22,
-      ignore: ['.git', 'node_modules/']
+      destination: '/usr/src/app',
+      port: 22
     });
+    options.ignore = _.filter(options.ignore, function(item) {
+      return !_.isEmpty(item);
+    });
+    if (options.ignore.length === 0) {
+      options.ignore = ['.git', 'node_modules/'];
+    }
+    config.save(_.omit(options, ['source', 'progress', 'verbose']), options.source);
     console.info("Connecting with: " + uuid);
     return resin.models.device.isOnline(uuid).then(function(isOnline) {
       if (!isOnline) {
