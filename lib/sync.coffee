@@ -84,10 +84,10 @@ exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method (
 # 	$ cat $PWD/resin-sync.yml
 # 	destination: '/usr/src/app/'
 # 	before: 'echo Hello'
+# 	port: 22
 # 	ignore:
 # 		- .git
 # 		- node_modules/
-# 	progress: false
 #
 # Notice that explicitly passed command options override the ones
 # set in the configuration file.
@@ -123,7 +123,10 @@ exports.sync = (uuid, options) ->
 				type: 'string'
 				message: 'The before option should be a string'
 
-	options = _.merge(config.load(options.source), options, { uuid })
+	options = _.mergeWith config.load(options.source), options, { uuid }, (objVal, srcVal) ->
+		# Override 'ignore' paths with user option
+		if _.isArray(objVal)
+			return srcVal
 
 	form.run [
 		message: 'Destination directory on device [\'/usr/src/app\']'
@@ -132,12 +135,24 @@ exports.sync = (uuid, options) ->
 	],
 		override:
 			destination: options.destination
-	.then ({ destination }) ->
+	.then ({ options: destination }) ->
 
+		# Set defaults options
 		_.defaults options,
-			destination: destination ? '/usr/src/app'
+			destination: '/usr/src/app'
 			port: 22
-			ignore: [ '.git', 'node_modules/' ]
+
+		# Filter out empty 'ignore' paths
+		options.ignore = _.filter(options.ignore, (item) -> not _.isEmpty(item))
+
+		# Only add default 'ignore' options if user has not explicitly set an empty
+		# 'ignore' setting in '.resin-sync.yml'
+		if options.ignore.length is 0 and not config.load(options.source).ignore?
+			options.ignore = [ '.git', 'node_modules/' ]
+
+		# Omit 'source' (not required) as well as 'progress' and 'verbose'
+		# flags from auto saving
+		config.save(_.omit(options, [ 'source', 'progress', 'verbose' ]), options.source)
 
 		console.info("Connecting with: #{uuid}")
 
