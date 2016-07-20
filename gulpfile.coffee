@@ -18,13 +18,13 @@ gulp.task 'coffee', ->
 		.pipe(coffee(bare: true)).on('error', gutil.log)
 		.pipe(gulp.dest('build/'))
 
-gulp.task 'test', ->
+gulp.task 'test', ['lint'], ->
 	gulp.src(OPTIONS.files.tests, read: false)
 		.pipe(mocha({
 			reporter: 'min'
 		}))
 
-gulp.task 'lint', ->
+gulp.task 'lint', ['coffee'], ->
 	gulp.src(OPTIONS.files.coffee)
 		.pipe(coffeelint({
 			optFile: OPTIONS.config.coffeelint
