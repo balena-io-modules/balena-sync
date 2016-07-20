@@ -5,30 +5,30 @@ config = require('../lib/config')
 
 describe 'Config:', ->
 
-	describe '.getPath()', ->
+	describe '.getPath(baseDir)', ->
 
 		it 'should be an absolute path', ->
-			configPath = config.getPath()
+			configPath = config.getPath('/tmp')
 			isAbsolute = configPath is path.resolve(configPath)
 			m.chai.expect(isAbsolute).to.be.true
 
 		it 'should point to a yaml file', ->
-			configPath = config.getPath()
+			configPath = config.getPath('/tmp')
 			m.chai.expect(path.extname(configPath)).to.equal('.yml')
 
-	describe '.load()', ->
+	describe '.load(baseDir)', ->
 
 		describe 'given the file contains valid yaml', ->
 
 			it 'should return the parsed contents', ->
 				filesystem = {}
-				filesystem[config.getPath()] = '''
+				filesystem[config.getPath('/tmp')] = '''
 					source: 'src/'
 					before: 'echo Hello'
 				'''
 				mockFs(filesystem)
 
-				options = config.load()
+				options = config.load('/tmp')
 				m.chai.expect(options).to.deep.equal
 					source: 'src/'
 					before: 'echo Hello'
@@ -39,12 +39,12 @@ describe 'Config:', ->
 
 			it 'should return the parsed contents', ->
 				filesystem = {}
-				filesystem[config.getPath()] = '''
+				filesystem[config.getPath('/tmp')] = '''
 					1234
 				'''
 				mockFs(filesystem)
 
-				m.chai.expect(config.load).to.throw('Invalid configuration file')
+				m.chai.expect(-> config.load('/tmp')).to.throw("Invalid configuration file: #{config.getPath('/tmp')}")
 
 				mockFs.restore()
 
@@ -53,7 +53,7 @@ describe 'Config:', ->
 			it 'should return an empty object', ->
 				mockFs({})
 
-				options = config.load()
+				options = config.load('/tmp')
 				m.chai.expect(options).to.deep.equal({})
 
 				mockFs.restore()
