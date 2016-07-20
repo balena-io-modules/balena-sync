@@ -17,7 +17,7 @@ assertCommand = (command, options) ->
 			return "--exclude=#{pattern}"
 		.join(' ')
 
-	expected += " . #{options.username}@ssh.resindevice.io:"
+	expected += " . #{options.username}@ssh.resindevice.io:/usr/src/app/"
 
 	m.chai.expect(command).to.equal(expected)
 
@@ -28,6 +28,7 @@ describe 'Rsync:', ->
 			rsync.getCommand
 				username: 'test'
 				uuid: '1234'
+				destination: '/usr/src/app/'
 				containerId: '4567'
 				progress: 'true'
 		.to.throw('Not a boolean: progress')
@@ -37,6 +38,7 @@ describe 'Rsync:', ->
 			rsync.getCommand
 				username: 'test'
 				uuid: '1234'
+				destination: '/usr/src/app/'
 				containerId: '4567'
 				ignore: 1234
 		.to.throw('Not a string or array: ignore')
@@ -45,12 +47,14 @@ describe 'Rsync:', ->
 		command = rsync.getCommand
 			username: 'test'
 			uuid: '1234'
+			destination: '/usr/src/app/'
 			containerId: '4567'
 			progress: true
 
 		assertCommand command,
 			username: 'test'
 			uuid: '1234'
+			destination: '/usr/src/app/'
 			containerId: '4567'
 			progress: true
 
@@ -58,24 +62,28 @@ describe 'Rsync:', ->
 		command = rsync.getCommand
 			username: 'test'
 			uuid: '1234'
+			destination: '/usr/src/app/'
 			containerId: '4567'
 			progress: false
 
 		assertCommand command,
 			username: 'test'
 			uuid: '1234'
+			destination: '/usr/src/app/'
 			containerId: '4567'
 
 	it 'should be able to exclute a single pattern', ->
 		command = rsync.getCommand
 			username: 'test'
 			uuid: '1234'
+			destination: '/usr/src/app/'
 			containerId: '4567'
 			ignore: '.git'
 
 		assertCommand command,
 			username: 'test'
 			uuid: '1234'
+			destination: '/usr/src/app/'
 			containerId: '4567'
 			exclude: [ '.git' ]
 
@@ -83,11 +91,13 @@ describe 'Rsync:', ->
 		command = rsync.getCommand
 			username: 'test'
 			uuid: '1234'
+			destination: '/usr/src/app/'
 			containerId: '4567'
 			ignore: [ '.git', 'node_modules' ]
 
 		assertCommand command,
 			username: 'test'
 			uuid: '1234'
+			destination: '/usr/src/app/'
 			containerId: '4567'
 			exclude: [ '.git', 'node_modules' ]
