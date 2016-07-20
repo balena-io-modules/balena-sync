@@ -83,6 +83,7 @@ exports.getConnectCommand = (options = {}) ->
 		-o LogLevel=ERROR \
 		-o StrictHostKeyChecking=no \
 		-o UserKnownHostsFile=/dev/null \
+		-o ControlMaster=no \
 		#{username}@ssh.#{settings.get('proxyUrl')} \
 		rsync #{uuid} #{containerId}
 	"""

@@ -22,7 +22,8 @@ assertCommand = (command, options) ->
 	if options.progress
 		expected += ' --progress'
 
-	expected += ' --rsh=\"ssh -p 22 -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null test@ssh.resindevice.io rsync 1234 4567\" --delete'
+	expected += ' --rsh=\"ssh -p 22 -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ControlMaster=no test@ssh.resindevice.io rsync 1234 4567\"'
+	expected += ' --delete'
 	expected += ' --include=\"lib/include\\ me.txt\" --exclude=npm-debug.log --exclude=node_modules/ --exclude=lib/* --exclude=#notacomment'
 
 	if options.ignore?
