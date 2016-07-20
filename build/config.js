@@ -30,14 +30,19 @@ jsYaml = require('js-yaml');
  * @function
  * @private
  *
+ * @param {String} baseDir
+ *
  * @returns {String} config path
  *
  * @example
- * configPath = config.getPath()
+ * configPath = config.getPath('.')
  */
 
-exports.getPath = function() {
-  return path.join(process.cwd(), 'resin-sync.yml');
+exports.getPath = function(baseDir) {
+  if (baseDir == null) {
+    baseDir = process.cwd();
+  }
+  return path.join(baseDir, '.resin-sync.yml');
 };
 
 
@@ -49,15 +54,17 @@ exports.getPath = function() {
  * @description
  * If no configuration file is found, return an empty object.
  *
+ * @param {String} baseDir
+ *
  * @returns {Object} configuration
  *
  * @example
- * options = config.load()
+ * options = config.load('.')
  */
 
-exports.load = function() {
+exports.load = function(baseDir) {
   var config, configPath, error, result;
-  configPath = exports.getPath();
+  configPath = exports.getPath(baseDir);
   try {
     config = fs.readFileSync(configPath, {
       encoding: 'utf8'
@@ -74,4 +81,38 @@ exports.load = function() {
     throw new Error("Invalid configuration file: " + configPath);
   }
   return result;
+};
+
+
+/**
+ * @summary Serialezed object as yaml object and saves it to file
+ * @function
+ * @protected
+ *
+ * @param {String} yamlObj
+ * @param {String} baseDir
+ *
+ * @throws Exception on error
+ * @example
+ * options = config.save(yamlObj, '.')
+ */
+
+exports.save = function(yamlObj, baseDir) {
+  var configSavePath, error, yamlDump;
+  if (yamlObj == null) {
+    yamlObj = {};
+  }
+  configSavePath = exports.getPath(baseDir);
+  try {
+    yamlDump = jsYaml.safeDump(yamlObj);
+    return fs.writeFileSync(configSavePath, yamlDump, {
+      encoding: 'utf8'
+    });
+  } catch (_error) {
+    error = _error;
+    if (error.code === 'ENOENT') {
+      return {};
+    }
+    throw error;
+  }
 };

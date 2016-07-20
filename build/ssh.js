@@ -93,6 +93,6 @@ exports.getConnectCommand = function(options) {
   });
   username = options.username, uuid = options.uuid, containerId = options.containerId, port = options.port;
   verbose = options.verbose ? '-vv ' : '';
-  result = "ssh " + verbose + "-p " + port + " -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null " + username + "@ssh." + (settings.get('proxyUrl')) + " rsync " + uuid + " " + containerId;
+  result = "ssh " + verbose + "-p " + port + " -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ControlMaster=no " + username + "@ssh." + (settings.get('proxyUrl')) + " rsync " + uuid + " " + containerId;
   return result;
 };
