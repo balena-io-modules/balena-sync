@@ -123,7 +123,10 @@ exports.sync = (uuid, options) ->
 				type: 'string'
 				message: 'The before option should be a string'
 
-	options = _.merge(config.load(options.source), options, { uuid })
+	options = _.mergeWith config.load(options.source), options, { uuid }, (objVal, srcVal) ->
+		# Overwrite 'ignore' paths with user option
+		if _.isArray(objVal)
+			return srcVal
 
 	form.run [
 		message: 'Destination directory on device [\'/usr/src/app\']'
@@ -132,12 +135,21 @@ exports.sync = (uuid, options) ->
 	],
 		override:
 			destination: options.destination
-	.then ({ destination }) ->
+	.then ({ options: destination }) ->
 
+		# Set defaults options
 		_.defaults options,
-			destination: destination ? '/usr/src/app'
+			destination: '/usr/src/app'
 			port: 22
-			ignore: [ '.git', 'node_modules/' ]
+
+		# filter out empty 'ignore' paths
+		options.ignore = _.filter(options.ignore, (item) -> not _.isEmpty(item))
+		if options.ignore.length is 0
+			options.ignore = [ '.git', 'node_modules/' ]
+
+		# omit 'source' (not required) as well as 'progress' and 'verbose'
+		# flags from auto saving
+		config.save(_.omit(options, [ 'source', 'progress', 'verbose' ]), options.source)
 
 		console.info("Connecting with: #{uuid}")
 
