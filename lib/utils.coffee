@@ -43,3 +43,75 @@ exports.validateObject = (object, rules) ->
 	if not validation.valid
 		error = _.first(validation.errors)
 		throw new Error(error.message)
+
+trimGitignorePattern = (pattern) ->
+	pattern = _.trimStart(pattern)
+
+	# Trailing spaces not quoted with backslash are trimmed
+	quotedTrailSpacesReg = /(.*\\\s)\s*$/
+	if quotedTrailSpacesReg.test(pattern)
+		pattern = pattern.match(quotedTrailSpacesReg)[1]
+	else
+		pattern = _.trimEnd(pattern)
+
+###*
+# @summary Transform .gitignore patterns to rsync compatible exclude/include patterns
+# @function
+# @protected
+#
+# @description Note that in rsync 'include''s must be set before 'exclude''s
+#
+# @param {String} gitignoreFile - .gitignore file location
+#
+# @returns object with include/exclude options
+# @throws an exception if there was an error accessing the file
+#
+# @example
+# For .gitignore:
+# ```
+#		node_modules/
+#		lib/*
+#		!lib/includeme.coffee
+# ```
+#
+# utils.gitignoreToRsync('.gitignore') returns
+#
+# {
+#		include: [ 'lib/includeme.coffee' ]
+#		exclude: [ 'node_modules/', 'lib/*' ]
+#	}
+###
+exports.gitignoreToRsyncPatterns = (gitignoreFile) ->
+	fs = require('fs')
+
+	patterns = fs.readFileSync(gitignoreFile, encoding: 'utf8').split('\n')
+
+	patterns = _.map(patterns, trimGitignorePattern)
+
+	# Ignore empty lines and comments
+	patterns = _.filter patterns, (pattern) ->
+		if pattern.length is 0 or _.startsWith(pattern, '#')
+			return false
+		return true
+
+	# search for '!'-prefixed patterns to explicitly include
+	include = _.chain(patterns).filter (pattern) ->
+		_.startsWith(pattern, '!')
+	.map (pattern) ->
+		pattern.replace(/^!/, '')
+	.value()
+
+	# all non '!'-prefixed patterns should be excluded
+	exclude = _.chain(patterns).filter (pattern) ->
+		not _.startsWith(pattern, '!')
+	# Remove escape backslashes
+	.map (pattern) ->
+		pattern = pattern.replace(/^\\#/, '#')
+			.replace(/^\\!/, '!')
+			.replace(/\\\s/g, ' ')
+	.value()
+
+	return {
+		include
+		exclude
+	}

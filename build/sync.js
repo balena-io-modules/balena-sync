@@ -18,7 +18,7 @@ limitations under the License.
 /**
  * @module resinSync
  */
-var MIN_HOSTOS_RSYNC, Promise, Spinner, chalk, config, ensureHostOSCompatibility, resin, rsync, semver, semverRegExp, shell, utils, _;
+var MIN_HOSTOS_RSYNC, Promise, Spinner, chalk, config, ensureHostOSCompatibility, form, prepareOptions, resin, rsync, semver, semverRegExp, shell, utils, _;
 
 Promise = require('bluebird');
 
@@ -29,6 +29,8 @@ chalk = require('chalk');
 resin = require('resin-sdk');
 
 Spinner = require('resin-cli-visuals').Spinner;
+
+form = require('resin-cli-form');
 
 rsync = require('./rsync');
 
@@ -80,6 +82,70 @@ exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method(f
 
 
 /**
+ * @summary Load, validate and save passed options to '.resin-sync.yml'
+ * @function
+ * @private
+ *
+ * @param {String} uuid
+ * @param {String} cliOptions - cli options passed by the user
+ * @returns {Promise} options - the options to use for this resin sync run
+ *
+ */
+
+exports.prepareOptions = prepareOptions = Promise.method(function(uuid, cliOptions) {
+  var options;
+  utils.validateObject(cliOptions, {
+    properties: {
+      source: {
+        description: 'source',
+        type: 'any',
+        required: true,
+        message: 'The source option should be a string'
+      },
+      before: {
+        description: 'before',
+        type: 'string',
+        message: 'The before option should be a string'
+      }
+    }
+  });
+  options = _.mergeWith(config.load(cliOptions.source), cliOptions, {
+    uuid: uuid
+  }, function(objVal, srcVal) {
+    if (_.isArray(objVal)) {
+      return srcVal;
+    }
+  });
+  return form.run([
+    {
+      message: 'Destination directory on device [\'/usr/src/app\']',
+      name: 'destination',
+      type: 'input'
+    }
+  ], {
+    override: {
+      destination: options.destination
+    }
+  }).then(function(_arg) {
+    var destination;
+    destination = _arg.options;
+    _.defaults(options, {
+      destination: '/usr/src/app',
+      port: 22
+    });
+    options.ignore = _.filter(options.ignore, function(item) {
+      return !_.isEmpty(item);
+    });
+    if (options.ignore.length === 0 && (config.load(options.source).ignore == null)) {
+      options.ignore = ['.git', 'node_modules/'];
+    }
+    config.save(_.omit(options, ['source', 'progress', 'verbose']), options.source);
+    return options;
+  });
+});
+
+
+/**
  * @summary Sync your changes with a device
  * @function
  * @public
@@ -96,120 +162,123 @@ exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method(f
  * file, by using the same option names as keys. For example:
  *
  * 	$ cat $PWD/resin-sync.yml
- * 	source: src/
+ * 	destination: '/usr/src/app/'
  * 	before: 'echo Hello'
+ * 	port: 22
  * 	ignore:
  * 		- .git
  * 		- node_modules/
- * 	progress: false
  *
  * Notice that explicitly passed command options override the ones
  * set in the configuration file.
  *
  * @param {String} uuid - device uuid
- * @param {Object} [options] - options
- * @param {String} [options.source=$PWD] - source path
- * @param {String[]} [options.ignore] - ignore paths
- * @param {String} [options.before] - command to execute before sync
- * @param {Boolean} [options.progress] - display rsync progress
- * @param {Number} [options.port=22] - ssh port
+ * @param {Object} [cliOptions] - cli options
+ * @param {String[]} [cliOptions.source] - source directory on local host
+ * @param {String[]} [cliOptions.destination=/usr/src/app] - destination directory on device
+ * @param {String[]} [cliOptions.ignore] - ignore paths
+ * @param {String[]} [cliOptions.skip-gitignore] - skip .gitignore when parsing exclude/include files
+ * @param {String} [cliOptions.before] - command to execute before sync
+ * @param {Boolean} [cliOptions.progress] - display rsync progress
+ * @param {Number} [cliOptions.port=22] - ssh port
  *
  * @example
  * resinSync.sync('7a4e3dc', {
+ *		source: '.',
+ *		destination: '/usr/src/app',
  *   ignore: [ '.git', 'node_modules' ],
  *   progress: false
  * });
  */
 
-exports.sync = function(uuid, options) {
-  options = _.merge(config.load(), options);
-  _.defaults(options, {
-    source: process.cwd(),
-    port: 22
-  });
-  utils.validateObject(options, {
-    properties: {
-      before: {
-        description: 'before',
-        type: 'string',
-        message: 'The before option should be a string'
+exports.sync = function(uuid, cliOptions) {
+  var beforeAction, clearSpinner, getDeviceInfo, spinnerPromise, startContainer, startContainerAfterError, stopContainer, syncContainer, syncOptions;
+  syncOptions = {};
+  getDeviceInfo = function() {
+    uuid = syncOptions.uuid;
+    console.info("Getting information for device: " + uuid);
+    return resin.models.device.isOnline(uuid).then(function(isOnline) {
+      if (!isOnline) {
+        throw new Error('Device is not online');
       }
-    }
-  });
-  console.info("Connecting with: " + uuid);
-  return resin.models.device.isOnline(uuid).then(function(isOnline) {
-    if (!isOnline) {
-      throw new Error('Device is not online');
-    }
-    return resin.models.device.get(uuid);
-  }).tap(function(device) {
-    return ensureHostOSCompatibility(device.os_version, MIN_HOSTOS_RSYNC);
-  }).tap(function(device) {
-    return Promise["try"](function() {
-      if (options.before != null) {
-        return shell.runCommand(options.before, {
-          cwd: options.source
-        });
-      }
+      return resin.models.device.get(uuid);
+    }).tap(function(device) {
+      return ensureHostOSCompatibility(device.os_version, MIN_HOSTOS_RSYNC);
+    }).then(function(device) {
+      return Promise.props({
+        uuid: device.uuid,
+        username: resin.auth.whoami()
+      }).then(_.partial(_.merge, syncOptions));
     });
-  }).then(function(device) {
-    return Promise.props({
-      uuid: device.uuid,
-      username: resin.auth.whoami()
-    });
-  }).then(function(_arg) {
-    var spinner, username, uuid;
-    uuid = _arg.uuid, username = _arg.username;
-    spinner = new Spinner('Stopping application container...');
+  };
+  clearSpinner = function(spinner, msg) {
+    if (spinner != null) {
+      spinner.stop();
+    }
+    if (msg != null) {
+      return console.log(msg);
+    }
+  };
+  spinnerPromise = function(promise, startMsg, stopMsg) {
+    var spinner;
+    spinner = new Spinner(startMsg);
     spinner.start();
-    return resin.models.device.stopApplication(uuid).then(function(containerId) {
-      spinner.stop();
-      if (containerId == null) {
-        throw new Error('No application container id found');
-      }
-      return Promise["try"](function() {
-        var command;
-        console.log('Application container stopped.');
-        spinner = new Spinner("Syncing to /usr/src/app on " + (uuid.substring(0, 7)) + "...");
-        spinner.start();
-        options = _.merge(options, {
-          username: username,
-          uuid: uuid,
-          containerId: containerId
-        });
-        command = rsync.getCommand(options);
-        return shell.runCommand(command, {
-          cwd: options.source
-        });
-      }).then(function() {
-        spinner.stop();
-        console.log("Synced /usr/src/app on " + (uuid.substring(0, 7)) + ".");
-        spinner = new Spinner('Starting application container...');
-        spinner.start();
-        return resin.models.device.startApplication(uuid);
-      }).then(function() {
-        spinner.stop();
-        console.log('Application container started.');
-        return console.log(chalk.green.bold('\nresin sync completed successfully!'));
-      })["catch"](function(err) {
-        spinner.stop();
-        spinner = new Spinner('Attempting to restart stopped application container after failed \'resin sync\'...');
-        spinner.start();
-        return resin.models.device.startApplication(uuid).then(function() {
-          spinner.stop();
-          return console.log('Application container restarted after failed \'resin sync\'.');
-        })["catch"](function(err) {
-          spinner.stop();
-          return console.log('Could not restart application container', err);
-        })["finally"](function() {
-          console.log(chalk.red.bold('resin sync failed.', err));
-          return process.exit(1);
-        });
-      });
+    return promise.then(function(value) {
+      clearSpinner(spinner, stopMsg);
+      return value;
     })["catch"](function(err) {
-      spinner.stop();
-      console.log(chalk.red.bold('resin sync failed.', err));
-      return process.exit(1);
+      clearSpinner(spinner);
+      throw err;
     });
+  };
+  beforeAction = function() {
+    return Promise["try"](function() {
+      if (syncOptions.before != null) {
+        return shell.runCommand(syncOptions.before, {
+          cwd: syncOptions.source
+        });
+      }
+    });
+  };
+  stopContainer = function() {
+    uuid = syncOptions.uuid;
+    return spinnerPromise(resin.models.device.stopApplication(uuid), 'Stopping application container...', 'Application container stopped.').then(function(containerId) {
+      return _.merge(syncOptions, {
+        containerId: containerId
+      });
+    });
+  };
+  syncContainer = Promise.method(function() {
+    var command, containerId, destination, source;
+    uuid = syncOptions.uuid, containerId = syncOptions.containerId, source = syncOptions.source, destination = syncOptions.destination;
+    if (containerId == null) {
+      throw new Error('No stopped application container found');
+    }
+    command = rsync.getCommand(syncOptions);
+    return spinnerPromise(shell.runCommand(command, {
+      cwd: source
+    }), "Syncing to " + destination + " on " + (uuid.substring(0, 7)) + "...", "Synced " + destination + " on " + (uuid.substring(0, 7)) + ".");
+  });
+  startContainer = function() {
+    uuid = syncOptions.uuid;
+    return spinnerPromise(resin.models.device.startApplication(uuid), 'Application container started.', 'Starting application container...');
+  };
+  startContainerAfterError = function() {
+    uuid = syncOptions.uuid;
+    return spinnerPromise(resin.models.device.startApplication(uuid), 'Attempting to restart stopped application container after failed \'resin sync\'...', 'Application container restarted after failed \'resin sync\'.');
+  };
+  return prepareOptions(uuid, cliOptions).then(_.partial(_.merge, syncOptions)).then(getDeviceInfo).then(beforeAction).then(stopContainer).then(function() {
+    return syncContainer().then(startContainer).then(function() {
+      return console.log(chalk.green.bold('\nresin sync completed successfully!'));
+    })["catch"](function(err) {
+      return startContainerAfterError()["catch"](function(err) {
+        return console.log('Could not restart application container', err);
+      })["finally"](function() {
+        throw err;
+      });
+    });
+  })["catch"](function(err) {
+    console.log(chalk.red.bold('resin sync failed.', err));
+    return process.exit(1);
   });
 };

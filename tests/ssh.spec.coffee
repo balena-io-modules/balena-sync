@@ -21,4 +21,4 @@ describe 'SSH:', ->
 					port: 8080
 					verbose: true
 
-				m.chai.expect(command).to.equal('ssh -vv -p 8080 -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null test@ssh.resindevice.io rsync 1234 4567')
+				m.chai.expect(command).to.equal('ssh -vv -p 8080 -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ControlMaster=no test@ssh.resindevice.io rsync 1234 4567')

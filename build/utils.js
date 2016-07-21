@@ -14,7 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
  */
-var revalidator, _;
+var revalidator, trimGitignorePattern, _;
 
 _ = require('lodash');
 
@@ -49,4 +49,73 @@ exports.validateObject = function(object, rules) {
     error = _.first(validation.errors);
     throw new Error(error.message);
   }
+};
+
+trimGitignorePattern = function(pattern) {
+  var quotedTrailSpacesReg;
+  pattern = _.trimStart(pattern);
+  quotedTrailSpacesReg = /(.*\\\s)\s*$/;
+  if (quotedTrailSpacesReg.test(pattern)) {
+    return pattern = pattern.match(quotedTrailSpacesReg)[1];
+  } else {
+    return pattern = _.trimEnd(pattern);
+  }
+};
+
+
+/**
+ * @summary Transform .gitignore patterns to rsync compatible exclude/include patterns
+ * @function
+ * @protected
+ *
+ * @description Note that in rsync 'include''s must be set before 'exclude''s
+ *
+ * @param {String} gitignoreFile - .gitignore file location
+ *
+ * @returns object with include/exclude options
+ * @throws an exception if there was an error accessing the file
+ *
+ * @example
+ * For .gitignore:
+ * ```
+ *		node_modules/
+ *		lib/*
+ *		!lib/includeme.coffee
+ * ```
+ *
+ * utils.gitignoreToRsync('.gitignore') returns
+ *
+ * {
+ *		include: [ 'lib/includeme.coffee' ]
+ *		exclude: [ 'node_modules/', 'lib/*' ]
+ *	}
+ */
+
+exports.gitignoreToRsyncPatterns = function(gitignoreFile) {
+  var exclude, fs, include, patterns;
+  fs = require('fs');
+  patterns = fs.readFileSync(gitignoreFile, {
+    encoding: 'utf8'
+  }).split('\n');
+  patterns = _.map(patterns, trimGitignorePattern);
+  patterns = _.filter(patterns, function(pattern) {
+    if (pattern.length === 0 || _.startsWith(pattern, '#')) {
+      return false;
+    }
+    return true;
+  });
+  include = _.chain(patterns).filter(function(pattern) {
+    return _.startsWith(pattern, '!');
+  }).map(function(pattern) {
+    return pattern.replace(/^!/, '');
+  }).value();
+  exclude = _.chain(patterns).filter(function(pattern) {
+    return !_.startsWith(pattern, '!');
+  }).map(function(pattern) {
+    return pattern = pattern.replace(/^\\#/, '#').replace(/^\\!/, '!').replace(/\\\s/g, ' ');
+  }).value();
+  return {
+    include: include,
+    exclude: exclude
+  };
 };
