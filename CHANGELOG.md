@@ -3,6 +3,24 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+# v3.0.0
+
+## New features
+  * **Parse .gitignore** for file inclusions/exclusions from resin sync by default (don't parse with `--skip-gitignore`)
+  * **Automatically save options** to `${source}/.resin-sync.yml` after every run
+  * Support **user-specified destination directories** with `--destination/-d` option
+
+## Changes
+  * `resin sync` **`--source/-s`** option is mandatory if a `.resin-sync.yml` file is not found in the current directory
+  * `resin sync` now only accepts `uuid` as a destination (`appName` has been deprecated)
+
+## Improvements
+  * Major code refactoring - improved readability/maintainability
+  * Improve error reporting
+
+## Fixes
+  * Disable ControlMaster ssh option (as reported in support)
+
 # v2.2.0
 
 * Code refactor, clean up unsused variables
