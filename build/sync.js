@@ -126,11 +126,9 @@ exports.prepareOptions = prepareOptions = Promise.method(function(uuid, cliOptio
     override: {
       destination: options.destination
     }
-  }).then(function(_arg) {
-    var destination;
-    destination = _arg.options;
+  }).get('destination').then(function(dest) {
     _.defaults(options, {
-      destination: '/usr/src/app',
+      destination: dest != null ? dest : '/usr/src/app',
       port: 22
     });
     options.ignore = _.filter(options.ignore, function(item) {
