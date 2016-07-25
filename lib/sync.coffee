@@ -100,11 +100,12 @@ exports.prepareOptions = prepareOptions = Promise.method (uuid, cliOptions) ->
 	],
 		override:
 			destination: options.destination
-	.then ({ options: destination }) ->
+	.get('destination')
+	.then (dest) ->
 
 		# Set default options
 		_.defaults options,
-			destination: '/usr/src/app'
+			destination: dest ? '/usr/src/app'
 			port: 22
 
 		# Filter out empty 'ignore' paths
