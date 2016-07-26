@@ -87,6 +87,10 @@ exports.prepareOptions = prepareOptions = Promise.method (uuid, cliOptions) ->
 				description: 'before'
 				type: 'string'
 				message: 'The before option should be a string'
+			after:
+				description: 'after'
+				type: 'string'
+				message: 'The after option should be a string'
 
 	options = _.mergeWith config.load(cliOptions.source), cliOptions, { uuid }, (objVal, srcVal) ->
 		# Give precedence to command line 'ignore' options
@@ -140,6 +144,7 @@ exports.prepareOptions = prepareOptions = Promise.method (uuid, cliOptions) ->
 # 	$ cat $PWD/resin-sync.yml
 # 	destination: '/usr/src/app/'
 # 	before: 'echo Hello'
+# 	after: 'echo Done'
 # 	port: 22
 # 	ignore:
 # 		- .git
@@ -155,6 +160,7 @@ exports.prepareOptions = prepareOptions = Promise.method (uuid, cliOptions) ->
 # @param {String[]} [cliOptions.ignore] - ignore paths
 # @param {String[]} [cliOptions.skip-gitignore] - skip .gitignore when parsing exclude/include files
 # @param {String} [cliOptions.before] - command to execute before sync
+# @param {String} [cliOptions.after] - command to execute after sync
 # @param {Boolean} [cliOptions.progress] - display rsync progress
 # @param {Number} [cliOptions.port=22] - ssh port
 #
@@ -204,6 +210,10 @@ exports.sync = (uuid, cliOptions) ->
 	beforeAction = ->
 		Promise.try ->
 			shell.runCommand(syncOptions.before, cwd: syncOptions.source) if syncOptions.before?
+
+	afterAction = ->
+		Promise.try ->
+			shell.runCommand(syncOptions.after, cwd: syncOptions.source) if syncOptions.after?
 
 	stopContainer = ->
 		{ uuid } = syncOptions
@@ -255,6 +265,7 @@ exports.sync = (uuid, cliOptions) ->
 	.then ->
 		syncContainer()
 		.then(startContainer)
+		.then(afterAction)
 		.then ->
 			console.log(chalk.green.bold('\nresin sync completed successfully!'))
 		.catch (err) ->
