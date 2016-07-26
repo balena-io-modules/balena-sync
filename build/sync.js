@@ -106,6 +106,11 @@ exports.prepareOptions = prepareOptions = Promise.method(function(uuid, cliOptio
         description: 'before',
         type: 'string',
         message: 'The before option should be a string'
+      },
+      after: {
+        description: 'after',
+        type: 'string',
+        message: 'The after option should be a string'
       }
     }
   });
@@ -162,6 +167,7 @@ exports.prepareOptions = prepareOptions = Promise.method(function(uuid, cliOptio
  * 	$ cat $PWD/resin-sync.yml
  * 	destination: '/usr/src/app/'
  * 	before: 'echo Hello'
+ * 	after: 'echo Done'
  * 	port: 22
  * 	ignore:
  * 		- .git
@@ -177,6 +183,7 @@ exports.prepareOptions = prepareOptions = Promise.method(function(uuid, cliOptio
  * @param {String[]} [cliOptions.ignore] - ignore paths
  * @param {String[]} [cliOptions.skip-gitignore] - skip .gitignore when parsing exclude/include files
  * @param {String} [cliOptions.before] - command to execute before sync
+ * @param {String} [cliOptions.after] - command to execute after sync
  * @param {Boolean} [cliOptions.progress] - display rsync progress
  * @param {Number} [cliOptions.port=22] - ssh port
  *
@@ -190,7 +197,7 @@ exports.prepareOptions = prepareOptions = Promise.method(function(uuid, cliOptio
  */
 
 exports.sync = function(uuid, cliOptions) {
-  var beforeAction, clearSpinner, getDeviceInfo, spinnerPromise, startContainer, startContainerAfterError, stopContainer, syncContainer, syncOptions;
+  var afterAction, beforeAction, clearSpinner, getDeviceInfo, spinnerPromise, startContainer, startContainerAfterError, stopContainer, syncContainer, syncOptions;
   syncOptions = {};
   getDeviceInfo = function() {
     uuid = syncOptions.uuid;
@@ -238,6 +245,15 @@ exports.sync = function(uuid, cliOptions) {
       }
     });
   };
+  afterAction = function() {
+    return Promise["try"](function() {
+      if (syncOptions.after != null) {
+        return shell.runCommand(syncOptions.after, {
+          cwd: syncOptions.source
+        });
+      }
+    });
+  };
   stopContainer = function() {
     uuid = syncOptions.uuid;
     return spinnerPromise(resin.models.device.stopApplication(uuid), 'Stopping application container...', 'Application container stopped.').then(function(containerId) {
@@ -266,7 +282,7 @@ exports.sync = function(uuid, cliOptions) {
     return spinnerPromise(resin.models.device.startApplication(uuid), 'Attempting to restart stopped application container after failed \'resin sync\'...', 'Application container restarted after failed \'resin sync\'.');
   };
   return prepareOptions(uuid, cliOptions).then(_.partial(_.merge, syncOptions)).then(getDeviceInfo).then(beforeAction).then(stopContainer).then(function() {
-    return syncContainer().then(startContainer).then(function() {
+    return syncContainer().then(startContainer).then(afterAction).then(function() {
       return console.log(chalk.green.bold('\nresin sync completed successfully!'));
     })["catch"](function(err) {
       return startContainerAfterError()["catch"](function(err) {
