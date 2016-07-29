@@ -18,7 +18,7 @@ limitations under the License.
 /**
  * @module resinSync
  */
-var MIN_HOSTOS_RSYNC, Promise, Spinner, chalk, config, ensureHostOSCompatibility, form, prepareOptions, resin, rsync, semver, semverRegExp, shell, utils, _;
+var MIN_HOSTOS_RSYNC, Promise, Spinner, chalk, config, ensureHostOSCompatibility, form, prepareOptions, resin, rsync, saveOptions, semver, semverRegExp, shell, utils, _;
 
 Promise = require('bluebird');
 
@@ -82,7 +82,7 @@ exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method(f
 
 
 /**
- * @summary Load, validate and save passed options to '.resin-sync.yml'
+ * @summary Prepare and validate options from command line and `resin-sync.yml` (if found)
  * @function
  * @private
  *
@@ -142,9 +142,23 @@ exports.prepareOptions = prepareOptions = Promise.method(function(uuid, cliOptio
     if (options.ignore.length === 0 && (config.load(options.source).ignore == null)) {
       options.ignore = ['.git', 'node_modules/'];
     }
-    config.save(_.omit(options, ['source', 'progress', 'verbose']), options.source);
     return options;
   });
+});
+
+
+/**
+ * @summary Save passed options to '.resin-sync.yml' in 'source' folder
+ * @function
+ * @private
+ *
+ * @param {String} options - options to save to `.resin-sync.yml`
+ * @returns {Promise} - Promise is rejected if file could not be saved or settled otherwise
+ *
+ */
+
+exports.saveOptions = saveOptions = Promise.method(function(options) {
+  return config.save(_.omit(options, ['source', 'progress', 'verbose']), options.source);
 });
 
 
@@ -281,7 +295,9 @@ exports.sync = function(uuid, cliOptions) {
     uuid = syncOptions.uuid;
     return spinnerPromise(resin.models.device.startApplication(uuid), 'Attempting to restart stopped application container after failed \'resin sync\'...', 'Application container restarted after failed \'resin sync\'.');
   };
-  return prepareOptions(uuid, cliOptions).then(_.partial(_.merge, syncOptions)).then(getDeviceInfo).then(beforeAction).then(stopContainer).then(function() {
+  return prepareOptions(uuid, cliOptions).then(_.partial(_.merge, syncOptions)).then(getDeviceInfo).then(function() {
+    return saveOptions(syncOptions);
+  }).then(beforeAction).then(stopContainer).then(function() {
     return syncContainer().then(startContainer).then(afterAction).then(function() {
       return console.log(chalk.green.bold('\nresin sync completed successfully!'));
     })["catch"](function(err) {
