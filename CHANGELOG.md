@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+# v3.1.2
+
+## Fixes
+
+* Save full uuids in `.resin-sync.yml` to avoid conflicts when selecting
+  default device in interactive choose dialog
+
 # v3.1.1
 
 ## Fixes
