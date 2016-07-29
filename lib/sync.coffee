@@ -66,7 +66,7 @@ exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method (
 		throw new Error("Incompatible HostOS version: #{osRelease} - must be >= #{minVersion}")
 
 ###*
-# @summary Load, validate and save passed options to '.resin-sync.yml'
+# @summary Prepare and validate options from command line and `resin-sync.yml` (if found)
 # @function
 # @private
 #
@@ -120,10 +120,21 @@ exports.prepareOptions = prepareOptions = Promise.method (uuid, cliOptions) ->
 		if options.ignore.length is 0 and not config.load(options.source).ignore?
 			options.ignore = [ '.git', 'node_modules/' ]
 
-		# Save new cli options. Omit 'source' (not required) as well as 'progress' and 'verbose'
-		config.save(_.omit(options, [ 'source', 'progress', 'verbose' ]), options.source)
-
 		return options
+
+###*
+# @summary Save passed options to '.resin-sync.yml' in 'source' folder
+# @function
+# @private
+#
+# @param {String} options - options to save to `.resin-sync.yml`
+# @returns {Promise} - Promise is rejected if file could not be saved or settled otherwise
+#
+###
+exports.saveOptions = saveOptions = Promise.method (options) ->
+
+	# Omit 'source' (not required) as well as 'progress' and 'verbose'
+	config.save(_.omit(options, [ 'source', 'progress', 'verbose' ]), options.source)
 
 ###*
 # @summary Sync your changes with a device
@@ -260,6 +271,8 @@ exports.sync = (uuid, cliOptions) ->
 	prepareOptions(uuid, cliOptions)
 	.then(_.partial(_.merge, syncOptions))
 	.then(getDeviceInfo)
+	.then ->
+		saveOptions(syncOptions)
 	.then(beforeAction)
 	.then(stopContainer)
 	.then ->
