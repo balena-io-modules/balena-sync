@@ -244,8 +244,8 @@ exports.sync = (uuid, cliOptions) ->
 
 		spinnerPromise(
 			resin.models.device.startApplication(uuid)
-			'Application container started.'
 			'Starting application container...'
+			'Application container started.'
 		)
 
 	startContainerAfterError = ->

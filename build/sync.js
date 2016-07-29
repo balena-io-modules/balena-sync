@@ -275,7 +275,7 @@ exports.sync = function(uuid, cliOptions) {
   });
   startContainer = function() {
     uuid = syncOptions.uuid;
-    return spinnerPromise(resin.models.device.startApplication(uuid), 'Application container started.', 'Starting application container...');
+    return spinnerPromise(resin.models.device.startApplication(uuid), 'Starting application container...', 'Application container started.');
   };
   startContainerAfterError = function() {
     uuid = syncOptions.uuid;
