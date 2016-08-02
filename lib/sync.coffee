@@ -98,7 +98,7 @@ exports.prepareOptions = prepareOptions = Promise.method (uuid, cliOptions) ->
 			return srcVal
 
 	form.run [
-		message: 'Destination directory on device [\'/usr/src/app\']'
+		message: 'Destination directory on device [/usr/src/app]'
 		name: 'destination'
 		type: 'input'
 	],
@@ -128,13 +128,18 @@ exports.prepareOptions = prepareOptions = Promise.method (uuid, cliOptions) ->
 # @private
 #
 # @param {String} options - options to save to `.resin-sync.yml`
-# @returns {Promise} - Promise is rejected if file could not be saved or settled otherwise
+# @returns {Promise} - Promise is rejected if file could not be saved
 #
 ###
 exports.saveOptions = saveOptions = Promise.method (options) ->
 
-	# Omit 'source' (not required) as well as 'progress' and 'verbose'
-	config.save(_.omit(options, [ 'source', 'progress', 'verbose' ]), options.source)
+	config.save(
+		_.pick(
+			options
+			[ 'uuid', 'destination', 'port', 'before', 'after', 'ignore', 'skip-gitignore' ]
+		)
+		options.source
+	)
 
 ###*
 # @summary Sync your changes with a device
@@ -187,7 +192,22 @@ exports.sync = (uuid, cliOptions) ->
 
 	syncOptions = {}
 
-	# Each sync step is enclosed in a separate Promise
+	clearSpinner = (spinner, msg) ->
+		spinner.stop() if spinner?
+		console.log(msg) if msg?
+
+	spinnerPromise = (promise, startMsg, stopMsg) ->
+		spinner = new Spinner(startMsg)
+		spinner.start()
+		promise.then (value) ->
+			clearSpinner(spinner, stopMsg)
+			return value
+		.catch (err) ->
+			clearSpinner(spinner)
+			throw err
+
+	# Each sync step is a separate Promise
+
 	getDeviceInfo = ->
 		{ uuid } = syncOptions
 
@@ -203,20 +223,6 @@ exports.sync = (uuid, cliOptions) ->
 				uuid: device.uuid	# get full uuid
 				username: resin.auth.whoami()
 			.then(_.partial(_.merge, syncOptions))
-
-	clearSpinner = (spinner, msg) ->
-		spinner.stop() if spinner?
-		console.log(msg) if msg?
-
-	spinnerPromise = (promise, startMsg, stopMsg) ->
-		spinner = new Spinner(startMsg)
-		spinner.start()
-		promise.then (value) ->
-			clearSpinner(spinner, stopMsg)
-			return value
-		.catch (err) ->
-			clearSpinner(spinner)
-			throw err
 
 	beforeAction = ->
 		Promise.try ->
