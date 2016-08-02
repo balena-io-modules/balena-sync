@@ -123,7 +123,7 @@ exports.prepareOptions = prepareOptions = Promise.method(function(uuid, cliOptio
   });
   return form.run([
     {
-      message: 'Destination directory on device [\'/usr/src/app\']',
+      message: 'Destination directory on device [/usr/src/app]',
       name: 'destination',
       type: 'input'
     }
@@ -153,12 +153,12 @@ exports.prepareOptions = prepareOptions = Promise.method(function(uuid, cliOptio
  * @private
  *
  * @param {String} options - options to save to `.resin-sync.yml`
- * @returns {Promise} - Promise is rejected if file could not be saved or settled otherwise
+ * @returns {Promise} - Promise is rejected if file could not be saved
  *
  */
 
 exports.saveOptions = saveOptions = Promise.method(function(options) {
-  return config.save(_.omit(options, ['source', 'progress', 'verbose']), options.source);
+  return config.save(_.pick(options, ['uuid', 'destination', 'port', 'before', 'after', 'ignore', 'skip-gitignore']), options.source);
 });
 
 
@@ -213,23 +213,6 @@ exports.saveOptions = saveOptions = Promise.method(function(options) {
 exports.sync = function(uuid, cliOptions) {
   var afterAction, beforeAction, clearSpinner, getDeviceInfo, spinnerPromise, startContainer, startContainerAfterError, stopContainer, syncContainer, syncOptions;
   syncOptions = {};
-  getDeviceInfo = function() {
-    uuid = syncOptions.uuid;
-    console.info("Getting information for device: " + uuid);
-    return resin.models.device.isOnline(uuid).then(function(isOnline) {
-      if (!isOnline) {
-        throw new Error('Device is not online');
-      }
-      return resin.models.device.get(uuid);
-    }).tap(function(device) {
-      return ensureHostOSCompatibility(device.os_version, MIN_HOSTOS_RSYNC);
-    }).then(function(device) {
-      return Promise.props({
-        uuid: device.uuid,
-        username: resin.auth.whoami()
-      }).then(_.partial(_.merge, syncOptions));
-    });
-  };
   clearSpinner = function(spinner, msg) {
     if (spinner != null) {
       spinner.stop();
@@ -248,6 +231,23 @@ exports.sync = function(uuid, cliOptions) {
     })["catch"](function(err) {
       clearSpinner(spinner);
       throw err;
+    });
+  };
+  getDeviceInfo = function() {
+    uuid = syncOptions.uuid;
+    console.info("Getting information for device: " + uuid);
+    return resin.models.device.isOnline(uuid).then(function(isOnline) {
+      if (!isOnline) {
+        throw new Error('Device is not online');
+      }
+      return resin.models.device.get(uuid);
+    }).tap(function(device) {
+      return ensureHostOSCompatibility(device.os_version, MIN_HOSTOS_RSYNC);
+    }).then(function(device) {
+      return Promise.props({
+        uuid: device.uuid,
+        username: resin.auth.whoami()
+      }).then(_.partial(_.merge, syncOptions));
     });
   };
   beforeAction = function() {
