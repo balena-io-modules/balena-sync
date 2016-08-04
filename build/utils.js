@@ -14,7 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
  */
-var revalidator, trimGitignorePattern, _;
+var revalidator, unescapeSpaces, _;
 
 _ = require('lodash');
 
@@ -51,15 +51,16 @@ exports.validateObject = function(object, rules) {
   }
 };
 
-trimGitignorePattern = function(pattern) {
+unescapeSpaces = function(pattern) {
   var quotedTrailSpacesReg;
   pattern = _.trimStart(pattern);
   quotedTrailSpacesReg = /(.*\\\s)\s*$/;
   if (quotedTrailSpacesReg.test(pattern)) {
-    return pattern = pattern.match(quotedTrailSpacesReg)[1];
+    pattern = pattern.match(quotedTrailSpacesReg)[1];
   } else {
-    return pattern = _.trimEnd(pattern);
+    pattern = _.trimEnd(pattern);
   }
+  return pattern.replace(/\\\s/g, ' ');
 };
 
 
@@ -97,7 +98,7 @@ exports.gitignoreToRsyncPatterns = function(gitignoreFile) {
   patterns = fs.readFileSync(gitignoreFile, {
     encoding: 'utf8'
   }).split('\n');
-  patterns = _.map(patterns, trimGitignorePattern);
+  patterns = _.map(patterns, unescapeSpaces);
   patterns = _.filter(patterns, function(pattern) {
     if (pattern.length === 0 || _.startsWith(pattern, '#')) {
       return false;
@@ -112,10 +113,10 @@ exports.gitignoreToRsyncPatterns = function(gitignoreFile) {
   exclude = _.chain(patterns).filter(function(pattern) {
     return !_.startsWith(pattern, '!');
   }).map(function(pattern) {
-    return pattern = pattern.replace(/^\\#/, '#').replace(/^\\!/, '!').replace(/\\\s/g, ' ');
+    return pattern = pattern.replace(/^\\#/, '#').replace(/^\\!/, '!');
   }).value();
   return {
-    include: include,
-    exclude: exclude
+    include: _.uniq(include),
+    exclude: _.uniq(exclude)
   };
 };

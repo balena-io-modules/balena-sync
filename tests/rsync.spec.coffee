@@ -1,8 +1,5 @@
 m = require('mochainon')
 _ = require('lodash')
-fs = require('fs')
-path = require('path')
-os = require('os')
 rsync = require('../lib/rsync')
 mockFs = require('mock-fs')
 
@@ -11,7 +8,9 @@ filesystem['/.gitignore'] = '''
 	npm-debug.log
 	node_modules/
 	lib/*
-	!lib/include\\ me.txt
+	!lib/include with space.txt
+	!lib/include\ with\ space.txt
+	!lib/include with space trail.txt\\ 
 	# comment
 	\\#notacomment
 '''
@@ -24,14 +23,16 @@ assertCommand = (command, options) ->
 
 	expected += ' --rsh=\"ssh -p 22 -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ControlMaster=no test@ssh.resindevice.io rsync 1234 4567\"'
 	expected += ' --delete'
-	expected += ' --include=\"lib/include\\ me.txt\" --exclude=npm-debug.log --exclude=node_modules/ --exclude=lib/* --exclude=#notacomment'
+	expected += ' --include=\"lib/include with space.txt\" --include=\"lib/include with space trail.txt \"'
+	expected += ' --exclude=npm-debug.log --exclude=node_modules/ --exclude=lib/* --exclude=#notacomment'
 
 	if options.ignore?
 		expected += ' ' + _.map options.ignore, (pattern) ->
 			return "--exclude=#{pattern}"
 		.join(' ')
 
-	expected += " . #{options.username}@ssh.resindevice.io:/usr/src/app/"
+	# node-rsync@0.4.0 bug - the single quote should normally not be escaped since it appears inside double quotes
+	expected += " . \"#{options.username}@ssh.resindevice.io:/usr/src/app/a/b/\\` \\' @ ! \\$test \\\" end\""
 
 	m.chai.expect(command).to.equal(expected)
 
@@ -41,7 +42,7 @@ describe 'Rsync:', ->
 		username: 'test'
 		uuid: '1234'
 		source: '/'
-		destination: '/usr/src/app/'
+		destination: "/usr/src/app/a/b/` ' @ ! $test \" end"
 		containerId: '4567'
 
 	beforeEach ->

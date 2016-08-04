@@ -44,7 +44,7 @@ exports.validateObject = (object, rules) ->
 		error = _.first(validation.errors)
 		throw new Error(error.message)
 
-trimGitignorePattern = (pattern) ->
+unescapeSpaces = (pattern) ->
 	pattern = _.trimStart(pattern)
 
 	# Trailing spaces not quoted with backslash are trimmed
@@ -53,6 +53,9 @@ trimGitignorePattern = (pattern) ->
 		pattern = pattern.match(quotedTrailSpacesReg)[1]
 	else
 		pattern = _.trimEnd(pattern)
+
+	# Unescape spaces - 'file\ name' and 'file name' are equivalent in .gitignore
+	pattern.replace(/\\\s/g, ' ')
 
 ###*
 # @summary Transform .gitignore patterns to rsync compatible exclude/include patterns
@@ -86,7 +89,7 @@ exports.gitignoreToRsyncPatterns = (gitignoreFile) ->
 
 	patterns = fs.readFileSync(gitignoreFile, encoding: 'utf8').split('\n')
 
-	patterns = _.map(patterns, trimGitignorePattern)
+	patterns = _.map(patterns, unescapeSpaces)
 
 	# Ignore empty lines and comments
 	patterns = _.filter patterns, (pattern) ->
@@ -108,10 +111,9 @@ exports.gitignoreToRsyncPatterns = (gitignoreFile) ->
 	.map (pattern) ->
 		pattern = pattern.replace(/^\\#/, '#')
 			.replace(/^\\!/, '!')
-			.replace(/\\\s/g, ' ')
 	.value()
 
 	return {
-		include
-		exclude
+		include: _.uniq(include)
+		exclude: _.uniq(exclude)
 	}
