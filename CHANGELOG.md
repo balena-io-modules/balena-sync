@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+# v3.1.4
+
+## Fixes
+
+* Install missing resin-cli-form dependency
+* Lock node-rsync version to 0.4.0
+* Fix space escape bug in .gitignore
+* Add more thorough special character escaping tests
+
 # v3.1.3
 
 ## Changes
