@@ -217,6 +217,11 @@ exports.sync = (uuid, cliOptions) ->
 			throw new Error('Device is not online') if not isOnline
 			resin.models.device.get(uuid)
 		.tap (device) ->
+			# Ensure user is the owner of the device. This is also checked on the backend side.
+			resin.auth.getUserId().then (userId) ->
+				if userId isnt device.user.__id
+					throw new Error('Resin sync is permitted to the device owner only. The device owner is the user who provisioned it.')
+		.tap (device) ->
 			ensureHostOSCompatibility(device.os_version, MIN_HOSTOS_RSYNC)
 		.then (device) ->
 			Promise.props
