@@ -242,6 +242,12 @@ exports.sync = function(uuid, cliOptions) {
       }
       return resin.models.device.get(uuid);
     }).tap(function(device) {
+      return resin.auth.getUserId().then(function(userId) {
+        if (userId !== device.user.__id) {
+          throw new Error('Resin sync is permitted to the device owner only. The device owner is the user who provisioned it.');
+        }
+      });
+    }).tap(function(device) {
       return ensureHostOSCompatibility(device.os_version, MIN_HOSTOS_RSYNC);
     }).then(function(device) {
       return Promise.props({
