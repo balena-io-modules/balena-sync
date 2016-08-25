@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+# v3.1.5
+
+## Changes
+
+* Permit resin sync to device owners only and fail with descriptive message otherwise
+
 # v3.1.4
 
 ## Fixes
