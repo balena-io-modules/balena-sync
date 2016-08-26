@@ -31,8 +31,8 @@ jsYaml = require('js-yaml')
 # @example
 # configPath = config.getPath('.')
 ###
-exports.getPath = (baseDir = process.cwd()) ->
-	return path.join(baseDir, '.resin-sync.yml')
+exports.getPath = (baseDir = process.cwd(), configFile = '.resin-sync.yml') ->
+	return path.join(baseDir, configFile)
 
 ###*
 # @summary Load configuration file
@@ -49,24 +49,24 @@ exports.getPath = (baseDir = process.cwd()) ->
 # @example
 # options = config.load('.')
 ###
-exports.load = (baseDir) ->
-	configPath = exports.getPath(baseDir)
+exports.load = (baseDir, configFile = '.resin-sync.yml') ->
+	configPath = exports.getPath(baseDir, configFile)
 
 	try
 		config = fs.readFileSync(configPath, encoding: 'utf8')
 		result = jsYaml.safeLoad(config)
+
+		if not _.isPlainObject(result)
+			throw new Error("Invalid configuration file: #{configPath}")
 	catch error
 		if error.code is 'ENOENT'
 			return {}
 		throw error
 
-	if not _.isPlainObject(result)
-		throw new Error("Invalid configuration file: #{configPath}")
-
 	return result
 #
 ###*
-# @summary Serialezed object as yaml object and saves it to file
+# @summary Serializes object as yaml object and saves it to file
 # @function
 # @protected
 #
@@ -77,8 +77,8 @@ exports.load = (baseDir) ->
 # @example
 # options = config.save(yamlObj, '.')
 ###
-exports.save = (yamlObj = {}, baseDir) ->
-	configSavePath = exports.getPath(baseDir)
+exports.save = (yamlObj = {}, baseDir, configFile = '.resin-sync.yml') ->
+	configSavePath = exports.getPath(baseDir, configFile)
 
 	try
 		yamlDump = jsYaml.safeDump(yamlObj)

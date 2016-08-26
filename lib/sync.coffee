@@ -66,7 +66,7 @@ exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method (
 		throw new Error("Incompatible HostOS version: #{osRelease} - must be >= #{minVersion}")
 
 ###*
-# @summary Prepare and validate options from command line and `resin-sync.yml` (if found)
+# @summary Prepare and validate options from command line and `.resin-sync.yml` (if found)
 # @function
 # @private
 #
@@ -92,35 +92,66 @@ exports.prepareOptions = prepareOptions = Promise.method (uuid, cliOptions) ->
 				type: 'string'
 				message: 'The after option should be a string'
 
-	options = _.mergeWith config.load(cliOptions.source), cliOptions, { uuid }, (objVal, srcVal) ->
-		# Give precedence to command line 'ignore' options
-		if _.isArray(objVal)
-			return srcVal
+	Promise.try ->
+		configFileOptions = config.load(cliOptions.source)
 
-	form.run [
-		message: 'Destination directory on device [/usr/src/app]'
-		name: 'destination'
-		type: 'input'
-	],
-		override:
-			destination: options.destination
-	.get('destination')
-	.then (dest) ->
+		return configFileOptions if not _.isEmpty(configFileOptions)
 
-		# Set default options
-		_.defaults options,
-			destination: dest ? '/usr/src/app'
-			port: 22
+		# If `.resin-sync.yml` is not found, look for a backwards-compatible `resin-sync.yml` and prompt the user
+		# for confirmation to convert it to `.resin-sync.yml`. This is to make a smoother transition
+		# from older resin sync versions, where `resin-sync.yml` was used. The original
+		# `resin-sync.yml` will not be deleted.
+		try
+			@oldConfigFileOptions = config.load(cliOptions.source, 'resin-sync.yml')
+			return {} if _.isEmpty(@oldConfigFileOptions)
+		catch
+			return {}
 
-		# Filter out empty 'ignore' paths
-		options.ignore = _.filter(options.ignore, (item) -> not _.isEmpty(item))
+		form.ask
+			message: '''
+				A \'resin-sync.yml\' configuration file was found, but the current resin-cli version expects a \'.resin-sync.yml\' file instead.
+				Convert \'resin-sync.yml\' to \'.resin-sync.yml\' (the original file will be kept either way) ?
+			'''
+			type: 'list'
+			choices: [ 'Yes', 'No' ]
+		.then (answer) ->
+			if answer is 'No'
+				return {}
+			else
+				saveOptions(@oldConfigFileOptions, cliOptions.source, '.resin-sync.yml')
+				return config.load(cliOptions.source)
+	.then	(loadedOptions) ->
+		options = {}
 
-		# Only add default 'ignore' options if user has not explicitly set an empty
-		# 'ignore' setting in '.resin-sync.yml'
-		if options.ignore.length is 0 and not config.load(options.source).ignore?
-			options.ignore = [ '.git', 'node_modules/' ]
+		_.mergeWith options, loadedOptions, cliOptions, { uuid }, (objVal, srcVal) ->
+			# Give precedence to command line 'ignore' options
+			if _.isArray(objVal)
+				return srcVal
 
-		return options
+		form.run [
+			message: 'Destination directory on device [/usr/src/app]'
+			name: 'destination'
+			type: 'input'
+		],
+			override:
+				destination: options.destination
+		.get('destination')
+		.then (dest) ->
+
+			# Set default options
+			_.defaults options,
+				destination: dest ? '/usr/src/app'
+				port: 22
+
+			# Filter out empty 'ignore' paths
+			options.ignore = _.filter(options.ignore, (item) -> not _.isEmpty(item))
+
+			# Only add default 'ignore' options if user has not explicitly set an empty
+			# 'ignore' setting in '.resin-sync.yml'
+			if options.ignore.length is 0 and not loadedOptions.ignore?
+				options.ignore = [ '.git', 'node_modules/' ]
+
+			return options
 
 ###*
 # @summary Save passed options to '.resin-sync.yml' in 'source' folder
@@ -131,14 +162,15 @@ exports.prepareOptions = prepareOptions = Promise.method (uuid, cliOptions) ->
 # @returns {Promise} - Promise is rejected if file could not be saved
 #
 ###
-exports.saveOptions = saveOptions = Promise.method (options) ->
+exports.saveOptions = saveOptions = Promise.method (options, baseDir, configFile) ->
 
 	config.save(
 		_.pick(
 			options
 			[ 'uuid', 'destination', 'port', 'before', 'after', 'ignore', 'skip-gitignore' ]
 		)
-		options.source
+		baseDir ? options.source
+		configFile ? '.resin-sync.yml'
 	)
 
 ###*
