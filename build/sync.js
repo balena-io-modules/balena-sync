@@ -82,7 +82,7 @@ exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method(f
 
 
 /**
- * @summary Prepare and validate options from command line and `resin-sync.yml` (if found)
+ * @summary Prepare and validate options from command line and `.resin-sync.yml` (if found)
  * @function
  * @private
  *
@@ -93,7 +93,6 @@ exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method(f
  */
 
 exports.prepareOptions = prepareOptions = Promise.method(function(uuid, cliOptions) {
-  var options;
   utils.validateObject(cliOptions, {
     properties: {
       source: {
@@ -114,35 +113,65 @@ exports.prepareOptions = prepareOptions = Promise.method(function(uuid, cliOptio
       }
     }
   });
-  options = _.mergeWith(config.load(cliOptions.source), cliOptions, {
-    uuid: uuid
-  }, function(objVal, srcVal) {
-    if (_.isArray(objVal)) {
-      return srcVal;
+  return Promise["try"](function() {
+    var configFileOptions;
+    configFileOptions = config.load(cliOptions.source);
+    if (!_.isEmpty(configFileOptions)) {
+      return configFileOptions;
     }
-  });
-  return form.run([
-    {
-      message: 'Destination directory on device [/usr/src/app]',
-      name: 'destination',
-      type: 'input'
+    try {
+      this.oldConfigFileOptions = config.load(cliOptions.source, 'resin-sync.yml');
+      if (_.isEmpty(this.oldConfigFileOptions)) {
+        return {};
+      }
+    } catch (_error) {
+      return {};
     }
-  ], {
-    override: {
-      destination: options.destination
-    }
-  }).get('destination').then(function(dest) {
-    _.defaults(options, {
-      destination: dest != null ? dest : '/usr/src/app',
-      port: 22
+    return form.ask({
+      message: 'A \'resin-sync.yml\' configuration file was found, but the current resin-cli version expects a \'.resin-sync.yml\' file instead.\nConvert \'resin-sync.yml\' to \'.resin-sync.yml\' (the original file will be kept either way) ?',
+      type: 'list',
+      choices: ['Yes', 'No']
+    }).then(function(answer) {
+      if (answer === 'No') {
+        return {};
+      } else {
+        saveOptions(this.oldConfigFileOptions, cliOptions.source, '.resin-sync.yml');
+        return config.load(cliOptions.source);
+      }
     });
-    options.ignore = _.filter(options.ignore, function(item) {
-      return !_.isEmpty(item);
+  }).then(function(loadedOptions) {
+    var options;
+    options = {};
+    _.mergeWith(options, loadedOptions, cliOptions, {
+      uuid: uuid
+    }, function(objVal, srcVal) {
+      if (_.isArray(objVal)) {
+        return srcVal;
+      }
     });
-    if (options.ignore.length === 0 && (config.load(options.source).ignore == null)) {
-      options.ignore = ['.git', 'node_modules/'];
-    }
-    return options;
+    return form.run([
+      {
+        message: 'Destination directory on device [/usr/src/app]',
+        name: 'destination',
+        type: 'input'
+      }
+    ], {
+      override: {
+        destination: options.destination
+      }
+    }).get('destination').then(function(dest) {
+      _.defaults(options, {
+        destination: dest != null ? dest : '/usr/src/app',
+        port: 22
+      });
+      options.ignore = _.filter(options.ignore, function(item) {
+        return !_.isEmpty(item);
+      });
+      if (options.ignore.length === 0 && (loadedOptions.ignore == null)) {
+        options.ignore = ['.git', 'node_modules/'];
+      }
+      return options;
+    });
   });
 });
 
@@ -157,8 +186,8 @@ exports.prepareOptions = prepareOptions = Promise.method(function(uuid, cliOptio
  *
  */
 
-exports.saveOptions = saveOptions = Promise.method(function(options) {
-  return config.save(_.pick(options, ['uuid', 'destination', 'port', 'before', 'after', 'ignore', 'skip-gitignore']), options.source);
+exports.saveOptions = saveOptions = Promise.method(function(options, baseDir, configFile) {
+  return config.save(_.pick(options, ['uuid', 'destination', 'port', 'before', 'after', 'ignore', 'skip-gitignore']), baseDir != null ? baseDir : options.source, configFile != null ? configFile : '.resin-sync.yml');
 });
 
 

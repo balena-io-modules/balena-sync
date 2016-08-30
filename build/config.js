@@ -38,11 +38,14 @@ jsYaml = require('js-yaml');
  * configPath = config.getPath('.')
  */
 
-exports.getPath = function(baseDir) {
+exports.getPath = function(baseDir, configFile) {
   if (baseDir == null) {
     baseDir = process.cwd();
   }
-  return path.join(baseDir, '.resin-sync.yml');
+  if (configFile == null) {
+    configFile = '.resin-sync.yml';
+  }
+  return path.join(baseDir, configFile);
 };
 
 
@@ -62,14 +65,20 @@ exports.getPath = function(baseDir) {
  * options = config.load('.')
  */
 
-exports.load = function(baseDir) {
+exports.load = function(baseDir, configFile) {
   var config, configPath, error, result;
-  configPath = exports.getPath(baseDir);
+  if (configFile == null) {
+    configFile = '.resin-sync.yml';
+  }
+  configPath = exports.getPath(baseDir, configFile);
   try {
     config = fs.readFileSync(configPath, {
       encoding: 'utf8'
     });
     result = jsYaml.safeLoad(config);
+    if (!_.isPlainObject(result)) {
+      throw new Error("Invalid configuration file: " + configPath);
+    }
   } catch (_error) {
     error = _error;
     if (error.code === 'ENOENT') {
@@ -77,15 +86,12 @@ exports.load = function(baseDir) {
     }
     throw error;
   }
-  if (!_.isPlainObject(result)) {
-    throw new Error("Invalid configuration file: " + configPath);
-  }
   return result;
 };
 
 
 /**
- * @summary Serialezed object as yaml object and saves it to file
+ * @summary Serializes object as yaml object and saves it to file
  * @function
  * @protected
  *
@@ -97,12 +103,15 @@ exports.load = function(baseDir) {
  * options = config.save(yamlObj, '.')
  */
 
-exports.save = function(yamlObj, baseDir) {
+exports.save = function(yamlObj, baseDir, configFile) {
   var configSavePath, error, yamlDump;
   if (yamlObj == null) {
     yamlObj = {};
   }
-  configSavePath = exports.getPath(baseDir);
+  if (configFile == null) {
+    configFile = '.resin-sync.yml';
+  }
+  configSavePath = exports.getPath(baseDir, configFile);
   try {
     yamlDump = jsYaml.safeDump(yamlObj);
     return fs.writeFileSync(configSavePath, yamlDump, {
