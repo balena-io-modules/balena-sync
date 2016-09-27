@@ -14,11 +14,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
  */
-var revalidator, unescapeSpaces, _;
+var form, resin, revalidator, unescapeSpaces, _,
+  __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 _ = require('lodash');
 
 revalidator = require('revalidator');
+
+form = require('resin-cli-form');
+
+resin = require('resin-sdk');
 
 
 /**
@@ -119,4 +124,25 @@ exports.gitignoreToRsyncPatterns = function(gitignoreFile) {
     include: _.uniq(include),
     exclude: _.uniq(exclude)
   };
+};
+
+exports.selectResinIODevice = function(preferredUuid) {
+  return resin.models.device.getAll().filter(function(device) {
+    return device.is_online;
+  }).then(function(onlineDevices) {
+    if (_.isEmpty(onlineDevices)) {
+      throw new Error('You don\'t have any devices online');
+    }
+    return form.ask({
+      message: 'Select a device',
+      type: 'list',
+      "default": __indexOf.call(_.map(onlineDevices, 'uuid'), preferredUuid) >= 0 ? preferredUuid : onlineDevices[0].uuid,
+      choices: _.map(onlineDevices, function(device) {
+        return {
+          name: "" + (device.name || 'Untitled') + " (" + (device.uuid.slice(0, 7)) + ")",
+          value: device.uuid
+        };
+      })
+    });
+  });
 };
