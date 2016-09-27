@@ -24,10 +24,10 @@ chalk = require('chalk')
 resin = require('resin-sdk')
 Spinner = require('resin-cli-visuals').Spinner
 form = require('resin-cli-form')
-rsync = require('./rsync')
-utils = require('./utils')
-shell = require('./shell')
-config = require('./config')
+rsync = require('../rsync')
+utils = require('../utils')
+shell = require('../shell')
+config = require('../config')
 semver = require('semver')
 
 MIN_HOSTOS_RSYNC = '1.1.4'
@@ -57,7 +57,7 @@ semverRegExp = /[0-9]+\.[0-9]+\.[0-9]+(?:(-|\+)[^\s]+)?/
 # .catch ->
 #		console.log('Is incompatible')
 ###
-exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method (osRelease, minVersion) ->
+ensureHostOSCompatibility = Promise.method (osRelease, minVersion) ->
 	version = osRelease?.match(semverRegExp)?[0]
 	if not version?
 		throw new Error("Could not parse semantic version from HostOS release info: #{osRelease}")
@@ -75,7 +75,7 @@ exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method (
 # @returns {Promise} options - the options to use for this resin sync run
 #
 ###
-exports.prepareOptions = prepareOptions = Promise.method (uuid, cliOptions) ->
+prepareOptions = Promise.method (uuid, cliOptions) ->
 	utils.validateObject cliOptions,
 		properties:
 			source:
@@ -162,7 +162,7 @@ exports.prepareOptions = prepareOptions = Promise.method (uuid, cliOptions) ->
 # @returns {Promise} - Promise is rejected if file could not be saved
 #
 ###
-exports.saveOptions = saveOptions = Promise.method (options, baseDir, configFile) ->
+saveOptions = Promise.method (options, baseDir, configFile) ->
 
 	config.save(
 		_.pick(
@@ -213,14 +213,14 @@ exports.saveOptions = saveOptions = Promise.method (options, baseDir, configFile
 # @param {Number} [cliOptions.port=22] - ssh port
 #
 # @example
-# resinSync.sync('7a4e3dc', {
+# resinSync('7a4e3dc', {
 #		source: '.',
 #		destination: '/usr/src/app',
 #   ignore: [ '.git', 'node_modules' ],
 #   progress: false
 # });
 ###
-exports.sync = (uuid, cliOptions) ->
+module.exports = (uuid, cliOptions) ->
 
 	syncOptions = {}
 

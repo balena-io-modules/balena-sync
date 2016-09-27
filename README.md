@@ -1,7 +1,7 @@
 resin-sync
 ==========
 
-> Watch a local project directory and sync it on the fly
+> Update your application from a local source directory to a device on-the-fly.
 
 [![npm version](https://badge.fury.io/js/resin-sync.svg)](http://badge.fury.io/js/resin-sync)
 [![dependencies](https://david-dm.org/resin-io-modules/resin-sync.svg)](https://david-dm.org/resin-io-modules/resin-sync.svg)
@@ -11,7 +11,7 @@ resin-sync
 Role
 ----
 
-The intention of this module is to provide a low level mechanism to sync code to devices.
+The intention of this module is to provide a way to sync changes from a local source directory to a device.
 
 **THIS MODULE IS LOW LEVEL AND IS NOT MEANT TO BE USED BY END USERS DIRECTLY**.
 
@@ -24,62 +24,57 @@ Install `resin-sync` by running:
 $ npm install --save resin-sync
 ```
 
-Documentation
--------------
+Dependencies
+------------
 
-<a name="module_resinSync.sync"></a>
-
-### resinSync.sync(uuid, [options])
-This module provides a way to sync changes from a local source
-directory to a device. It relies on the following dependencies
+`resin sync` relies on the following dependencies
 being installed in the system:
 
 - `rsync`
 - `ssh`
 
-You can save all the options mentioned below in a `resin-sync.yml`
-file, by using the same option names as keys. For example:
-
-	$ cat $PWD/resin-sync.yml
-	source: src/
-	before: 'echo Hello'
-	ignore:
-		- .git
-		- node_modules/
-	progress: true
-
-Notice that explicitly passed command options override the ones
-set in the configuration file.
-
-**Kind**: static method of <code>[resinSync](#module_resinSync)</code>  
-**Summary**: Sync your changes with a device  
-**Access:** public  
-
-| Param | Type | Default | Description |
-| --- | --- | --- | --- |
-| uuid | <code>String</code> |  | device uuid |
-| [options] | <code>Object</code> |  | options |
-| [options.source] | <code>String</code> | <code>$PWD</code> | source path |
-| [options.ignore] | <code>Array.&lt;String&gt;</code> |  | ignore paths |
-| [options.before] | <code>String</code> |  | command to execute before sync |
-| [options.progress] | <code>Boolean</code> | <code>true</code> | display sync progress |
-| [options.port] | <code>Number</code> | <code>22</code> | ssh port |
-
-**Example**  
-```js
-resinSync.sync('7a4e3dc', {
-  ignore: [ '.git', 'node_modules' ],
-  progress: false
-});
-```
-
-Windows
--------
+#### For Windows users:
 
 1. Install [MinGW](http://www.mingw.org).
 2. Install the `msys-rsync` and `msys-openssh` packages.
 3. Add MinGW to the `%PATH%` if this hasn't been done by the installer already. The location where the binaries are places is usually `C:\MinGW\msys\1.0\bin`, but it can vary if you selected a different location in the installer.
 4. Copy your SSH keys to `%homedrive%%homepath\.ssh`.
+
+API
+-------------
+
+This module exports two methods:
+
+#### capitano(cliTool)
+
+This returns [`capitano`](https://github.com/resin-io/capitano) command that
+can be registered by a cli tool. It is a convenience method that allows
+adding/modifying `resin sync` capitano commands/options without requiring changes in
+both the cli tool and the `resin-sync` module. The list of supported cli
+tools currently only includes 'resin-cli'
+
+Example usage in `resin-cli`:
+
+```coffeescript
+resinCliSyncCmd = require('resin-sync').capitano('resin-cli')
+capitano.command(resinCliSyncCmd)
+```
+
+#### sync(target)
+
+This method returns the proper `sync()` method for the specified `target`.
+Specifying different targets is necessary because the *application sync*
+process needs to adapt to the particular destination environment.
+
+The list of currently support targets is
+
+* `remote-resin-io-device`
+* `local-resin-os-device`
+
+and more will be added incrementally (e.g. `remote-resin-os-device`,
+`virtual-resin-os-device` etc.)
+
+The `sync()` method can be used directly by modules that don't use capitano.
 
 Support
 -------
