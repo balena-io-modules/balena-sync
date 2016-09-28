@@ -16,35 +16,32 @@ limitations under the License.
 
 path = require('path')
 _ = require('lodash')
-_.str = require('underscore.string')
 rsync = require('rsync')
 settings = require('resin-settings-client')
 utils = require('./utils')
 ssh = require('./ssh')
 
 ###*
-# @summary Get rsync command
+# @summary Build rsync command
 # @function
 # @protected
 #
 # @param {Object} options - rsync options
 # @param {String} options.username - username
-# @param {String} options.uuid - device uuid
-# @param {String} options.containerId - container id
-# @param {String} options.destination - destination directory on device
 # @param {Boolean} [options.progress] - show progress
 # @param {String|String[]} [options.ignore] - pattern/s to ignore. Note that '.gitignore' is always used as a filter if it exists
-# @param {Number} [options.port=22] - ssh port
+# @param {Boolean} [options.verbose] - verbose output
+# @param {Boolean} [options.skip-gitignore] - skip gitignore
+# @param {String} options.source - source directory on local machine
+# @param {String} options.destination - destination directory on device
 #
 # @returns {String} rsync command
 #
 # @example
 # command = rsync.getCommand
 #		username: 'test',
-#		uuid: '1324'
-#		containerId: '6789'
 ###
-exports.getCommand = (options = {}) ->
+exports.buildRsyncCommand = (options = {}) ->
 
 	utils.validateObject options,
 		properties:

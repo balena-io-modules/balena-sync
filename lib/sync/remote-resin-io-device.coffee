@@ -23,7 +23,7 @@ _ = require('lodash')
 chalk = require('chalk')
 resin = require('resin-sdk')
 form = require('resin-cli-form')
-rsync = require('../rsync')
+{ buildRsyncCommand } = require('../rsync')
 { validateObject, spinnerPromise } = require('../utils')
 shell = require('../shell')
 config = require('../config')
@@ -270,7 +270,7 @@ module.exports = (uuid, cliOptions) ->
 		if not containerId?
 			throw new Error('No stopped application container found')
 
-		command = rsync.getCommand(syncOptions)
+		command = buildRsyncCommand(syncOptions)
 
 		spinnerPromise(
 			shell.runCommand(command, cwd: source)
