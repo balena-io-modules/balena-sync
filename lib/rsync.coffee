@@ -125,6 +125,6 @@ exports.getCommand = (options = {}) ->
 	# backslashes on Windows for some reason.
 	result = result.replace(/\\\\/g, '\\')
 
-	console.log("resin sync command: #{result}") if options.verbose
+	console.log("rsync command: #{result}") if options.verbose
 
 	return result

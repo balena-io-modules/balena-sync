@@ -14,10 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ###
 
+Promise = require('bluebird')
 _ = require('lodash')
 revalidator = require('revalidator')
 form = require('resin-cli-form')
 resin = require('resin-sdk')
+Spinner = require('resin-cli-visuals').Spinner
 
 ###*
 # @summary Validate object
@@ -137,3 +139,18 @@ exports.selectResinIODevice = (preferredUuid) ->
 					name: "#{device.name or 'Untitled'} (#{device.uuid.slice(0, 7)})"
 					value: device.uuid
 				}
+
+exports.spinnerPromise = Promise.method (promise, startMsg, stopMsg) ->
+
+	clearSpinner = (spinner, msg) ->
+		spinner.stop() if spinner?
+		console.log(msg) if msg?
+
+	spinner = new Spinner(startMsg)
+	spinner.start()
+	promise.then (value) ->
+		clearSpinner(spinner, stopMsg)
+		return value
+	.catch (err) ->
+		clearSpinner(spinner)
+		throw err

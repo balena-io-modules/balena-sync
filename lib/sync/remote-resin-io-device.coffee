@@ -22,10 +22,9 @@ Promise = require('bluebird')
 _ = require('lodash')
 chalk = require('chalk')
 resin = require('resin-sdk')
-Spinner = require('resin-cli-visuals').Spinner
 form = require('resin-cli-form')
 rsync = require('../rsync')
-utils = require('../utils')
+{ validateObject, spinnerPromise } = require('../utils')
 shell = require('../shell')
 config = require('../config')
 semver = require('semver')
@@ -76,7 +75,7 @@ ensureHostOSCompatibility = Promise.method (osRelease, minVersion) ->
 #
 ###
 prepareOptions = Promise.method (uuid, cliOptions) ->
-	utils.validateObject cliOptions,
+	validateObject cliOptions,
 		properties:
 			source:
 				description: 'source'
@@ -223,20 +222,6 @@ saveOptions = Promise.method (options, baseDir, configFile) ->
 module.exports = (uuid, cliOptions) ->
 
 	syncOptions = {}
-
-	clearSpinner = (spinner, msg) ->
-		spinner.stop() if spinner?
-		console.log(msg) if msg?
-
-	spinnerPromise = (promise, startMsg, stopMsg) ->
-		spinner = new Spinner(startMsg)
-		spinner.start()
-		promise.then (value) ->
-			clearSpinner(spinner, stopMsg)
-			return value
-		.catch (err) ->
-			clearSpinner(spinner)
-			throw err
 
 	# Each sync step is a separate Promise
 
