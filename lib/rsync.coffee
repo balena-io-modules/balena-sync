@@ -17,7 +17,6 @@ limitations under the License.
 path = require('path')
 _ = require('lodash')
 rsync = require('rsync')
-settings = require('resin-settings-client')
 utils = require('./utils')
 
 buildRshOption = (options = {}) ->

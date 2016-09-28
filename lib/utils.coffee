@@ -17,8 +17,6 @@ limitations under the License.
 Promise = require('bluebird')
 _ = require('lodash')
 revalidator = require('revalidator')
-form = require('resin-cli-form')
-resin = require('resin-sdk')
 Spinner = require('resin-cli-visuals').Spinner
 
 ###*
@@ -121,24 +119,6 @@ exports.gitignoreToRsyncPatterns = (gitignoreFile) ->
 		include: _.uniq(include)
 		exclude: _.uniq(exclude)
 	}
-
-exports.selectResinIODevice = (preferredUuid) ->
-	resin.models.device.getAll()
-	.filter (device) ->
-		device.is_online
-	.then (onlineDevices) ->
-		if _.isEmpty(onlineDevices)
-			throw new Error('You don\'t have any devices online')
-
-		return form.ask
-			message: 'Select a device'
-			type: 'list'
-			default: if preferredUuid in _.map(onlineDevices, 'uuid') then preferredUuid else onlineDevices[0].uuid
-			choices: _.map onlineDevices, (device) ->
-				return {
-					name: "#{device.name or 'Untitled'} (#{device.uuid.slice(0, 7)})"
-					value: device.uuid
-				}
 
 exports.spinnerPromise = Promise.method (promise, startMsg, stopMsg) ->
 

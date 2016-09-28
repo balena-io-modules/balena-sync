@@ -102,11 +102,33 @@ module.exports =
 	action: (params, options, done) ->
 		fs = require('fs')
 		path = require('path')
-		resin = require('resin-sdk')
 		Promise = require('bluebird')
+		_ = require('lodash')
+		resin = require('resin-sdk')
+		form = require('resin-cli-form')
 		{ load } = require('../config')
-		utils = require('../utils')
 		resinSync = require('../sync')('remote-resin-io-device')
+
+		#
+		# Device Discovery
+		#
+		selectDevice = (preferredUuid) ->
+			resin.models.device.getAll()
+			.filter (device) ->
+				device.is_online
+			.then (onlineDevices) ->
+				if _.isEmpty(onlineDevices)
+					throw new Error('You don\'t have any devices online')
+
+				return form.ask
+					message: 'Select a device'
+					type: 'list'
+					default: if preferredUuid in _.map(onlineDevices, 'uuid') then preferredUuid else onlineDevices[0].uuid
+					choices: _.map onlineDevices, (device) ->
+						return {
+							name: "#{device.name or 'Untitled'} (#{device.uuid.slice(0, 7)})"
+							value: device.uuid
+						}
 
 		Promise.try ->
 			try
@@ -124,8 +146,8 @@ module.exports =
 			Promise.resolve(params.uuid)
 			.then (uuid) ->
 				if not uuid?
-					savedUuid = load(options.source).uuid
-					return utils.selectResinIODevice(savedUuid)
+					preferredUuid = load(options.source).uuid
+					return selectDevice(preferredUuid)
 
 				resin.models.device.has(uuid)
 				.then (hasDevice) ->
