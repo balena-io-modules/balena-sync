@@ -19,8 +19,68 @@ _ = require('lodash')
 rsync = require('rsync')
 settings = require('resin-settings-client')
 utils = require('./utils')
-ssh = require('./ssh')
 
+###*
+# @summary Get --rsh SSH command for rsync
+# @function
+# @protected
+#
+# @param {Object} [options] - options
+# @param {String} [options.username] - username
+# @param {String} [options.host] - host
+# @param {Number} [options.port] - resin ssh gateway port
+# @param {String} [options.'remote-cmd'] - remote ssh command
+# @param {Boolean} [options.verbose] - verbose output
+#
+# @returns {String} ssh command
+#
+# @example
+# ssh.getConnectCommand
+#		username: 'test'
+# 	uuid: '1234'
+# 	containerId: '4567'
+# 	command: 'date'
+###
+buildRshOption = (options = {}) ->
+
+	utils.validateObject options,
+		properties:
+			username:
+				description: 'username'
+				type: 'string'
+				required: true
+			host:
+				description: 'host'
+				type: 'string'
+				required: true
+			port:
+				description: 'port'
+				type: 'number'
+				required: true
+			'remote-cmd':
+				description: 'remote-cmd'
+				type: 'string'
+				required: false
+			verbose:
+				description: 'verbose'
+				type: 'boolean'
+
+	verbose = if options.verbose then '-vv ' else ''
+	remoteCmd = options['remote-cmd'] ? ''
+
+	result = """
+		ssh \
+		#{verbose}\
+		-p #{options.port} \
+		-o LogLevel=ERROR \
+		-o StrictHostKeyChecking=no \
+		-o UserKnownHostsFile=/dev/null \
+		-o ControlMaster=no \
+		#{options.username}@#{options.host} \
+		#{remoteCmd}
+	"""
+
+	return result
 ###*
 # @summary Build rsync command
 # @function
@@ -38,8 +98,10 @@ ssh = require('./ssh')
 # @returns {String} rsync command
 #
 # @example
-# command = rsync.getCommand
-#		username: 'test',
+# command = rsync.buildRsyncCommand
+#		username: 'user',
+#		source: '/home/uer/app',
+#		destination: '/usr/src/app'
 ###
 exports.buildRsyncCommand = (options = {}) ->
 
@@ -79,12 +141,11 @@ exports.buildRsyncCommand = (options = {}) ->
 				required: true
 				message: 'Not a string: destination'
 
-	{ username } = options
 	args =
 		source: '.'
-		destination: "#{username}@ssh.#{settings.get('proxyUrl')}:#{options.destination}"
+		destination: "#{options.username}@ssh.#{settings.get('proxyUrl')}:#{options.destination}"
 		progress: options.progress
-		shell: ssh.getConnectCommand(options)
+		shell: buildRshOption(options)
 
 		# a = archive mode.
 		# This makes sure rsync synchronizes the

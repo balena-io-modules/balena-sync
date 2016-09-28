@@ -40,10 +40,11 @@ describe 'Rsync:', ->
 
 	defaultOpts =
 		username: 'test'
-		uuid: '1234'
 		source: '/'
 		destination: "/usr/src/app/a/b/` ' @ ! $test \" end"
-		containerId: '4567'
+		port: 22
+		host: 'ssh.resindevice.io'
+		'remote-cmd': 'rsync 1234 4567'
 
 	beforeEach ->
 		mockFs(filesystem)
@@ -53,30 +54,30 @@ describe 'Rsync:', ->
 
 	it 'should throw if progress is not a boolean', ->
 		m.chai.expect ->
-			rsync.getCommand(_.merge({}, defaultOpts, progress: 'true'))
+			rsync.buildRsyncCommand(_.merge({}, defaultOpts, progress: 'true'))
 		.to.throw('Not a boolean: progress')
 
 	it 'should throw if ignore is not a string nor array', ->
 		m.chai.expect ->
-			rsync.getCommand(_.merge({}, defaultOpts, ignore: 1234))
+			rsync.buildRsyncCommand(_.merge({}, defaultOpts, ignore: 1234))
 		.to.throw('Not a string or array: ignore')
 
 	it 'should be able to set progress to true', ->
 		opts = _.merge({}, defaultOpts, progress: true)
-		command = rsync.getCommand(opts)
+		command = rsync.buildRsyncCommand(opts)
 		assertCommand(command, opts)
 
 	it 'should be able to set progress to false', ->
 		opts = _.merge({}, defaultOpts, progress: false)
-		command = rsync.getCommand(opts)
+		command = rsync.buildRsyncCommand(opts)
 		assertCommand(command, opts)
 
 	it 'should be able to exclute a single pattern', ->
 		opts = _.merge({}, defaultOpts, ignore: [ '.git' ])
-		command = rsync.getCommand(opts)
+		command = rsync.buildRsyncCommand(opts)
 		assertCommand(command, opts)
 
 	it 'should be able to exclute a multiple patterns', ->
 		opts = _.merge({}, defaultOpts, ignore: [ '.git', 'node_modules' ])
-		command = rsync.getCommand(opts)
+		command = rsync.buildRsyncCommand(opts)
 		assertCommand(command, opts)

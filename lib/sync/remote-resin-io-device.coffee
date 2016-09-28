@@ -23,6 +23,7 @@ _ = require('lodash')
 chalk = require('chalk')
 resin = require('resin-sdk')
 form = require('resin-cli-form')
+settings = require('resin-settings-client')
 { buildRsyncCommand } = require('../rsync')
 { validateObject, spinnerPromise } = require('../utils')
 shell = require('../shell')
@@ -75,6 +76,7 @@ ensureHostOSCompatibility = Promise.method (osRelease, minVersion) ->
 #
 ###
 prepareOptions = Promise.method (uuid, cliOptions) ->
+
 	validateObject cliOptions,
 		properties:
 			source:
@@ -270,7 +272,9 @@ module.exports = (uuid, cliOptions) ->
 		if not containerId?
 			throw new Error('No stopped application container found')
 
-		command = buildRsyncCommand(syncOptions)
+		command = buildRsyncCommand _.assign syncOptions,
+			host: "ssh.#{settings.get('proxyUrl')}"
+			'remote-cmd': "rsync #{uuid} #{containerId}"
 
 		spinnerPromise(
 			shell.runCommand(command, cwd: source)
