@@ -20,27 +20,6 @@ rsync = require('rsync')
 settings = require('resin-settings-client')
 utils = require('./utils')
 
-###*
-# @summary Get --rsh SSH command for rsync
-# @function
-# @protected
-#
-# @param {Object} [options] - options
-# @param {String} [options.username] - username
-# @param {String} [options.host] - host
-# @param {Number} [options.port] - resin ssh gateway port
-# @param {String} [options.'remote-cmd'] - remote ssh command
-# @param {Boolean} [options.verbose] - verbose output
-#
-# @returns {String} ssh command
-#
-# @example
-# ssh.getConnectCommand
-#		username: 'test'
-# 	uuid: '1234'
-# 	containerId: '4567'
-# 	command: 'date'
-###
 buildRshOption = (options = {}) ->
 
 	utils.validateObject options,
@@ -81,13 +60,14 @@ buildRshOption = (options = {}) ->
 	"""
 
 	return result
+
 ###*
 # @summary Build rsync command
 # @function
 # @protected
 #
 # @param {Object} options - rsync options
-# @param {String} options.username - username
+# @param {String} options.host - host
 # @param {Boolean} [options.progress] - show progress
 # @param {String|String[]} [options.ignore] - pattern/s to ignore. Note that '.gitignore' is always used as a filter if it exists
 # @param {Boolean} [options.verbose] - verbose output
@@ -99,7 +79,7 @@ buildRshOption = (options = {}) ->
 #
 # @example
 # command = rsync.buildRsyncCommand
-#		username: 'user',
+#		host: 'ssh.resindevice.io'
 #		source: '/home/uer/app',
 #		destination: '/usr/src/app'
 ###
@@ -107,13 +87,13 @@ exports.buildRsyncCommand = (options = {}) ->
 
 	utils.validateObject options,
 		properties:
-			username:
-				description: 'username'
+			host:
+				description: 'host'
 				type: 'string'
 				required: true
 				messages:
-					type: 'Not a string: username'
-					required: 'Missing username'
+					type: 'Not a string: host'
+					required: 'Missing host'
 			progress:
 				description: 'progress'
 				type: 'boolean'
@@ -143,7 +123,7 @@ exports.buildRsyncCommand = (options = {}) ->
 
 	args =
 		source: '.'
-		destination: "#{options.username}@ssh.#{settings.get('proxyUrl')}:#{options.destination}"
+		destination: "#{options.host}:#{options.destination}"
 		progress: options.progress
 		shell: buildRshOption(options)
 
