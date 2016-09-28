@@ -32,13 +32,13 @@ Spinner = require('resin-cli-visuals').Spinner;
 
 form = require('resin-cli-form');
 
-rsync = require('./rsync');
+rsync = require('../rsync');
 
-utils = require('./utils');
+utils = require('../utils');
 
-shell = require('./shell');
+shell = require('../shell');
 
-config = require('./config');
+config = require('../config');
 
 semver = require('semver');
 
@@ -69,7 +69,7 @@ semverRegExp = /[0-9]+\.[0-9]+\.[0-9]+(?:(-|\+)[^\s]+)?/;
  *		console.log('Is incompatible')
  */
 
-exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method(function(osRelease, minVersion) {
+ensureHostOSCompatibility = Promise.method(function(osRelease, minVersion) {
   var version, _ref;
   version = osRelease != null ? (_ref = osRelease.match(semverRegExp)) != null ? _ref[0] : void 0 : void 0;
   if (version == null) {
@@ -92,7 +92,7 @@ exports.ensureHostOSCompatibility = ensureHostOSCompatibility = Promise.method(f
  *
  */
 
-exports.prepareOptions = prepareOptions = Promise.method(function(uuid, cliOptions) {
+prepareOptions = Promise.method(function(uuid, cliOptions) {
   utils.validateObject(cliOptions, {
     properties: {
       source: {
@@ -186,7 +186,7 @@ exports.prepareOptions = prepareOptions = Promise.method(function(uuid, cliOptio
  *
  */
 
-exports.saveOptions = saveOptions = Promise.method(function(options, baseDir, configFile) {
+saveOptions = Promise.method(function(options, baseDir, configFile) {
   return config.save(_.pick(options, ['uuid', 'destination', 'port', 'before', 'after', 'ignore', 'skip-gitignore']), baseDir != null ? baseDir : options.source, configFile != null ? configFile : '.resin-sync.yml');
 });
 
@@ -231,7 +231,7 @@ exports.saveOptions = saveOptions = Promise.method(function(options, baseDir, co
  * @param {Number} [cliOptions.port=22] - ssh port
  *
  * @example
- * resinSync.sync('7a4e3dc', {
+ * resinSync('7a4e3dc', {
  *		source: '.',
  *		destination: '/usr/src/app',
  *   ignore: [ '.git', 'node_modules' ],
@@ -239,7 +239,7 @@ exports.saveOptions = saveOptions = Promise.method(function(options, baseDir, co
  * });
  */
 
-exports.sync = function(uuid, cliOptions) {
+module.exports = function(uuid, cliOptions) {
   var afterAction, beforeAction, clearSpinner, getDeviceInfo, spinnerPromise, startContainer, startContainerAfterError, stopContainer, syncContainer, syncOptions;
   syncOptions = {};
   clearSpinner = function(spinner, msg) {
