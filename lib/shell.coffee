@@ -15,8 +15,9 @@ limitations under the License.
 ###
 
 child_process = require('child_process')
-_ = require('lodash')
 os = require('os')
+Promise = require('bluebird')
+_ = require('lodash')
 rindle = require('rindle')
 
 ###*
@@ -51,15 +52,14 @@ exports.getSubShellCommand = (command) ->
 # stdin is inherited from the parent process.
 #
 # @param {String} command - command
-# @param {Object} [options] - options
-# @param {String} [options.cwd] - current working directory
+# @param {String} cwd - current working directory
 # @returns {Promise}
 #
 # @example
 # shell.runCommand('echo hello').then ->
 # 	console.log('Done!')
 ###
-exports.runCommand = (command, options = {}) ->
+exports.runCommand = Promise.method (command, cwd) ->
 	env = {}
 
 	if os.platform() is 'win32'
@@ -77,7 +77,7 @@ exports.runCommand = (command, options = {}) ->
 	spawn = child_process.spawn subShellCommand.program, subShellCommand.args,
 		stdio: 'inherit'
 		env: _.merge(env, process.env)
-		cwd: options.cwd
+		cwd: cwd
 
 		# This is an internal undocumented option that causes
 		# spawn to execute multiple word commands correctly
