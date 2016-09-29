@@ -14,12 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ###
 
+Promise = require('bluebird')
 chalk = require('chalk')
 
-module.exports = (deviceIp, syncOptions) ->
+exports.sync = (syncOptions) ->
 
 	Promise.try ->
-		console.log 'syncing'
+		console.log 'Syncing...'
+		console.log(chalk.green.bold('sync succeeded'))
 	.catch (err) ->
 		console.log(chalk.red.bold('sync failed.', err))
 		process.exit(1)

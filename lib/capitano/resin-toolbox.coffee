@@ -15,12 +15,13 @@ limitations under the License.
 ###
 
 module.exports =
-	signature: 'resin-toolbox [deviceIp]'
-	description: 'Sync your changes to a container on local resinOS device '
+	signature: 'sync [deviceIp]'
+	description: 'Sync your changes to a container on local ResinOS device '
 	help: '''
 		WARNING: If you're running Windows, this command only supports `cmd.exe`.
 
 		Use this command to sync your local changes to a container on a LAN-accessible resinOS device on the fly.
+		If `Dockerfile` or `package.json` are changed, a new container will be built and run on your device.
 
 		After every 'resin sync' the updated settings will be saved in
 		'<source>/.resin-sync.yml' and will be used in later invocations. You can
@@ -50,6 +51,7 @@ module.exports =
 			$ resin-toolbox sync 192.168.2.10 --source . --destination /usr/src/app
 			$ resin-toolbox sync 192.168.2.10 -s /home/user/myResinProject -d /usr/src/app --before 'echo Hello' --after 'echo Done'
 	'''
+	primary: true
 	options: [
 			signature: 'source'
 			parameter: 'path'
@@ -97,29 +99,46 @@ module.exports =
 		,
 	]
 	action: (params, options, done) ->
-		fs = require('fs')
-		path = require('path')
 		Promise = require('bluebird')
-		{ selectLocalResinOSDevice } = require('../utils')
-		resinSync = require('../sync')('local-resin-os-device')
-		{ findAvahiDevices } = require('../autodiscovery')
+		_ = require('lodash')
+		form = require('resin-cli-form')
+		{ save } = require('../config')
+		{ getSyncOptions } = require('../utils')
+		{ findAvahiDevices } = require('../discover')
+		{ sync } = require('../sync')('local-resin-os-device')
+
+		selectLocalResinOSDevice = ->
+			findAvahiDevices()
+			.then (devices) ->
+				if _.isEmpty(devices)
+					throw new Error('You don\'t have any local ResinOS devices')
+
+				return form.ask
+					message: 'Select a device'
+					type: 'list'
+					default: devices[0].ip
+					choices: _.map devices, (device) ->
+						return {
+							name: "#{device.name or 'Untitled'} (#{device.ip})"
+							value: device.ip
+						}
 
 		Promise.try ->
-			try
-				fs.accessSync(path.join(process.cwd(), '.resin-sync.yml'))
-			catch
-				if not options.source?
-					throw new Error('No --source option passed and no \'.resin-sync.yml\' file found in current directory.')
-
-			options.source ?= process.cwd()
-
-			# TODO: Add comma separated options to Capitano
-			if options.ignore?
-				options.ignore = options.ignore.split(',')
-
-			Promise.try ->
-				findAvahiDevices()
-				.then(selectLocalResinOSDevice)
+			getSyncOptions(options)
+			.then (@syncOptions) =>
+				if not params.deviceIp?
+					return selectLocalResinOSDevice()
+				return params.deviceIp
 			.then (deviceIp) ->
-				resinSync(deviceIp, options)
+				_.assign(@syncOptions, { deviceIp })
+				_.defaults(@syncOptions, port: 22222)
+
+				# Save options to `.resin-sync.yml`
+				save(
+					_.omit(@syncOptions, [ 'source', 'verbose', 'progress', 'deviceIp' ])
+					@syncOptions.source
+				)
+			.then =>
+				console.log "Attempting to sync to /dev/null on device #{@syncOptions.deviceIp}"
+				sync(@syncOptions)
 		.nodeify(done)

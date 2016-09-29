@@ -18,7 +18,16 @@ Promise = require('bluebird')
 resin = require('resin-sdk')
 
 exports.findAvahiDevices = Promise.method ->
-	return []
+	return [
+		{
+			name: 'resin.local'
+			ip: '129.168.1.10'
+		}
+		{
+			name: 'resin2.local'
+			ip: '129.168.1.11'
+		}
+	]
 
 # Resolves with array of remote online Resin.io devices, throws on error
 exports.getRemoteResinioOnlineDevices = ->
