@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+# 4.1.0
+
+* Add resin-toolbox sync structure
+* Major refactorins to share as much functionality as possible between sync
+  frontends
+
 # 4.0.0
 
 * [Breaking] - changed external API - `.capitano()` and `.sync()` are now
