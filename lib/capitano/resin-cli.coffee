@@ -147,7 +147,7 @@ module.exports =
 
 				# Save options to `.resin-sync.yml`
 				save(
-					_.pick(@syncOptions, [ 'uuid', 'destination', 'port', 'before', 'after', 'ignore', 'skip-gitignore' ])
+					_.omit(@syncOptions, [ 'source', 'verbose', 'progress' ])
 					@syncOptions.source
 				)
 			.then =>
