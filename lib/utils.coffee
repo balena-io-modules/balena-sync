@@ -120,6 +120,7 @@ exports.gitignoreToRsyncPatterns = (gitignoreFile) ->
 		exclude: _.uniq(exclude)
 	}
 
+# Resolves with the resolved 'promise' value
 exports.spinnerPromise = Promise.method (promise, startMsg, stopMsg) ->
 
 	clearSpinner = (spinner, msg) ->
@@ -128,9 +129,33 @@ exports.spinnerPromise = Promise.method (promise, startMsg, stopMsg) ->
 
 	spinner = new Spinner(startMsg)
 	spinner.start()
-	promise.then (value) ->
+	promise.tap (value) ->
 		clearSpinner(spinner, stopMsg)
-		return value
 	.catch (err) ->
 		clearSpinner(spinner)
 		throw err
+
+# Resolves with the resolved 'promise' value
+exports.startContainer = (promise) ->
+	exports.spinnerPromise(
+		promise
+		'Starting application container...'
+		'Application container started.'
+	)
+
+# Resolves with the resolved 'promise' value
+exports.stopContainer = (promise) ->
+	exports.spinnerPromise(
+		promise
+		'Stopping application container...'
+		'Application container stopped.'
+	)
+
+# Resolves with the resolved 'promise' value
+exports.startContainerAfterError = (promise) ->
+	exports.spinnerPromise(
+		promise
+		'Attempting to start application container after failed \'sync\'...'
+		'Application container started after failed \'sync\'.'
+	)
+

@@ -21,14 +21,20 @@ limitations under the License.
 Promise = require('bluebird')
 _ = require('lodash')
 chalk = require('chalk')
+semver = require('semver')
 resin = require('resin-sdk')
 form = require('resin-cli-form')
 settings = require('resin-settings-client')
-{ buildRsyncCommand } = require('../rsync')
-{ validateObject, spinnerPromise } = require('../utils')
 shell = require('../shell')
 config = require('../config')
-semver = require('semver')
+{ buildRsyncCommand } = require('../rsync')
+{ validateObject
+	spinnerPromise
+	startContainer
+	stopContainer
+	startContainerAfterError
+} = require('../utils')
+
 
 MIN_HOSTOS_RSYNC = '1.1.4'
 
@@ -225,8 +231,6 @@ module.exports = (uuid, cliOptions) ->
 
 	syncOptions = {}
 
-	# Each sync step is a separate Promise
-
 	getDeviceInfo = ->
 		{ uuid } = syncOptions
 
@@ -248,24 +252,6 @@ module.exports = (uuid, cliOptions) ->
 				username: resin.auth.whoami()
 			.then(_.partial(_.merge, syncOptions))
 
-	beforeAction = ->
-		Promise.try ->
-			shell.runCommand(syncOptions.before, cwd: syncOptions.source) if syncOptions.before?
-
-	afterAction = ->
-		Promise.try ->
-			shell.runCommand(syncOptions.after, cwd: syncOptions.source) if syncOptions.after?
-
-	stopContainer = ->
-		{ uuid } = syncOptions
-
-		spinnerPromise(
-			resin.models.device.stopApplication(uuid)
-			'Stopping application container...'
-			'Application container stopped.'
-		).then (containerId) ->
-			_.merge(syncOptions, { containerId })
-
 	syncContainer = Promise.method ->
 		{ uuid, containerId, source, destination } = syncOptions
 
@@ -282,43 +268,33 @@ module.exports = (uuid, cliOptions) ->
 			"Synced #{destination} on #{uuid.substring(0, 7)}."
 		)
 
-	startContainer = ->
-		{ uuid } = syncOptions
-
-		spinnerPromise(
-			resin.models.device.startApplication(uuid)
-			'Starting application container...'
-			'Application container started.'
-		)
-
-	startContainerAfterError = ->
-		{ uuid } = syncOptions
-
-		spinnerPromise(
-			resin.models.device.startApplication(uuid)
-			'Attempting to restart stopped application container after failed \'resin sync\'...'
-			'Application container restarted after failed \'resin sync\'.'
-		)
-
 	prepareOptions(uuid, cliOptions)
 	.then(_.partial(_.merge, syncOptions))
 	.then(getDeviceInfo)
 	.then ->
 		saveOptions(syncOptions)
-	.then(beforeAction)
-	.then(stopContainer)
-	.then ->
+	.then -> # run 'before' action
+		if syncOptions.before?
+			shell.runCommand(syncOptions.before, syncOptions.source)
+	.then -> # stop container
+		stopContainer(resin.models.device.stopApplication(uuid)).then (containerId) ->
+			# the resolved 'containerId' value is needed for the rsync process over resin-proxy
+			_.merge(syncOptions, { containerId })
+	.then -> # sync container
 		syncContainer()
-		.then(startContainer)
-		.then(afterAction)
+		.then -> # start container
+			startContainer(resin.models.device.startApplication(uuid))
+		.then -> # run 'after' action
+			if syncOptions.after?
+				shell.runCommand(syncOptions.after, syncOptions.source)
 		.then ->
 			console.log(chalk.green.bold('\nresin sync completed successfully!'))
 		.catch (err) ->
 			# Notify the user of the error and run 'startApplication()'
 			# once again to make sure that a new app container will be started
-			startContainerAfterError()
+			startContainerAfterError(resin.models.device.startApplication(uuid))
 			.catch (err) ->
-				console.log('Could not restart application container', err)
+				console.log('Could not start application container', err)
 			.finally ->
 				throw err
 	.catch (err) ->
