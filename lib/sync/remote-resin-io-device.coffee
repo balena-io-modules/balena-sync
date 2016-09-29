@@ -71,6 +71,20 @@ ensureHostOSCompatibility = Promise.method (osRelease, minVersion) ->
 	if semver.lt(version, minVersion)
 		throw new Error("Incompatible HostOS version: #{osRelease} - must be >= #{minVersion}")
 
+# Resolves with uuid, throws on error or if device is offline
+exports.ensureDeviceIsOnline = (uuid) ->
+	resin.models.device.get(uuid)
+	.then (device) ->
+		if not device.is_online
+			throw new Error("Device is offline: #{uuid}")
+		return uuid
+
+# Resolves with array of online devices, throws on error
+exports.discoverOnlineDevices = ->
+	resin.models.device.getAll()
+	.filter (device) ->
+		device.is_online
+
 ###*
 # @summary Prepare and validate options from command line and `.resin-sync.yml` (if found)
 # @function
@@ -227,7 +241,7 @@ saveOptions = Promise.method (options, baseDir, configFile) ->
 #   progress: false
 # });
 ###
-module.exports = (uuid, cliOptions) ->
+exports.sync = (uuid, cliOptions) ->
 
 	syncOptions = {}
 

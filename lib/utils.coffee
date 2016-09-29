@@ -158,4 +158,3 @@ exports.startContainerAfterError = (promise) ->
 		'Attempting to start application container after failed \'sync\'...'
 		'Application container started after failed \'sync\'.'
 	)
-

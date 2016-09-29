@@ -104,18 +104,13 @@ module.exports =
 		path = require('path')
 		Promise = require('bluebird')
 		_ = require('lodash')
-		resin = require('resin-sdk')
 		form = require('resin-cli-form')
 		{ load } = require('../config')
-		resinSync = require('../sync')('remote-resin-io-device')
+		{ sync, ensureDeviceIsOnline, discoverOnlineDevices } = require('../sync')('remote-resin-io-device')
 
-		#
-		# Device Discovery
-		#
-		selectDevice = (preferredUuid) ->
-			resin.models.device.getAll()
-			.filter (device) ->
-				device.is_online
+		# Resolves with uuid of selected online device, throws on error
+		selectOnlineDevice = ->
+			discoverOnlineDevices()
 			.then (onlineDevices) ->
 				if _.isEmpty(onlineDevices)
 					throw new Error('You don\'t have any devices online')
@@ -123,7 +118,7 @@ module.exports =
 				return form.ask
 					message: 'Select a device'
 					type: 'list'
-					default: if preferredUuid in _.map(onlineDevices, 'uuid') then preferredUuid else onlineDevices[0].uuid
+					default: onlineDevices[0].uuid
 					choices: _.map onlineDevices, (device) ->
 						return {
 							name: "#{device.name or 'Untitled'} (#{device.uuid.slice(0, 7)})"
@@ -143,17 +138,26 @@ module.exports =
 			if options.ignore?
 				options.ignore = options.ignore.split(',')
 
-			Promise.resolve(params.uuid)
-			.then (uuid) ->
-				if not uuid?
-					preferredUuid = load(options.source).uuid
-					return selectDevice(preferredUuid)
+			#
+			# Choose Sync Destination
+			#
 
-				resin.models.device.has(uuid)
-				.then (hasDevice) ->
-					if not hasDevice
-						throw new Error("Device not found: #{uuid}")
-					return uuid
-			.then (uuid) ->
-				resinSync(uuid, options)
+			# If uuid was explicitly passed as a parameter then make sure it exists or fail otherwise
+			if params?.uuid
+				return ensureDeviceIsOnline(params.uuid)
+
+			# Attempt to load uuid from .resin-sync.yml
+			# If no saved uuid was found, present dialog to select an online device
+			{ uuid } = load(options.source)
+			if not uuid?
+				return selectOnlineDevice()
+
+			# If the saved uuid in .resin-sync.yml refers to a device that does not exist
+			# or is offline then present device selection dialog instead of failing with an error
+			ensureDeviceIsOnline(uuid)
+			.catch ->
+				console.log "Device #{uuid} not found or is offline."
+				return selectOnlineDevice()
+		.then (uuid) ->
+			sync(uuid, options)
 		.nodeify(done)
