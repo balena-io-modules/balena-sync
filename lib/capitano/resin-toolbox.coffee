@@ -102,7 +102,6 @@ module.exports =
 		Promise = require('bluebird')
 		{ selectLocalResinOSDevice } = require('../utils')
 		resinSync = require('../sync')('local-resin-os-device')
-		{ load } = require('../config')
 		{ findAvahiDevices } = require('../autodiscovery')
 
 		Promise.try ->

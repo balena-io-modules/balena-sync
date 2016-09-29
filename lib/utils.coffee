@@ -14,10 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ###
 
+fs = require('fs')
+path = require('path')
 Promise = require('bluebird')
 _ = require('lodash')
 revalidator = require('revalidator')
 Spinner = require('resin-cli-visuals').Spinner
+form = require('resin-cli-form')
+{ load } = require('./config')
 
 ###*
 # @summary Validate object
@@ -87,8 +91,6 @@ unescapeSpaces = (pattern) ->
 #	}
 ###
 exports.gitignoreToRsyncPatterns = (gitignoreFile) ->
-	fs = require('fs')
-
 	patterns = fs.readFileSync(gitignoreFile, encoding: 'utf8').split('\n')
 
 	patterns = _.map(patterns, unescapeSpaces)
@@ -158,3 +160,46 @@ exports.startContainerAfterError = (promise) ->
 		'Attempting to start application container after failed \'sync\'...'
 		'Application container started after failed \'sync\'.'
 	)
+
+# Get sync options from command line and `.resin-sync.yml`
+# Command line options have precedence over the ones saved in `.resin-sync.yml`
+exports.getSyncOptions = (options = {}) ->
+	Promise.try ->
+		try
+			if not options.source?
+				fs.accessSync(path.join(process.cwd(), '.resin-sync.yml'))
+				options.source = process.cwd()
+		catch
+			throw new Error('No --source option passed and no \'.resin-sync.yml\' file found in current directory.')
+
+		return load(options.source)
+	.then	(resinSyncYml) ->
+		syncOptions = {}
+
+		# Capitano does not support comma separated options yet
+		if options.ignore?
+			options.ignore = options.ignore.split(',')
+
+		_.mergeWith syncOptions, resinSyncYml, options, (objVal, srcVal, key) ->
+			# Give precedence to command line 'ignore' options
+			if key is 'ignore'
+				return srcVal
+
+		# Filter out empty 'ignore' paths
+		syncOptions.ignore = _.filter(syncOptions.ignore, (item) -> not _.isEmpty(item))
+
+		# Only add default 'ignore' options if user has not explicitly set an empty
+		# 'ignore' setting in '.resin-sync.yml'
+		if syncOptions.ignore.length is 0 and not resinSyncYml.ignore?
+			syncOptions.ignore = [ '.git', 'node_modules/' ]
+
+		form.run [
+			message: 'Destination directory on device container [/usr/src/app]'
+			name: 'destination'
+			type: 'input'
+		],
+			override:
+				destination: syncOptions.destination
+		.get('destination')
+		.then (destination) ->
+			_.assign(syncOptions, destination: destination ? '/usr/src/app')

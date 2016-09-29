@@ -100,12 +100,11 @@ module.exports =
 		,
 	]
 	action: (params, options, done) ->
-		fs = require('fs')
-		path = require('path')
 		Promise = require('bluebird')
 		_ = require('lodash')
 		form = require('resin-cli-form')
-		{ load } = require('../config')
+		{ save } = require('../config')
+		{ getSyncOptions } = require('../utils')
 		{ sync, ensureDeviceIsOnline, discoverOnlineDevices } = require('../sync')('remote-resin-io-device')
 
 		# Resolves with uuid of selected online device, throws on error
@@ -126,38 +125,30 @@ module.exports =
 						}
 
 		Promise.try ->
-			try
-				fs.accessSync(path.join(process.cwd(), '.resin-sync.yml'))
-			catch
-				if not options.source?
-					throw new Error('No --source option passed and no \'.resin-sync.yml\' file found in current directory.')
-
-			options.source ?= process.cwd()
-
-			# TODO: Add comma separated options to Capitano
-			if options.ignore?
-				options.ignore = options.ignore.split(',')
-
-			#
-			# Choose Sync Destination
-			#
-
 			# If uuid was explicitly passed as a parameter then make sure it exists or fail otherwise
 			if params?.uuid
 				return ensureDeviceIsOnline(params.uuid)
 
-			# Attempt to load uuid from .resin-sync.yml
-			# If no saved uuid was found, present dialog to select an online device
-			{ uuid } = load(options.source)
-			if not uuid?
-				return selectOnlineDevice()
+			getSyncOptions(options)
+			.then (@syncOptions) =>
+				if @syncOptions.uuid?
+					# If the saved uuid in .resin-sync.yml refers to a device that does not exist
+					# or is offline then present device selection dialog instead of failing with an error
+					return ensureDeviceIsOnline(@syncOptions.uuid).catch ->
+						console.log "Device #{@syncOptions.uuid} not found or is offline."
+						return selectOnlineDevice()
 
-			# If the saved uuid in .resin-sync.yml refers to a device that does not exist
-			# or is offline then present device selection dialog instead of failing with an error
-			ensureDeviceIsOnline(uuid)
-			.catch ->
-				console.log "Device #{uuid} not found or is offline."
+				# If no saved uuid was found, present dialog to select an online device
 				return selectOnlineDevice()
-		.then (uuid) ->
-			sync(uuid, options)
+			.then (uuid) =>
+				_.assign(@syncOptions, { uuid })
+				_.defaults(@syncOptions, port: 22)
+
+				# Save options to `.resin-sync.yml`
+				save(
+					_.pick(@syncOptions, [ 'uuid', 'destination', 'port', 'before', 'after', 'ignore', 'skip-gitignore' ])
+					@syncOptions.source
+				)
+			.then =>
+				sync(@syncOptions)
 		.nodeify(done)
