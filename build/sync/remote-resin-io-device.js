@@ -18,7 +18,7 @@ limitations under the License.
 /**
  * @module resinSync
  */
-var MIN_HOSTOS_RSYNC, Promise, Spinner, chalk, config, ensureHostOSCompatibility, form, prepareOptions, resin, rsync, saveOptions, semver, semverRegExp, shell, utils, _;
+var MIN_HOSTOS_RSYNC, Promise, buildRsyncCommand, chalk, ensureHostOSCompatibility, resin, semver, semverRegExp, settings, shell, spinnerPromise, startContainer, startContainerAfterError, stopContainer, _, _ref;
 
 Promise = require('bluebird');
 
@@ -26,21 +26,17 @@ _ = require('lodash');
 
 chalk = require('chalk');
 
+semver = require('semver');
+
 resin = require('resin-sdk');
 
-Spinner = require('resin-cli-visuals').Spinner;
-
-form = require('resin-cli-form');
-
-rsync = require('../rsync');
-
-utils = require('../utils');
+settings = require('resin-settings-client');
 
 shell = require('../shell');
 
-config = require('../config');
+buildRsyncCommand = require('../rsync').buildRsyncCommand;
 
-semver = require('semver');
+_ref = require('../utils'), spinnerPromise = _ref.spinnerPromise, startContainer = _ref.startContainer, stopContainer = _ref.stopContainer, startContainerAfterError = _ref.startContainerAfterError;
 
 MIN_HOSTOS_RSYNC = '1.1.4';
 
@@ -70,8 +66,8 @@ semverRegExp = /[0-9]+\.[0-9]+\.[0-9]+(?:(-|\+)[^\s]+)?/;
  */
 
 ensureHostOSCompatibility = Promise.method(function(osRelease, minVersion) {
-  var version, _ref;
-  version = osRelease != null ? (_ref = osRelease.match(semverRegExp)) != null ? _ref[0] : void 0 : void 0;
+  var version, _ref1;
+  version = osRelease != null ? (_ref1 = osRelease.match(semverRegExp)) != null ? _ref1[0] : void 0 : void 0;
   if (version == null) {
     throw new Error("Could not parse semantic version from HostOS release info: " + osRelease);
   }
@@ -80,115 +76,14 @@ ensureHostOSCompatibility = Promise.method(function(osRelease, minVersion) {
   }
 });
 
-
-/**
- * @summary Prepare and validate options from command line and `.resin-sync.yml` (if found)
- * @function
- * @private
- *
- * @param {String} uuid
- * @param {String} cliOptions - cli options passed by the user
- * @returns {Promise} options - the options to use for this resin sync run
- *
- */
-
-prepareOptions = Promise.method(function(uuid, cliOptions) {
-  utils.validateObject(cliOptions, {
-    properties: {
-      source: {
-        description: 'source',
-        type: 'any',
-        required: true,
-        message: 'The source option should be a string'
-      },
-      before: {
-        description: 'before',
-        type: 'string',
-        message: 'The before option should be a string'
-      },
-      after: {
-        description: 'after',
-        type: 'string',
-        message: 'The after option should be a string'
-      }
+exports.ensureDeviceIsOnline = function(uuid) {
+  return resin.models.device.get(uuid).then(function(device) {
+    if (!device.is_online) {
+      throw new Error("Device is offline: " + uuid);
     }
+    return uuid;
   });
-  return Promise["try"](function() {
-    var configFileOptions;
-    configFileOptions = config.load(cliOptions.source);
-    if (!_.isEmpty(configFileOptions)) {
-      return configFileOptions;
-    }
-    try {
-      this.oldConfigFileOptions = config.load(cliOptions.source, 'resin-sync.yml');
-      if (_.isEmpty(this.oldConfigFileOptions)) {
-        return {};
-      }
-    } catch (_error) {
-      return {};
-    }
-    return form.ask({
-      message: 'A \'resin-sync.yml\' configuration file was found, but the current resin-cli version expects a \'.resin-sync.yml\' file instead.\nConvert \'resin-sync.yml\' to \'.resin-sync.yml\' (the original file will be kept either way) ?',
-      type: 'list',
-      choices: ['Yes', 'No']
-    }).then(function(answer) {
-      if (answer === 'No') {
-        return {};
-      } else {
-        saveOptions(this.oldConfigFileOptions, cliOptions.source, '.resin-sync.yml');
-        return config.load(cliOptions.source);
-      }
-    });
-  }).then(function(loadedOptions) {
-    var options;
-    options = {};
-    _.mergeWith(options, loadedOptions, cliOptions, {
-      uuid: uuid
-    }, function(objVal, srcVal) {
-      if (_.isArray(objVal)) {
-        return srcVal;
-      }
-    });
-    return form.run([
-      {
-        message: 'Destination directory on device [/usr/src/app]',
-        name: 'destination',
-        type: 'input'
-      }
-    ], {
-      override: {
-        destination: options.destination
-      }
-    }).get('destination').then(function(dest) {
-      _.defaults(options, {
-        destination: dest != null ? dest : '/usr/src/app',
-        port: 22
-      });
-      options.ignore = _.filter(options.ignore, function(item) {
-        return !_.isEmpty(item);
-      });
-      if (options.ignore.length === 0 && (loadedOptions.ignore == null)) {
-        options.ignore = ['.git', 'node_modules/'];
-      }
-      return options;
-    });
-  });
-});
-
-
-/**
- * @summary Save passed options to '.resin-sync.yml' in 'source' folder
- * @function
- * @private
- *
- * @param {String} options - options to save to `.resin-sync.yml`
- * @returns {Promise} - Promise is rejected if file could not be saved
- *
- */
-
-saveOptions = Promise.method(function(options, baseDir, configFile) {
-  return config.save(_.pick(options, ['uuid', 'destination', 'port', 'before', 'after', 'ignore', 'skip-gitignore']), baseDir != null ? baseDir : options.source, configFile != null ? configFile : '.resin-sync.yml');
-});
+};
 
 
 /**
@@ -219,19 +114,21 @@ saveOptions = Promise.method(function(options, baseDir, configFile) {
  * Notice that explicitly passed command options override the ones
  * set in the configuration file.
  *
- * @param {String} uuid - device uuid
- * @param {Object} [cliOptions] - cli options
- * @param {String[]} [cliOptions.source] - source directory on local host
- * @param {String[]} [cliOptions.destination=/usr/src/app] - destination directory on device
- * @param {String[]} [cliOptions.ignore] - ignore paths
- * @param {String[]} [cliOptions.skip-gitignore] - skip .gitignore when parsing exclude/include files
- * @param {String} [cliOptions.before] - command to execute before sync
- * @param {String} [cliOptions.after] - command to execute after sync
- * @param {Boolean} [cliOptions.progress] - display rsync progress
- * @param {Number} [cliOptions.port=22] - ssh port
+ * @param {Object} [syncOptions] - cli options
+ * @param {String} [syncOptions.uuid] - device uuid
+ * @param {String} [syncOptions.source] - source directory on local host
+ * @param {String} [syncOptions.destination=/usr/src/app] - destination directory on device
+ * @param {Number} [syncOptions.port] - ssh port
+ * @param {String} [syncOptions.before] - command to execute before sync
+ * @param {String} [syncOptions.after] - command to execute after sync
+ * @param {String[]} [syncOptions.ignore] - ignore paths
+ * @param {Boolean} [syncOptions.skip-gitignore] - skip .gitignore when parsing exclude/include files
+ * @param {Boolean} [syncOptions.progress] - display rsync progress
+ * @param {Boolean} [syncOptions.verbose] - display verbose info
  *
  * @example
- * resinSync('7a4e3dc', {
+ * sync({
+ *		uuid: '7a4e3dc',
  *		source: '.',
  *		destination: '/usr/src/app',
  *   ignore: [ '.git', 'node_modules' ],
@@ -239,30 +136,10 @@ saveOptions = Promise.method(function(options, baseDir, configFile) {
  * });
  */
 
-module.exports = function(uuid, cliOptions) {
-  var afterAction, beforeAction, clearSpinner, getDeviceInfo, spinnerPromise, startContainer, startContainerAfterError, stopContainer, syncContainer, syncOptions;
-  syncOptions = {};
-  clearSpinner = function(spinner, msg) {
-    if (spinner != null) {
-      spinner.stop();
-    }
-    if (msg != null) {
-      return console.log(msg);
-    }
-  };
-  spinnerPromise = function(promise, startMsg, stopMsg) {
-    var spinner;
-    spinner = new Spinner(startMsg);
-    spinner.start();
-    return promise.then(function(value) {
-      clearSpinner(spinner, stopMsg);
-      return value;
-    })["catch"](function(err) {
-      clearSpinner(spinner);
-      throw err;
-    });
-  };
+exports.sync = function(syncOptions) {
+  var after, before, getDeviceInfo, source, syncContainer, uuid;
   getDeviceInfo = function() {
+    var uuid;
     uuid = syncOptions.uuid;
     console.info("Getting information for device: " + uuid);
     return resin.models.device.isOnline(uuid).then(function(isOnline) {
@@ -282,62 +159,47 @@ module.exports = function(uuid, cliOptions) {
       return Promise.props({
         uuid: device.uuid,
         username: resin.auth.whoami()
-      }).then(_.partial(_.merge, syncOptions));
-    });
-  };
-  beforeAction = function() {
-    return Promise["try"](function() {
-      if (syncOptions.before != null) {
-        return shell.runCommand(syncOptions.before, {
-          cwd: syncOptions.source
-        });
-      }
-    });
-  };
-  afterAction = function() {
-    return Promise["try"](function() {
-      if (syncOptions.after != null) {
-        return shell.runCommand(syncOptions.after, {
-          cwd: syncOptions.source
-        });
-      }
-    });
-  };
-  stopContainer = function() {
-    uuid = syncOptions.uuid;
-    return spinnerPromise(resin.models.device.stopApplication(uuid), 'Stopping application container...', 'Application container stopped.').then(function(containerId) {
-      return _.merge(syncOptions, {
-        containerId: containerId
-      });
+      }).then(_.partial(_.assign, syncOptions));
     });
   };
   syncContainer = Promise.method(function() {
-    var command, containerId, destination, source;
+    var command, containerId, destination, source, uuid;
     uuid = syncOptions.uuid, containerId = syncOptions.containerId, source = syncOptions.source, destination = syncOptions.destination;
     if (containerId == null) {
       throw new Error('No stopped application container found');
     }
-    command = rsync.getCommand(syncOptions);
+    _.assign(syncOptions, {
+      host: "ssh." + (settings.get('proxyUrl')),
+      'remote-cmd': "rsync " + uuid + " " + containerId
+    });
+    command = buildRsyncCommand(syncOptions);
     return spinnerPromise(shell.runCommand(command, {
       cwd: source
     }), "Syncing to " + destination + " on " + (uuid.substring(0, 7)) + "...", "Synced " + destination + " on " + (uuid.substring(0, 7)) + ".");
   });
-  startContainer = function() {
-    uuid = syncOptions.uuid;
-    return spinnerPromise(resin.models.device.startApplication(uuid), 'Starting application container...', 'Application container started.');
-  };
-  startContainerAfterError = function() {
-    uuid = syncOptions.uuid;
-    return spinnerPromise(resin.models.device.startApplication(uuid), 'Attempting to restart stopped application container after failed \'resin sync\'...', 'Application container restarted after failed \'resin sync\'.');
-  };
-  return prepareOptions(uuid, cliOptions).then(_.partial(_.merge, syncOptions)).then(getDeviceInfo).then(function() {
-    return saveOptions(syncOptions);
-  }).then(beforeAction).then(stopContainer).then(function() {
-    return syncContainer().then(startContainer).then(afterAction).then(function() {
+  source = syncOptions.source, uuid = syncOptions.uuid, before = syncOptions.before, after = syncOptions.after;
+  return getDeviceInfo().then(function() {
+    if (before != null) {
+      return shell.runCommand(before, source);
+    }
+  }).then(function() {
+    return stopContainer(resin.models.device.stopApplication(uuid)).then(function(containerId) {
+      return _.assign(syncOptions, {
+        containerId: containerId
+      });
+    });
+  }).then(function() {
+    return syncContainer().then(function() {
+      return startContainer(resin.models.device.startApplication(uuid));
+    }).then(function() {
+      if (after != null) {
+        return shell.runCommand(after, source);
+      }
+    }).then(function() {
       return console.log(chalk.green.bold('\nresin sync completed successfully!'));
     })["catch"](function(err) {
-      return startContainerAfterError()["catch"](function(err) {
-        return console.log('Could not restart application container', err);
+      return startContainerAfterError(resin.models.device.startApplication(uuid))["catch"](function(err) {
+        return console.log('Could not start application container', err);
       })["finally"](function() {
         throw err;
       });

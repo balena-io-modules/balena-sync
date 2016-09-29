@@ -14,48 +14,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
  */
-var path, rsync, settings, ssh, utils, _;
+var buildRshOption, path, rsync, utils, _;
 
 path = require('path');
 
 _ = require('lodash');
 
-_.str = require('underscore.string');
-
 rsync = require('rsync');
-
-settings = require('resin-settings-client');
 
 utils = require('./utils');
 
-ssh = require('./ssh');
-
-
-/**
- * @summary Get rsync command
- * @function
- * @protected
- *
- * @param {Object} options - rsync options
- * @param {String} options.username - username
- * @param {String} options.uuid - device uuid
- * @param {String} options.containerId - container id
- * @param {String} options.destination - destination directory on device
- * @param {Boolean} [options.progress] - show progress
- * @param {String|String[]} [options.ignore] - pattern/s to ignore. Note that '.gitignore' is always used as a filter if it exists
- * @param {Number} [options.port=22] - ssh port
- *
- * @returns {String} rsync command
- *
- * @example
- * command = rsync.getCommand
- *		username: 'test',
- *		uuid: '1324'
- *		containerId: '6789'
- */
-
-exports.getCommand = function(options) {
-  var args, gitignoreExclude, patterns, result, rsyncCmd, username, _ref;
+buildRshOption = function(options) {
+  var remoteCmd, result, verbose, _ref;
   if (options == null) {
     options = {};
   }
@@ -64,10 +34,73 @@ exports.getCommand = function(options) {
       username: {
         description: 'username',
         type: 'string',
+        required: true
+      },
+      host: {
+        description: 'host',
+        type: 'string',
+        required: true
+      },
+      port: {
+        description: 'port',
+        type: 'number',
+        required: true
+      },
+      'remote-cmd': {
+        description: 'remote-cmd',
+        type: 'string',
+        required: false
+      },
+      verbose: {
+        description: 'verbose',
+        type: 'boolean'
+      }
+    }
+  });
+  verbose = options.verbose ? '-vv ' : '';
+  remoteCmd = (_ref = options['remote-cmd']) != null ? _ref : '';
+  result = "ssh " + verbose + "-p " + options.port + " -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ControlMaster=no " + options.username + "@" + options.host + " " + remoteCmd;
+  return result;
+};
+
+
+/**
+ * @summary Build rsync command
+ * @function
+ * @protected
+ *
+ * @param {Object} options - rsync options
+ * @param {String} options.host - host
+ * @param {Boolean} [options.progress] - show progress
+ * @param {String|String[]} [options.ignore] - pattern/s to ignore. Note that '.gitignore' is always used as a filter if it exists
+ * @param {Boolean} [options.verbose] - verbose output
+ * @param {Boolean} [options.skip-gitignore] - skip gitignore
+ * @param {String} options.source - source directory on local machine
+ * @param {String} options.destination - destination directory on device
+ *
+ * @returns {String} rsync command
+ *
+ * @example
+ * command = rsync.buildRsyncCommand
+ *		host: 'ssh.resindevice.io'
+ *		source: '/home/uer/app',
+ *		destination: '/usr/src/app'
+ */
+
+exports.buildRsyncCommand = function(options) {
+  var args, gitignoreExclude, patterns, result, rsyncCmd, _ref;
+  if (options == null) {
+    options = {};
+  }
+  utils.validateObject(options, {
+    properties: {
+      host: {
+        description: 'host',
+        type: 'string',
         required: true,
         messages: {
-          type: 'Not a string: username',
-          required: 'Missing username'
+          type: 'Not a string: host',
+          required: 'Missing host'
         }
       },
       progress: {
@@ -104,12 +137,11 @@ exports.getCommand = function(options) {
       }
     }
   });
-  username = options.username;
   args = {
     source: '.',
-    destination: "" + username + "@ssh." + (settings.get('proxyUrl')) + ":" + options.destination,
+    destination: "" + options.host + ":" + options.destination,
     progress: options.progress,
-    shell: ssh.getConnectCommand(options),
+    shell: buildRshOption(options),
     flags: {
       'a': true,
       'z': true,
@@ -131,7 +163,7 @@ exports.getCommand = function(options) {
   result = rsyncCmd.command();
   result = result.replace(/\\\\/g, '\\');
   if (options.verbose) {
-    console.log("resin sync command: " + result);
+    console.log("rsync command: " + result);
   }
   return result;
 };
