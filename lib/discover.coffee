@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-   http://www.apache.org/licenses/LICENSE-2.0
+	 http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,14 +14,23 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ###
 
-syncTargets = [
-	'remote-resin-io-device'
-	'local-resin-os-device'
-]
+Promise = require('bluebird')
+resin = require('resin-sdk')
 
-module.exports = (target) ->
+exports.findAvahiDevices = Promise.method ->
+	return [
+		{
+			name: 'resin.local'
+			ip: '129.168.1.10'
+		}
+		{
+			name: 'resin2.local'
+			ip: '129.168.1.11'
+		}
+	]
 
-	if not target? or target not in syncTargets
-		throw new Error("Invalid resin-sync target '#{target}'. Supported targets are: #{syncTargets}")
-
-	return require("./#{target}")
+# Resolves with array of remote online Resin.io devices, throws on error
+exports.getRemoteResinioOnlineDevices = ->
+	resin.models.device.getAll()
+	.filter (device) ->
+		device.is_online

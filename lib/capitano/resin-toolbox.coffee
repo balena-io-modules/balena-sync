@@ -15,12 +15,13 @@ limitations under the License.
 ###
 
 module.exports =
-	signature: 'sync [uuid]'
-	description: '(beta) sync your changes to a device'
+	signature: 'sync [deviceIp]'
+	description: 'Sync your changes to a container on local ResinOS device '
 	help: '''
 		WARNING: If you're running Windows, this command only supports `cmd.exe`.
 
-		Use this command to sync your local changes to a certain device on the fly.
+		Use this command to sync your local changes to a container on a LAN-accessible resinOS device on the fly.
+		If `Dockerfile` or `package.json` are changed, a new container will be built and run on your device.
 
 		After every 'resin sync' the updated settings will be saved in
 		'<source>/.resin-sync.yml' and will be used in later invocations. You can
@@ -29,7 +30,6 @@ module.exports =
 		Here is an example '.resin-sync.yml' :
 
 			$ cat $PWD/.resin-sync.yml
-			uuid: 7cf02a6
 			destination: '/usr/src/app'
 			before: 'echo Hello'
 			after: 'echo Done'
@@ -45,23 +45,22 @@ module.exports =
 
 		Examples:
 
-			$ resin sync 7cf02a6 --source . --destination /usr/src/app
-			$ resin sync 7cf02a6 -s /home/user/myResinProject -d /usr/src/app --before 'echo Hello' --after 'echo Done'
-			$ resin sync --ignore lib/
-			$ resin sync --verbose false
-			$ resin sync
+			$ resin-toolbox sync
+			$ resin-toolbox sync --ignore lib/
+			$ resin-toolbox sync --verbose false
+			$ resin-toolbox sync 192.168.2.10 --source . --destination /usr/src/app
+			$ resin-toolbox sync 192.168.2.10 -s /home/user/myResinProject -d /usr/src/app --before 'echo Hello' --after 'echo Done'
 	'''
-	permission: 'user'
 	primary: true
 	options: [
 			signature: 'source'
 			parameter: 'path'
-			description: 'local directory path to synchronize to device'
+			description: 'local directory path to synchronize to device container'
 			alias: 's'
 		,
 			signature: 'destination'
 			parameter: 'path'
-			description: 'destination path on device'
+			description: 'destination path on device container'
 			alias: 'd'
 		,
 			signature: 'ignore'
@@ -105,51 +104,41 @@ module.exports =
 		form = require('resin-cli-form')
 		{ save } = require('../config')
 		{ getSyncOptions } = require('../utils')
-		{ getRemoteResinioOnlineDevices } = require('../discover')
-		{ sync, ensureDeviceIsOnline, } = require('../sync')('remote-resin-io-device')
+		{ findAvahiDevices } = require('../discover')
+		{ sync } = require('../sync')('local-resin-os-device')
 
-		# Resolves with uuid of selected online device, throws on error
-		selectOnlineDevice = ->
-			getRemoteResinioOnlineDevices()
-			.then (onlineDevices) ->
-				if _.isEmpty(onlineDevices)
-					throw new Error('You don\'t have any devices online')
+		selectLocalResinOSDevice = ->
+			findAvahiDevices()
+			.then (devices) ->
+				if _.isEmpty(devices)
+					throw new Error('You don\'t have any local ResinOS devices')
 
 				return form.ask
 					message: 'Select a device'
 					type: 'list'
-					default: onlineDevices[0].uuid
-					choices: _.map onlineDevices, (device) ->
+					default: devices[0].ip
+					choices: _.map devices, (device) ->
 						return {
-							name: "#{device.name or 'Untitled'} (#{device.uuid.slice(0, 7)})"
-							value: device.uuid
+							name: "#{device.name or 'Untitled'} (#{device.ip})"
+							value: device.ip
 						}
 
 		Promise.try ->
-			# If uuid was explicitly passed as a parameter then make sure it exists or fail otherwise
-			if params?.uuid
-				return ensureDeviceIsOnline(params.uuid)
-
 			getSyncOptions(options)
 			.then (@syncOptions) =>
-				if @syncOptions.uuid?
-					# If the saved uuid in .resin-sync.yml refers to a device that does not exist
-					# or is offline then present device selection dialog instead of failing with an error
-					return ensureDeviceIsOnline(@syncOptions.uuid).catch ->
-						console.log "Device #{@syncOptions.uuid} not found or is offline."
-						return selectOnlineDevice()
-
-				# If no saved uuid was found, present dialog to select an online device
-				return selectOnlineDevice()
-			.then (uuid) =>
-				_.assign(@syncOptions, { uuid })
-				_.defaults(@syncOptions, port: 22)
+				if not params.deviceIp?
+					return selectLocalResinOSDevice()
+				return params.deviceIp
+			.then (deviceIp) ->
+				_.assign(@syncOptions, { deviceIp })
+				_.defaults(@syncOptions, port: 22222)
 
 				# Save options to `.resin-sync.yml`
 				save(
-					_.omit(@syncOptions, [ 'source', 'verbose', 'progress' ])
+					_.omit(@syncOptions, [ 'source', 'verbose', 'progress', 'deviceIp' ])
 					@syncOptions.source
 				)
 			.then =>
+				console.log "Attempting to sync to /dev/null on device #{@syncOptions.deviceIp}"
 				sync(@syncOptions)
 		.nodeify(done)

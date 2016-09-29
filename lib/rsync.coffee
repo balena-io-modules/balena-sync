@@ -16,35 +16,10 @@ limitations under the License.
 
 path = require('path')
 _ = require('lodash')
-_.str = require('underscore.string')
 rsync = require('rsync')
-settings = require('resin-settings-client')
 utils = require('./utils')
-ssh = require('./ssh')
 
-###*
-# @summary Get rsync command
-# @function
-# @protected
-#
-# @param {Object} options - rsync options
-# @param {String} options.username - username
-# @param {String} options.uuid - device uuid
-# @param {String} options.containerId - container id
-# @param {String} options.destination - destination directory on device
-# @param {Boolean} [options.progress] - show progress
-# @param {String|String[]} [options.ignore] - pattern/s to ignore. Note that '.gitignore' is always used as a filter if it exists
-# @param {Number} [options.port=22] - ssh port
-#
-# @returns {String} rsync command
-#
-# @example
-# command = rsync.getCommand
-#		username: 'test',
-#		uuid: '1324'
-#		containerId: '6789'
-###
-exports.getCommand = (options = {}) ->
+buildRshOption = (options = {}) ->
 
 	utils.validateObject options,
 		properties:
@@ -52,9 +27,72 @@ exports.getCommand = (options = {}) ->
 				description: 'username'
 				type: 'string'
 				required: true
+			host:
+				description: 'host'
+				type: 'string'
+				required: true
+			port:
+				description: 'port'
+				type: 'number'
+				required: true
+			'remote-cmd':
+				description: 'remote-cmd'
+				type: 'string'
+				required: false
+			verbose:
+				description: 'verbose'
+				type: 'boolean'
+
+	verbose = if options.verbose then '-vv ' else ''
+	remoteCmd = options['remote-cmd'] ? ''
+
+	result = """
+		ssh \
+		#{verbose}\
+		-p #{options.port} \
+		-o LogLevel=ERROR \
+		-o StrictHostKeyChecking=no \
+		-o UserKnownHostsFile=/dev/null \
+		-o ControlMaster=no \
+		#{options.username}@#{options.host} \
+		#{remoteCmd}
+	"""
+
+	return result
+
+###*
+# @summary Build rsync command
+# @function
+# @protected
+#
+# @param {Object} options - rsync options
+# @param {String} options.host - host
+# @param {Boolean} [options.progress] - show progress
+# @param {String|String[]} [options.ignore] - pattern/s to ignore. Note that '.gitignore' is always used as a filter if it exists
+# @param {Boolean} [options.verbose] - verbose output
+# @param {Boolean} [options.skip-gitignore] - skip gitignore
+# @param {String} options.source - source directory on local machine
+# @param {String} options.destination - destination directory on device
+#
+# @returns {String} rsync command
+#
+# @example
+# command = rsync.buildRsyncCommand
+#		host: 'ssh.resindevice.io'
+#		source: '/home/uer/app',
+#		destination: '/usr/src/app'
+###
+exports.buildRsyncCommand = (options = {}) ->
+
+	utils.validateObject options,
+		properties:
+			host:
+				description: 'host'
+				type: 'string'
+				required: true
 				messages:
-					type: 'Not a string: username'
-					required: 'Missing username'
+					type: 'Not a string: host'
+					required: 'Missing host'
 			progress:
 				description: 'progress'
 				type: 'boolean'
@@ -82,12 +120,11 @@ exports.getCommand = (options = {}) ->
 				required: true
 				message: 'Not a string: destination'
 
-	{ username } = options
 	args =
 		source: '.'
-		destination: "#{username}@ssh.#{settings.get('proxyUrl')}:#{options.destination}"
+		destination: "#{options.host}:#{options.destination}"
 		progress: options.progress
-		shell: ssh.getConnectCommand(options)
+		shell: buildRshOption(options)
 
 		# a = archive mode.
 		# This makes sure rsync synchronizes the
@@ -125,6 +162,6 @@ exports.getCommand = (options = {}) ->
 	# backslashes on Windows for some reason.
 	result = result.replace(/\\\\/g, '\\')
 
-	console.log("resin sync command: #{result}") if options.verbose
+	console.log("rsync command: #{result}") if options.verbose
 
 	return result

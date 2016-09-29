@@ -21,14 +21,16 @@ limitations under the License.
 Promise = require('bluebird')
 _ = require('lodash')
 chalk = require('chalk')
-resin = require('resin-sdk')
-Spinner = require('resin-cli-visuals').Spinner
-form = require('resin-cli-form')
-rsync = require('../rsync')
-utils = require('../utils')
-shell = require('../shell')
-config = require('../config')
 semver = require('semver')
+resin = require('resin-sdk')
+settings = require('resin-settings-client')
+shell = require('../shell')
+{ buildRsyncCommand } = require('../rsync')
+{ spinnerPromise
+	startContainer
+	stopContainer
+	startContainerAfterError
+} = require('../utils')
 
 MIN_HOSTOS_RSYNC = '1.1.4'
 
@@ -65,113 +67,13 @@ ensureHostOSCompatibility = Promise.method (osRelease, minVersion) ->
 	if semver.lt(version, minVersion)
 		throw new Error("Incompatible HostOS version: #{osRelease} - must be >= #{minVersion}")
 
-###*
-# @summary Prepare and validate options from command line and `.resin-sync.yml` (if found)
-# @function
-# @private
-#
-# @param {String} uuid
-# @param {String} cliOptions - cli options passed by the user
-# @returns {Promise} options - the options to use for this resin sync run
-#
-###
-prepareOptions = Promise.method (uuid, cliOptions) ->
-	utils.validateObject cliOptions,
-		properties:
-			source:
-				description: 'source'
-				type: 'any'
-				required: true
-				message: 'The source option should be a string'
-			before:
-				description: 'before'
-				type: 'string'
-				message: 'The before option should be a string'
-			after:
-				description: 'after'
-				type: 'string'
-				message: 'The after option should be a string'
-
-	Promise.try ->
-		configFileOptions = config.load(cliOptions.source)
-
-		return configFileOptions if not _.isEmpty(configFileOptions)
-
-		# If `.resin-sync.yml` is not found, look for a backwards-compatible `resin-sync.yml` and prompt the user
-		# for confirmation to convert it to `.resin-sync.yml`. This is to make a smoother transition
-		# from older resin sync versions, where `resin-sync.yml` was used. The original
-		# `resin-sync.yml` will not be deleted.
-		try
-			@oldConfigFileOptions = config.load(cliOptions.source, 'resin-sync.yml')
-			return {} if _.isEmpty(@oldConfigFileOptions)
-		catch
-			return {}
-
-		form.ask
-			message: '''
-				A \'resin-sync.yml\' configuration file was found, but the current resin-cli version expects a \'.resin-sync.yml\' file instead.
-				Convert \'resin-sync.yml\' to \'.resin-sync.yml\' (the original file will be kept either way) ?
-			'''
-			type: 'list'
-			choices: [ 'Yes', 'No' ]
-		.then (answer) ->
-			if answer is 'No'
-				return {}
-			else
-				saveOptions(@oldConfigFileOptions, cliOptions.source, '.resin-sync.yml')
-				return config.load(cliOptions.source)
-	.then	(loadedOptions) ->
-		options = {}
-
-		_.mergeWith options, loadedOptions, cliOptions, { uuid }, (objVal, srcVal) ->
-			# Give precedence to command line 'ignore' options
-			if _.isArray(objVal)
-				return srcVal
-
-		form.run [
-			message: 'Destination directory on device [/usr/src/app]'
-			name: 'destination'
-			type: 'input'
-		],
-			override:
-				destination: options.destination
-		.get('destination')
-		.then (dest) ->
-
-			# Set default options
-			_.defaults options,
-				destination: dest ? '/usr/src/app'
-				port: 22
-
-			# Filter out empty 'ignore' paths
-			options.ignore = _.filter(options.ignore, (item) -> not _.isEmpty(item))
-
-			# Only add default 'ignore' options if user has not explicitly set an empty
-			# 'ignore' setting in '.resin-sync.yml'
-			if options.ignore.length is 0 and not loadedOptions.ignore?
-				options.ignore = [ '.git', 'node_modules/' ]
-
-			return options
-
-###*
-# @summary Save passed options to '.resin-sync.yml' in 'source' folder
-# @function
-# @private
-#
-# @param {String} options - options to save to `.resin-sync.yml`
-# @returns {Promise} - Promise is rejected if file could not be saved
-#
-###
-saveOptions = Promise.method (options, baseDir, configFile) ->
-
-	config.save(
-		_.pick(
-			options
-			[ 'uuid', 'destination', 'port', 'before', 'after', 'ignore', 'skip-gitignore' ]
-		)
-		baseDir ? options.source
-		configFile ? '.resin-sync.yml'
-	)
+# Resolves with uuid, throws on error or if device is offline
+exports.ensureDeviceIsOnline = (uuid) ->
+	resin.models.device.get(uuid)
+	.then (device) ->
+		if not device.is_online
+			throw new Error("Device is offline: #{uuid}")
+		return uuid
 
 ###*
 # @summary Sync your changes with a device
@@ -201,44 +103,28 @@ saveOptions = Promise.method (options, baseDir, configFile) ->
 # Notice that explicitly passed command options override the ones
 # set in the configuration file.
 #
-# @param {String} uuid - device uuid
-# @param {Object} [cliOptions] - cli options
-# @param {String[]} [cliOptions.source] - source directory on local host
-# @param {String[]} [cliOptions.destination=/usr/src/app] - destination directory on device
-# @param {String[]} [cliOptions.ignore] - ignore paths
-# @param {String[]} [cliOptions.skip-gitignore] - skip .gitignore when parsing exclude/include files
-# @param {String} [cliOptions.before] - command to execute before sync
-# @param {String} [cliOptions.after] - command to execute after sync
-# @param {Boolean} [cliOptions.progress] - display rsync progress
-# @param {Number} [cliOptions.port=22] - ssh port
+# @param {Object} [syncOptions] - cli options
+# @param {String} [syncOptions.uuid] - device uuid
+# @param {String} [syncOptions.source] - source directory on local host
+# @param {String} [syncOptions.destination=/usr/src/app] - destination directory on device
+# @param {Number} [syncOptions.port] - ssh port
+# @param {String} [syncOptions.before] - command to execute before sync
+# @param {String} [syncOptions.after] - command to execute after sync
+# @param {String[]} [syncOptions.ignore] - ignore paths
+# @param {Boolean} [syncOptions.skip-gitignore] - skip .gitignore when parsing exclude/include files
+# @param {Boolean} [syncOptions.progress] - display rsync progress
+# @param {Boolean} [syncOptions.verbose] - display verbose info
 #
 # @example
-# resinSync('7a4e3dc', {
+# sync({
+#		uuid: '7a4e3dc',
 #		source: '.',
 #		destination: '/usr/src/app',
 #   ignore: [ '.git', 'node_modules' ],
 #   progress: false
 # });
 ###
-module.exports = (uuid, cliOptions) ->
-
-	syncOptions = {}
-
-	clearSpinner = (spinner, msg) ->
-		spinner.stop() if spinner?
-		console.log(msg) if msg?
-
-	spinnerPromise = (promise, startMsg, stopMsg) ->
-		spinner = new Spinner(startMsg)
-		spinner.start()
-		promise.then (value) ->
-			clearSpinner(spinner, stopMsg)
-			return value
-		.catch (err) ->
-			clearSpinner(spinner)
-			throw err
-
-	# Each sync step is a separate Promise
+exports.sync = (syncOptions) ->
 
 	getDeviceInfo = ->
 		{ uuid } = syncOptions
@@ -259,25 +145,7 @@ module.exports = (uuid, cliOptions) ->
 			Promise.props
 				uuid: device.uuid	# get full uuid
 				username: resin.auth.whoami()
-			.then(_.partial(_.merge, syncOptions))
-
-	beforeAction = ->
-		Promise.try ->
-			shell.runCommand(syncOptions.before, cwd: syncOptions.source) if syncOptions.before?
-
-	afterAction = ->
-		Promise.try ->
-			shell.runCommand(syncOptions.after, cwd: syncOptions.source) if syncOptions.after?
-
-	stopContainer = ->
-		{ uuid } = syncOptions
-
-		spinnerPromise(
-			resin.models.device.stopApplication(uuid)
-			'Stopping application container...'
-			'Application container stopped.'
-		).then (containerId) ->
-			_.merge(syncOptions, { containerId })
+			.then(_.partial(_.assign, syncOptions))
 
 	syncContainer = Promise.method ->
 		{ uuid, containerId, source, destination } = syncOptions
@@ -285,7 +153,11 @@ module.exports = (uuid, cliOptions) ->
 		if not containerId?
 			throw new Error('No stopped application container found')
 
-		command = rsync.getCommand(syncOptions)
+		_.assign syncOptions,
+					host: "ssh.#{settings.get('proxyUrl')}"
+					'remote-cmd': "rsync #{uuid} #{containerId}"
+
+		command = buildRsyncCommand(syncOptions)
 
 		spinnerPromise(
 			shell.runCommand(command, cwd: source)
@@ -293,43 +165,31 @@ module.exports = (uuid, cliOptions) ->
 			"Synced #{destination} on #{uuid.substring(0, 7)}."
 		)
 
-	startContainer = ->
-		{ uuid } = syncOptions
+	{ source, uuid, before, after } = syncOptions
 
-		spinnerPromise(
-			resin.models.device.startApplication(uuid)
-			'Starting application container...'
-			'Application container started.'
-		)
-
-	startContainerAfterError = ->
-		{ uuid } = syncOptions
-
-		spinnerPromise(
-			resin.models.device.startApplication(uuid)
-			'Attempting to restart stopped application container after failed \'resin sync\'...'
-			'Application container restarted after failed \'resin sync\'.'
-		)
-
-	prepareOptions(uuid, cliOptions)
-	.then(_.partial(_.merge, syncOptions))
-	.then(getDeviceInfo)
-	.then ->
-		saveOptions(syncOptions)
-	.then(beforeAction)
-	.then(stopContainer)
-	.then ->
+	getDeviceInfo()
+	.then -> # run 'before' action
+		if before?
+			shell.runCommand(before, source)
+	.then -> # stop container
+		stopContainer(resin.models.device.stopApplication(uuid)).then (containerId) ->
+			# the resolved 'containerId' value is needed for the rsync process over resin-proxy
+			_.assign(syncOptions, { containerId })
+	.then -> # sync container
 		syncContainer()
-		.then(startContainer)
-		.then(afterAction)
+		.then -> # start container
+			startContainer(resin.models.device.startApplication(uuid))
+		.then -> # run 'after' action
+			if after?
+				shell.runCommand(after, source)
 		.then ->
 			console.log(chalk.green.bold('\nresin sync completed successfully!'))
 		.catch (err) ->
 			# Notify the user of the error and run 'startApplication()'
 			# once again to make sure that a new app container will be started
-			startContainerAfterError()
+			startContainerAfterError(resin.models.device.startApplication(uuid))
 			.catch (err) ->
-				console.log('Could not restart application container', err)
+				console.log('Could not start application container', err)
 			.finally ->
 				throw err
 	.catch (err) ->

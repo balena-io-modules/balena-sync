@@ -60,7 +60,7 @@ describe 'Shell:', ->
 				@childProcessSpawnStub.restore()
 
 			it 'should be rejected with an error', ->
-				promise = shell.runCommand('echo foo')
+				promise = shell.runCommand('echo foo', '.')
 				m.chai.expect(promise).to.be.rejectedWith('spawn error')
 
 		describe 'given a spawn that closes with an error code', ->
@@ -79,7 +79,7 @@ describe 'Shell:', ->
 				@childProcessSpawnStub.restore()
 
 			it 'should be rejected with an error', ->
-				promise = shell.runCommand('echo foo')
+				promise = shell.runCommand('echo foo', '.')
 				m.chai.expect(promise).to.be.rejectedWith('Child process exited with code 1')
 
 		describe 'given a spawn that closes with a zero code', ->
@@ -98,7 +98,7 @@ describe 'Shell:', ->
 				@childProcessSpawnStub.restore()
 
 			it 'should be resolved', ->
-				promise = shell.runCommand('echo foo')
+				promise = shell.runCommand('echo foo', '.')
 				m.chai.expect(promise).to.eventually.be.undefined
 
 			describe 'given windows', ->
@@ -111,7 +111,7 @@ describe 'Shell:', ->
 					@osPlatformStub.restore()
 
 				it 'should call spawn with the correct arguments', ->
-					shell.runCommand('echo foo')
+					shell.runCommand('echo foo', '.')
 					args = @childProcessSpawnStub.firstCall.args
 					m.chai.expect(args[0]).to.equal('cmd.exe')
 					m.chai.expect(args[1]).to.deep.equal([ '/s', '/c', 'echo foo' ])

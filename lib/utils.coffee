@@ -14,10 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ###
 
+fs = require('fs')
+path = require('path')
+Promise = require('bluebird')
 _ = require('lodash')
 revalidator = require('revalidator')
+Spinner = require('resin-cli-visuals').Spinner
 form = require('resin-cli-form')
-resin = require('resin-sdk')
+{ load } = require('./config')
 
 ###*
 # @summary Validate object
@@ -87,8 +91,6 @@ unescapeSpaces = (pattern) ->
 #	}
 ###
 exports.gitignoreToRsyncPatterns = (gitignoreFile) ->
-	fs = require('fs')
-
 	patterns = fs.readFileSync(gitignoreFile, encoding: 'utf8').split('\n')
 
 	patterns = _.map(patterns, unescapeSpaces)
@@ -120,20 +122,84 @@ exports.gitignoreToRsyncPatterns = (gitignoreFile) ->
 		exclude: _.uniq(exclude)
 	}
 
-exports.selectResinIODevice = (preferredUuid) ->
-	resin.models.device.getAll()
-	.filter (device) ->
-		device.is_online
-	.then (onlineDevices) ->
-		if _.isEmpty(onlineDevices)
-			throw new Error('You don\'t have any devices online')
+# Resolves with the resolved 'promise' value
+exports.spinnerPromise = Promise.method (promise, startMsg, stopMsg) ->
 
-		return form.ask
-			message: 'Select a device'
-			type: 'list'
-			default: if preferredUuid in _.map(onlineDevices, 'uuid') then preferredUuid else onlineDevices[0].uuid
-			choices: _.map onlineDevices, (device) ->
-				return {
-					name: "#{device.name or 'Untitled'} (#{device.uuid.slice(0, 7)})"
-					value: device.uuid
-				}
+	clearSpinner = (spinner, msg) ->
+		spinner.stop() if spinner?
+		console.log(msg) if msg?
+
+	spinner = new Spinner(startMsg)
+	spinner.start()
+	promise.tap (value) ->
+		clearSpinner(spinner, stopMsg)
+	.catch (err) ->
+		clearSpinner(spinner)
+		throw err
+
+# Resolves with the resolved 'promise' value
+exports.startContainer = (promise) ->
+	exports.spinnerPromise(
+		promise
+		'Starting application container...'
+		'Application container started.'
+	)
+
+# Resolves with the resolved 'promise' value
+exports.stopContainer = (promise) ->
+	exports.spinnerPromise(
+		promise
+		'Stopping application container...'
+		'Application container stopped.'
+	)
+
+# Resolves with the resolved 'promise' value
+exports.startContainerAfterError = (promise) ->
+	exports.spinnerPromise(
+		promise
+		'Attempting to start application container after failed \'sync\'...'
+		'Application container started after failed \'sync\'.'
+	)
+
+# Get sync options from command line and `.resin-sync.yml`
+# Command line options have precedence over the ones saved in `.resin-sync.yml`
+exports.getSyncOptions = (options = {}) ->
+	Promise.try ->
+		try
+			if not options.source?
+				fs.accessSync(path.join(process.cwd(), '.resin-sync.yml'))
+				options.source = process.cwd()
+		catch
+			throw new Error('No --source option passed and no \'.resin-sync.yml\' file found in current directory.')
+
+		return load(options.source)
+	.then	(resinSyncYml) ->
+		syncOptions = {}
+
+		# Capitano does not support comma separated options yet
+		if options.ignore?
+			options.ignore = options.ignore.split(',')
+
+		_.mergeWith syncOptions, resinSyncYml, options, (objVal, srcVal, key) ->
+			# Give precedence to command line 'ignore' options
+			if key is 'ignore'
+				return srcVal
+
+		# Filter out empty 'ignore' paths
+		syncOptions.ignore = _.filter(syncOptions.ignore, (item) -> not _.isEmpty(item))
+
+		# Only add default 'ignore' options if user has not explicitly set an empty
+		# 'ignore' setting in '.resin-sync.yml'
+		if syncOptions.ignore.length is 0 and not resinSyncYml.ignore?
+			syncOptions.ignore = [ '.git', 'node_modules/' ]
+
+		form.run [
+			message: 'Destination directory on device container [/usr/src/app]'
+			name: 'destination'
+			type: 'input'
+		],
+			override:
+				destination: syncOptions.destination
+		.get('destination')
+		.then (destination) ->
+			_.assign(syncOptions, destination: destination ? '/usr/src/app')

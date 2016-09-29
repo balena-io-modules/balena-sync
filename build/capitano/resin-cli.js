@@ -68,43 +68,62 @@ module.exports = {
     }
   ],
   action: function(params, options, done) {
-    var Promise, fs, load, path, resin, resinSync, utils;
-    fs = require('fs');
-    path = require('path');
-    resin = require('resin-sdk');
+    var Promise, ensureDeviceIsOnline, form, getRemoteResinioOnlineDevices, getSyncOptions, save, selectOnlineDevice, sync, _, _ref;
     Promise = require('bluebird');
-    load = require('../config').load;
-    utils = require('../utils');
-    resinSync = require('../sync')('remote-resin-io-device');
-    return Promise["try"](function() {
-      try {
-        fs.accessSync(path.join(process.cwd(), '.resin-sync.yml'));
-      } catch (_error) {
-        if (options.source == null) {
-          throw new Error('No --source option passed and no \'.resin-sync.yml\' file found in current directory.');
+    _ = require('lodash');
+    form = require('resin-cli-form');
+    save = require('../config').save;
+    getSyncOptions = require('../utils').getSyncOptions;
+    getRemoteResinioOnlineDevices = require('../discover').getRemoteResinioOnlineDevices;
+    _ref = require('../sync')('remote-resin-io-device'), sync = _ref.sync, ensureDeviceIsOnline = _ref.ensureDeviceIsOnline;
+    selectOnlineDevice = function() {
+      return getRemoteResinioOnlineDevices().then(function(onlineDevices) {
+        if (_.isEmpty(onlineDevices)) {
+          throw new Error('You don\'t have any devices online');
         }
-      }
-      if (options.source == null) {
-        options.source = process.cwd();
-      }
-      if (options.ignore != null) {
-        options.ignore = options.ignore.split(',');
-      }
-      return Promise.resolve(params.uuid).then(function(uuid) {
-        var savedUuid;
-        if (uuid == null) {
-          savedUuid = load(options.source).uuid;
-          return utils.selectResinIODevice(savedUuid);
-        }
-        return resin.models.device.has(uuid).then(function(hasDevice) {
-          if (!hasDevice) {
-            throw new Error("Device not found: " + uuid);
-          }
-          return uuid;
+        return form.ask({
+          message: 'Select a device',
+          type: 'list',
+          "default": onlineDevices[0].uuid,
+          choices: _.map(onlineDevices, function(device) {
+            return {
+              name: "" + (device.name || 'Untitled') + " (" + (device.uuid.slice(0, 7)) + ")",
+              value: device.uuid
+            };
+          })
         });
-      }).then(function(uuid) {
-        return resinSync(uuid, options);
       });
+    };
+    return Promise["try"](function() {
+      if (params != null ? params.uuid : void 0) {
+        return ensureDeviceIsOnline(params.uuid);
+      }
+      return getSyncOptions(options).then((function(_this) {
+        return function(syncOptions) {
+          _this.syncOptions = syncOptions;
+          if (_this.syncOptions.uuid != null) {
+            return ensureDeviceIsOnline(_this.syncOptions.uuid)["catch"](function() {
+              console.log("Device " + this.syncOptions.uuid + " not found or is offline.");
+              return selectOnlineDevice();
+            });
+          }
+          return selectOnlineDevice();
+        };
+      })(this)).then((function(_this) {
+        return function(uuid) {
+          _.assign(_this.syncOptions, {
+            uuid: uuid
+          });
+          _.defaults(_this.syncOptions, {
+            port: 22
+          });
+          return save(_.omit(_this.syncOptions, ['source', 'verbose', 'progress']), _this.syncOptions.source);
+        };
+      })(this)).then((function(_this) {
+        return function() {
+          return sync(_this.syncOptions);
+        };
+      })(this));
     }).nodeify(done);
   }
 };
