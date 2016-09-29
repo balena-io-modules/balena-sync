@@ -14,5 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ###
 
+Promise = require('bluebird')
+resin = require('resin-sdk')
+
 exports.findAvahiDevices = Promise.method ->
 	return []
+
+# Resolves with array of remote online Resin.io devices, throws on error
+exports.getRemoteResinioOnlineDevices = ->
+	resin.models.device.getAll()
+	.filter (device) ->
+		device.is_online

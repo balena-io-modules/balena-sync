@@ -105,11 +105,12 @@ module.exports =
 		form = require('resin-cli-form')
 		{ save } = require('../config')
 		{ getSyncOptions } = require('../utils')
-		{ sync, ensureDeviceIsOnline, discoverOnlineDevices } = require('../sync')('remote-resin-io-device')
+		{ getRemoteResinioOnlineDevices } = require('../discover')
+		{ sync, ensureDeviceIsOnline, } = require('../sync')('remote-resin-io-device')
 
 		# Resolves with uuid of selected online device, throws on error
 		selectOnlineDevice = ->
-			discoverOnlineDevices()
+			getRemoteResinioOnlineDevices()
 			.then (onlineDevices) ->
 				if _.isEmpty(onlineDevices)
 					throw new Error('You don\'t have any devices online')

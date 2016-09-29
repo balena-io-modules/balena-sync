@@ -32,7 +32,6 @@ shell = require('../shell')
 	startContainerAfterError
 } = require('../utils')
 
-
 MIN_HOSTOS_RSYNC = '1.1.4'
 
 # Extract semver from device.os_version, since its format
@@ -75,12 +74,6 @@ exports.ensureDeviceIsOnline = (uuid) ->
 		if not device.is_online
 			throw new Error("Device is offline: #{uuid}")
 		return uuid
-
-# Resolves with array of online devices, throws on error
-exports.discoverOnlineDevices = ->
-	resin.models.device.getAll()
-	.filter (device) ->
-		device.is_online
 
 ###*
 # @summary Sync your changes with a device
