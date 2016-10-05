@@ -20,5 +20,6 @@ module.exports = {
   },
   sync: function(target) {
     return require('./sync')(target);
-  }
+  },
+  config: require('./config')
 };
