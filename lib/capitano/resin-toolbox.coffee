@@ -15,15 +15,16 @@ limitations under the License.
 ###
 
 module.exports =
-	signature: 'sync [deviceIp]'
-	description: 'Sync your changes to a container on local ResinOS device '
+	signature: 'deploy [deviceIp]'
+	description: 'Deploy your changes to a container on local ResinOS device '
 	help: '''
 		WARNING: If you're running Windows, this command only supports `cmd.exe`.
 
-		Use this command to sync your local changes to a container on a LAN-accessible resinOS device on the fly.
-		If `Dockerfile` or `package.json` are changed, a new container will be built and run on your device.
+		Use this command to deploy your local changes to a container on a LAN-accessible resinOS device on the fly.
+		If `Dockerfile` or any build-trigger file is changed, a new container will be built and run on your device.
+		If not, changes will simply be synced with `rsync` into the application container.
 
-		After every 'resin sync' the updated settings will be saved in
+		After every 'resin deploy' the updated settings will be saved in
 		'<source>/.resin-sync.yml' and will be used in later invocations. You can
 		also change any option by editing '.resin-sync.yml' directly.
 
@@ -40,22 +41,22 @@ module.exports =
 		Command line options have precedence over the ones saved in '.resin-sync.yml'.
 
 		If '.gitignore' is found in the source directory then all explicitly listed files will be
-		excluded from the syncing process. You can choose to change this default behavior with the
+		excluded when using rsync to update the container. You can choose to change this default behavior with the
 		'--skip-gitignore' option.
 
 		Examples:
 
-			$ resin-toolbox sync
-			$ resin-toolbox sync --ignore lib/
-			$ resin-toolbox sync --verbose false
-			$ resin-toolbox sync 192.168.2.10 --source . --destination /usr/src/app
-			$ resin-toolbox sync 192.168.2.10 -s /home/user/myResinProject -d /usr/src/app --before 'echo Hello' --after 'echo Done'
+			$ rtb deploy
+			$ rtb deploy --ignore lib/
+			$ rtb deploy --verbose false
+			$ rtb deploy 192.168.2.10 --source . --destination /usr/src/app
+			$ rtb deploy 192.168.2.10 -s /home/user/myResinProject -d /usr/src/app --before 'echo Hello' --after 'echo Done'
 	'''
 	primary: true
 	options: [
 			signature: 'source'
 			parameter: 'path'
-			description: 'local directory path to synchronize to device container'
+			description: 'root of project directory to deploy to device container'
 			alias: 's'
 		,
 			signature: 'destination'
@@ -65,7 +66,7 @@ module.exports =
 		,
 			signature: 'ignore'
 			parameter: 'paths'
-			description: 'comma delimited paths to ignore when syncing'
+			description: "comma delimited paths to ignore when syncing with 'rsync'"
 			alias: 'i'
 		,
 			signature: 'skip-gitignore'
@@ -74,12 +75,12 @@ module.exports =
 		,
 			signature: 'before'
 			parameter: 'command'
-			description: 'execute a command before syncing'
+			description: 'execute a command before deploying'
 			alias: 'b'
 		,
 			signature: 'after'
 			parameter: 'command'
-			description: 'execute a command after syncing'
+			description: 'execute a command after deploying'
 			alias: 'a'
 		,
 			signature: 'port'
@@ -103,8 +104,8 @@ module.exports =
 		_ = require('lodash')
 		form = require('resin-cli-form')
 		{ save } = require('../config')
-		{ getSyncOptions } = require('../utils')
 		{ findAvahiDevices } = require('../discover')
+		{ getSyncOptions } = require('../utils')
 		{ sync } = require('../sync')('local-resin-os-device')
 
 		selectLocalResinOSDevice = ->
