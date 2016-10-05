@@ -161,18 +161,21 @@ exports.startContainerAfterError = (promise) ->
 		'Application container started after failed \'sync\'.'
 	)
 
+# Resolve with .resin-sync.yml or throw
+exports.loadResinSyncYml = Promise.method (options = {}) ->
+	try
+		if not options.source?
+			fs.accessSync(path.join(process.cwd(), '.resin-sync.yml'))
+			options.source = process.cwd()
+	catch
+		throw new Error('No --source option passed and no \'.resin-sync.yml\' file found in current directory.')
+
+	return load(options.source)
+
 # Get sync options from command line and `.resin-sync.yml`
 # Command line options have precedence over the ones saved in `.resin-sync.yml`
 exports.getSyncOptions = (options = {}) ->
-	Promise.try ->
-		try
-			if not options.source?
-				fs.accessSync(path.join(process.cwd(), '.resin-sync.yml'))
-				options.source = process.cwd()
-		catch
-			throw new Error('No --source option passed and no \'.resin-sync.yml\' file found in current directory.')
-
-		return load(options.source)
+	exports.loadResinSyncYml(options)
 	.then	(resinSyncYml) ->
 		syncOptions = {}
 
@@ -203,3 +206,41 @@ exports.getSyncOptions = (options = {}) ->
 		.get('destination')
 		.then (destination) ->
 			_.assign(syncOptions, destination: destination ? '/usr/src/app')
+
+exports.defaultVolumes = {
+	'/data': {}
+	'/lib/modules': {}
+	'/lib/firmware': {}
+	'/host/var/lib/connman': {}
+	'/host/run/dbus': {}
+}
+
+exports.getDataPath = (identifier) ->
+	return '/resin-data' + '/' + identifier
+
+exports.defaultBinds = (dataPath) ->
+	return [
+		exports.getDataPath(dataPath) + ':/data'
+		'/lib/modules:/lib/modules'
+		'/lib/firmware:/lib/firmware'
+		'/run/dbus:/host_run/dbus'
+		'/run/dbus:/host/run/dbus'
+		'/etc/resolv.conf:/etc/resolv.conf:rw'
+		'/var/lib/connman:/host/var/lib/connman'
+	]
+
+# image can be either ID or name
+exports.getContainerStartOptions = Promise.method (image) ->
+	throw new Error('Please give an image name or ID') if not image
+
+	# TODO: add kmod bind mount
+	binds = exports.defaultBinds(image)
+
+	return {
+		Privileged: true
+		NetworkMode: 'host'
+		Binds: binds
+		RestartPolicy:
+			Name: 'always'
+			MaximumRetryCount: 0
+	}
