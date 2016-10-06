@@ -23,7 +23,7 @@ Spinner = require('resin-cli-visuals').Spinner
 Docker = require('docker-toolbelt')
 tar = require('tar-fs')
 form = require('resin-cli-form')
-{ load } = require('./config')
+{ load, save } = require('./config')
 
 
 ###*
@@ -165,28 +165,31 @@ exports.startContainerAfterError = (promise) ->
 	)
 
 # Resolve with .resin-sync.yml or throw
-exports.loadResinSyncYml = Promise.method (options = {}) ->
+exports.loadResinSyncYml = Promise.method (source) ->
 	try
-		if not options.source?
+		if not source?
 			fs.accessSync(path.join(process.cwd(), '.resin-sync.yml'))
-			options.source = process.cwd()
+			source = process.cwd()
 	catch
 		throw new Error('No --source option passed and no \'.resin-sync.yml\' file found in current directory.')
 
-	return load(options.source)
+	resinSyncYml = load(source)
+	resinSyncYml.source = source
+	return resinSyncYml
 
 # Get sync options from command line and `.resin-sync.yml`
 # Command line options have precedence over the ones saved in `.resin-sync.yml`
-exports.getSyncOptions = (options = {}) ->
-	exports.loadResinSyncYml(options)
+exports.getSyncOptions = (cliOptions = {}) ->
+	cliOptions = _.clone(cliOptions)
+	exports.loadResinSyncYml(cliOptions.source)
 	.then	(resinSyncYml) ->
 		syncOptions = {}
 
 		# Capitano does not support comma separated options yet
-		if options.ignore?
-			options.ignore = options.ignore.split(',')
+		if cliOptions.ignore?
+			cliOptions.ignore = cliOptions.ignore.split(',')
 
-		_.mergeWith syncOptions, resinSyncYml, options, (objVal, srcVal, key) ->
+		_.mergeWith syncOptions, resinSyncYml, cliOptions, (objVal, srcVal, key) ->
 			# Give precedence to command line 'ignore' options
 			if key is 'ignore'
 				return srcVal
@@ -209,6 +212,13 @@ exports.getSyncOptions = (options = {}) ->
 		.get('destination')
 		.then (destination) ->
 			_.assign(syncOptions, destination: destination ? '/usr/src/app')
+		.then ->
+			save(
+				_.omit(syncOptions, [ 'source', 'verbose', 'progress', 'force', 'build-triggers', 'app-name' ])
+				syncOptions.source
+			)
+			return syncOptions
+
 
 exports.defaultVolumes = {
 	'/data': {}
@@ -250,24 +260,41 @@ exports.getContainerStartOptions = Promise.method (image) ->
 			MaximumRetryCount: 0
 	}
 
-# Resolve with true if image (id or name) exists,
-# false otherwise and rejects promise on unknown error
-exports.checkForExistingImage = Promise.method ({ image, dockerHost }) ->
-	docker = new Docker(host: dockerHost, port: 2375)
+# Resolve with true if image with 'name' exists. Resolve
+# false otherwise and reject promise on unknown error
+exports.checkForExistingImage = Promise.method ({ name, dockerHostIp }) ->
+	docker = new Docker(host: dockerHostIp, port: 2375)
 
-	docker.getImage(image).inspectAsync()
+	docker.getImage(name).inspectAsync()
 	.then (imageInfo) ->
 		return true
 	.catch (err) ->
 		statusCode = '' + err.statusCode
 		if statusCode is '404'
 			return false
-		throw new Error("Error while inspecting image #{image}: #{err}")
+		throw new Error("Error while inspecting image #{name}: #{err}")
 
-exports.buildAndRunImage = Promise.method ({ baseDir, appname, dockerHost }) ->
+# Resolve with true if image and container with same name exist.
+# Resolve with false otherwise and reject promise on unknown error
+exports.checkForExistingImageAndContainer = Promise.method ({ name, dockerHostIp }) ->
+	docker = new Docker(host: dockerHostIp, port: 2375)
+	exports.checkForExistingImage({ name, dockerHostIp })
+	.then (imageExists) ->
+		if not imageExists
+			return false
+		docker.getContainer(name).inspectAsync()
+		.then (containerInfo) ->
+			return true
+		.catch (err) ->
+			statusCode = '' + err.statusCode
+			if statusCode is '404'
+				return false
+			throw new Error("Error while inspecting container #{name}: #{err}")
+
+exports.buildAndRunImage = Promise.method ({ baseDir, appname, dockerHostIp }) ->
 	es = require 'event-stream'
 	JSONStream = require 'JSONStream'
-	docker = new Docker(host: dockerHost, port: 2375)
+	docker = new Docker(host: dockerHostIp, port: 2375)
 
 	# build image
 	console.log '- Building Image..'

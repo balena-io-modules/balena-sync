@@ -114,9 +114,9 @@ Docker::containerRootDir = (container, host, port = DEVICE_SSH_PORT) ->
 					throw new Error("Unsupported driver: #{dockerInfo.Driver}/")
 
 
-exports.sync = (syncOptions) ->
+exports.sync = (syncOptions, deviceIp) ->
 
-	{ source, destination, before, after, deviceIp, local_resinos: 'app-name': appName } = syncOptions
+	{ source, destination, before, after, local_resinos: 'app-name': appName } = syncOptions
 
 	throw new Error("'destination' is a required sync option") if not destination?
 	throw new Error("'deviceIp' is a required sync option") if not deviceIp?
