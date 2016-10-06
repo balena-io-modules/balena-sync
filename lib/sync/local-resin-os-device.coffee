@@ -18,7 +18,6 @@ path = require('path')
 fs = require('fs')
 Promise = require('bluebird')
 _ = require('lodash')
-chalk = require('chalk')
 ssh2 = require('ssh2')
 semver = require('semver')
 shellwords = require('shellwords')
@@ -126,23 +125,23 @@ exports.sync = (syncOptions) ->
 	docker = new Docker(host: deviceIp, port: 2375)
 
 	getStopContainerPromise = Promise.method (appName) ->
-		docker.getContainer(appName).stopAsync(t: 10).catch Promise.OperationalError, (err) ->
-			# Bluebird throws OperationalError for errors resulting in the normal execution of a promisified function.
+		docker.getContainer(appName).stopAsync(t: 10)
+		.catch (err) ->
 			# Throw unless the error code is 304 (the container was already stopped)
 			statusCode = '' + err.statusCode
 			if statusCode is '304'
 				return
 
 			if statusCode is '404'
-				throw new Error("Container #{appName} not found - Please use 'rtb deploy --force-build'")
+				throw new Error("Container #{appName} not found - Please use 'rtb deploy --force'")
 
 			throw err
 
 	getStartContainerPromise = (appName) ->
 		getContainerStartOptions(appName)
 		.then (startOptions) ->
-			docker.getContainer(appName).startAsync(startOptions).catch Promise.OperationalError, (err) ->
-				# Bluebird throws OperationalError for errors resulting in the normal execution of a promisified function.
+			docker.getContainer(appName).startAsync(startOptions)
+			.catch (err) ->
 				# Throw unless the error code is 304 (the container was already started)
 				statusCode = '' + err.statusCode
 				if statusCode is '304'
@@ -184,8 +183,6 @@ exports.sync = (syncOptions) ->
 		.then -> # run 'after' action
 			if after?
 				shell.runCommand(after, source)
-		.then ->
-			console.log(chalk.green.bold('\nresin sync completed successfully!'))
 		.catch (err) ->
 			# Notify the user of the error and run 'startApplication()'
 			# once again to make sure that a new app container will be started
@@ -194,6 +191,3 @@ exports.sync = (syncOptions) ->
 				console.log('Could not start application container', err)
 			.finally ->
 				throw err
-	.catch (err) ->
-		console.log(chalk.red.bold('resin sync failed.', err))
-		process.exit(1)

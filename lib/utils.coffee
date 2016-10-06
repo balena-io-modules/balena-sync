@@ -20,8 +20,11 @@ Promise = require('bluebird')
 _ = require('lodash')
 revalidator = require('revalidator')
 Spinner = require('resin-cli-visuals').Spinner
+Docker = require('docker-toolbelt')
+tar = require('tar-fs')
 form = require('resin-cli-form')
 { load } = require('./config')
+
 
 ###*
 # @summary Validate object
@@ -219,8 +222,10 @@ exports.getDataPath = (identifier) ->
 	return path.join('/resin-data', identifier)
 
 exports.defaultBinds = (dataPath) ->
+	data = exports.getDataPath(dataPath) + ':/data'
+
 	return [
-		exports.getDataPath(dataPath) + ':/data'
+		data
 		'/lib/modules:/lib/modules'
 		'/lib/firmware:/lib/firmware'
 		'/run/dbus:/host_run/dbus'
@@ -244,3 +249,66 @@ exports.getContainerStartOptions = Promise.method (image) ->
 			Name: 'always'
 			MaximumRetryCount: 0
 	}
+
+# Resolve with true if image (id or name) exists,
+# false otherwise and rejects promise on unknown error
+exports.checkForExistingImage = Promise.method ({ image, dockerHost }) ->
+	docker = new Docker(host: dockerHost, port: 2375)
+
+	docker.getImage(image).inspectAsync()
+	.then (imageInfo) ->
+		return true
+	.catch (err) ->
+		statusCode = '' + err.statusCode
+		if statusCode is '404'
+			return false
+		throw new Error("Error while inspecting image #{image}: #{err}")
+
+exports.buildAndRunImage = Promise.method ({ baseDir, appname, dockerHost }) ->
+	es = require 'event-stream'
+	JSONStream = require 'JSONStream'
+	docker = new Docker(host: dockerHost, port: 2375)
+
+	# build image
+	console.log '- Building Image..'
+	tarStream = tar.pack(baseDir)
+	docker.buildImageAsync(tarStream, t: "#{appname}")
+	.then (output) ->
+		new Promise (resolve, reject) ->
+			output.pipe(JSONStream.parse())
+			.pipe(es.through (data) ->
+				if data.error?
+					return reject(new Error(data.error))
+
+				if data.stream?
+					str = "#{data.stream}\r"
+				else if data.status in [ 'Downloading', 'Extracting' ]
+					str = "#{data.status} #{data.progress ? ''}\r"
+				else
+					str = "#{data.status}\n"
+
+				@emit('data', str) if str?
+			, ->
+				resolve(true)
+			)
+			.pipe(process.stdout)
+	.then ->
+		docker.getImage(appname).inspectAsync()
+	.then (imageInfo) ->
+		# create container
+		console.log('- Creating Container..')
+		if imageInfo?.Config?.Cmd
+			cmd = imageInfo.Config.Cmd
+		else
+			cmd = [ '/bin/bash', '-c', '/start' ]
+
+		docker.createContainerAsync
+			Image: appname
+			Cmd: cmd
+			Tty: true
+			Volumes: exports.defaultVolumes
+			name: appname
+	.then (container) ->
+		# start container
+		console.log('Starting container..')
+		container.startAsync(exports.getContainerStartOptions(appname))
