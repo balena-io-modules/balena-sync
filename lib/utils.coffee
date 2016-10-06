@@ -216,7 +216,7 @@ exports.defaultVolumes = {
 }
 
 exports.getDataPath = (identifier) ->
-	return '/resin-data' + '/' + identifier
+	return path.join('/resin-data', identifier)
 
 exports.defaultBinds = (dataPath) ->
 	return [

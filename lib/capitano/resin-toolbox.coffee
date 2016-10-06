@@ -85,11 +85,6 @@ module.exports =
 			description: 'execute a command after deploying'
 			alias: 'a'
 		,
-			signature: 'port'
-			parameter: 'port'
-			description: 'ssh port'
-			alias: 't'
-		,
 			signature: 'progress'
 			boolean: true
 			description: 'show progress'
@@ -145,7 +140,6 @@ module.exports =
 					return params.deviceIp
 				.then (deviceIp) ->
 					_.assign(@syncOptions, { deviceIp })
-					_.defaults(@syncOptions, local_resinos: device_ssh_port: 22222)
 
 					# Save options to `.resin-sync.yml`
 					save(

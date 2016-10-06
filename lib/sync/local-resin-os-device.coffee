@@ -21,6 +21,7 @@ _ = require('lodash')
 chalk = require('chalk')
 ssh2 = require('ssh2')
 semver = require('semver')
+shellwords = require('shellwords')
 Promise.promisifyAll(ssh2.Client)
 Docker = require('docker-toolbelt')
 shell = require('../shell')
@@ -31,6 +32,8 @@ shell = require('../shell')
 	startContainerAfterError
 	getContainerStartOptions
 } = require('../utils')
+
+DEVICE_SSH_PORT = 22222
 
 # resolved with file contents, rejects on error
 readFileViaSSH = Promise.method (host, port, file) ->
@@ -76,7 +79,7 @@ readFileViaSSH = Promise.method (host, port, file) ->
 # Setting the 'host' parameter implies that the docker host is located on a network-accessible device,
 # so any file reads will take place on that host (instead of locally) over SSH.
 #
-Docker::containerRootDir = (container, host, port) ->
+Docker::containerRootDir = (container, host, port = DEVICE_SSH_PORT) ->
 	Promise.all [
 		@infoAsync()
 		@versionAsync().get('Version')
@@ -94,7 +97,6 @@ Docker::containerRootDir = (container, host, port) ->
 			destFile = path.join(dkroot, "image/#{dockerInfo.Driver}/layerdb/mounts", containerId, 'mount-id')
 
 			if host?
-				port ?= 22222
 				readFile = _.partial(readFileViaSSH, host, port)
 			else
 				readFile = fs.readFileAsync
@@ -115,7 +117,7 @@ Docker::containerRootDir = (container, host, port) ->
 
 exports.sync = (syncOptions) ->
 
-	{ source, destination, before, after, deviceIp, port, local_resinos: 'app-name': appName } = syncOptions
+	{ source, destination, before, after, deviceIp, local_resinos: 'app-name': appName } = syncOptions
 
 	throw new Error("'destination' is a required sync option") if not destination?
 	throw new Error("'deviceIp' is a required sync option") if not deviceIp?
@@ -128,7 +130,12 @@ exports.sync = (syncOptions) ->
 			# Bluebird throws OperationalError for errors resulting in the normal execution of a promisified function.
 			# Throw unless the error code is 304 (the container was already stopped)
 			statusCode = '' + err.statusCode
-			return if statusCode is '304'
+			if statusCode is '304'
+				return
+
+			if statusCode is '404'
+				throw new Error("Container #{appName} not found - Please use 'rtb deploy --force-build'")
+
 			throw err
 
 	getStartContainerPromise = (appName) ->
@@ -138,10 +145,12 @@ exports.sync = (syncOptions) ->
 				# Bluebird throws OperationalError for errors resulting in the normal execution of a promisified function.
 				# Throw unless the error code is 304 (the container was already started)
 				statusCode = '' + err.statusCode
-				return if statusCode is '304'
+				if statusCode is '304'
+					return
+
 				throw err
 
-	syncContainer = (appName, destination, host, port = 22222) ->
+	syncContainer = (appName, destination, host, port = DEVICE_SSH_PORT) ->
 		docker.containerRootDir(appName, host, port)
 		.then (containerRootDirLocation) ->
 
@@ -151,7 +160,7 @@ exports.sync = (syncOptions) ->
 						username: 'root'
 						host: host
 						port: port
-						destination: rsyncDestination
+						destination: shellwords.escape(rsyncDestination)
 
 			command = buildRsyncCommand(syncOptions)
 
@@ -169,7 +178,7 @@ exports.sync = (syncOptions) ->
 	.then -> # stop container
 		stopContainer(getStopContainerPromise(appName))
 	.then -> # sync container
-		syncContainer(appName, destination, deviceIp, port)
+		syncContainer(appName, destination, deviceIp)
 		.then -> # start container
 			startContainer(getStartContainerPromise(appName))
 		.then -> # run 'after' action
