@@ -14,23 +14,74 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
  */
-var Promise, resin;
+var _, avahiResinSshTag, enumerateServices, findServices, form, ref, resin, spinnerPromise,
+  indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
-Promise = require('bluebird');
+_ = require('lodash');
 
 resin = require('resin-sdk');
 
-exports.findAvahiDevices = Promise.method(function() {
-  return [
-    {
-      name: 'resin.local',
-      ip: '192.168.1.17'
-    }, {
-      name: 'resin2.local',
-      ip: '192.168.1.11'
+ref = require('resin-discoverable-services'), enumerateServices = ref.enumerateServices, findServices = ref.findServices;
+
+form = require('resin-cli-form');
+
+spinnerPromise = require('./utils').spinnerPromise;
+
+avahiResinSshTag = 'resin-ssh';
+
+exports.discoverLocalResinOsDevices = function(timeout) {
+  if (timeout == null) {
+    timeout = 4000;
+  }
+  return enumerateServices().then(function(availableServices) {
+    var i, len, s, services;
+    services = [];
+    for (i = 0, len = availableServices.length; i < len; i++) {
+      s = availableServices[i];
+      if (indexOf.call(s.tags, avahiResinSshTag) >= 0) {
+        services.push(s.service);
+      }
     }
-  ];
-});
+    return services;
+  }).then(function(services) {
+    if ((services == null) || services.length === 0) {
+      throw new Error("Could not find any available '" + avahiResinSshTag + "' services");
+    }
+    return findServices(services, timeout);
+  }).then(function(services) {
+    return _.map(services, function(service) {
+      var address, host, port, ref1;
+      (ref1 = service.referer, address = ref1.address), host = service.host, port = service.port;
+      return {
+        address: address,
+        host: host,
+        port: port
+      };
+    });
+  });
+};
+
+exports.selectLocalResinOsDeviceForm = function(timeout) {
+  if (timeout == null) {
+    timeout = 4000;
+  }
+  return spinnerPromise(exports.discoverLocalResinOsDevices(), 'Discovering local ResinOS devices..', 'Reporting discovered devices').then(function(devices) {
+    if (_.isEmpty(devices)) {
+      throw new Error('Could not find any local ResinOS devices');
+    }
+    return form.ask({
+      message: 'select a device',
+      type: 'list',
+      "default": devices[0].ip,
+      choices: _.map(devices, function(device) {
+        return {
+          name: (device.host || 'untitled') + " (" + device.address + ")",
+          value: device.address
+        };
+      })
+    });
+  });
+};
 
 exports.getRemoteResinioOnlineDevices = function() {
   return resin.models.device.getAll().filter(function(device) {

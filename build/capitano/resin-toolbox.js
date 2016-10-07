@@ -79,7 +79,7 @@ module.exports = {
     }
   ],
   action: function(params, options, done) {
-    var Promise, _, buildAction, buildImage, chalk, checkBuildTriggers, checkFileExistsSync, checkForExistingContainer, checkForExistingImage, cliAppName, cliBuildTriggersList, cliForceRebuild, createBuildTriggerHashes, createContainer, crypto, dockerInit, ensureDockerfileExists, findAvahiDevices, form, fs, getDeviceIp, getFileHash, getSyncOptions, loadResinSyncYml, path, ref, ref1, ref2, removeContainer, removeImage, save, selectLocalResinOSDevice, setAppName, setBuildTriggerHashes, startContainer, sync, syncAction;
+    var Promise, _, buildAction, buildImage, chalk, checkBuildTriggers, checkFileExistsSync, checkForExistingContainer, checkForExistingImage, cliAppName, cliBuildTriggersList, cliForceRebuild, createBuildTriggerHashes, createContainer, crypto, dockerInit, ensureDockerfileExists, form, fs, getDeviceIp, getFileHash, getSyncOptions, loadResinSyncYml, path, ref, ref1, ref2, removeContainer, removeImage, save, selectLocalResinOsDeviceForm, setAppName, setBuildTriggerHashes, startContainer, sync, syncAction;
     fs = require('fs');
     path = require('path');
     crypto = require('crypto');
@@ -88,28 +88,10 @@ module.exports = {
     chalk = require('chalk');
     form = require('resin-cli-form');
     save = require('../config').save;
-    findAvahiDevices = require('../discover').findAvahiDevices;
     ref = require('../utils'), getSyncOptions = ref.getSyncOptions, loadResinSyncYml = ref.loadResinSyncYml;
+    selectLocalResinOsDeviceForm = require('../discover').selectLocalResinOsDeviceForm;
     ref1 = require('../docker-utils'), dockerInit = ref1.dockerInit, checkForExistingImage = ref1.checkForExistingImage, checkForExistingContainer = ref1.checkForExistingContainer, buildImage = ref1.buildImage, removeImage = ref1.removeImage, createContainer = ref1.createContainer, startContainer = ref1.startContainer, removeContainer = ref1.removeContainer;
     sync = require('../sync')('local-resin-os-device').sync;
-    selectLocalResinOSDevice = function() {
-      return findAvahiDevices().then(function(devices) {
-        if (_.isEmpty(devices)) {
-          throw new Error('You don\'t have any local ResinOS devices');
-        }
-        return form.ask({
-          message: 'select a device',
-          type: 'list',
-          "default": devices[0].ip,
-          choices: _.map(devices, function(device) {
-            return {
-              name: (device.name || 'untitled') + " (" + device.ip + ")",
-              value: device.ip
-            };
-          })
-        });
-      });
-    };
     setAppName = Promise.method(function(resinSyncYml, preferredAppName) {
       return form.run([
         {
@@ -153,7 +135,7 @@ module.exports = {
       if (deviceIp != null) {
         return deviceIp;
       }
-      return selectLocalResinOSDevice();
+      return selectLocalResinOsDeviceForm();
     });
     getFileHash = Promise.method(function(file, algo) {
       if (algo == null) {
