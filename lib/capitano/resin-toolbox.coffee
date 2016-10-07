@@ -112,13 +112,24 @@ module.exports =
 			alias: 'f'
 	]
 	action: (params, options, done) ->
+		fs = require('fs')
+		path = require('path')
+		crypto = require('crypto')
 		Promise = require('bluebird')
 		_ = require('lodash')
 		chalk = require('chalk')
 		form = require('resin-cli-form')
 		{ save } = require('../config')
 		{ findAvahiDevices } = require('../discover')
-		{ getSyncOptions, loadResinSyncYml, checkForExistingImage, checkForExistingImageAndContainer, buildAndRunImage } = require('../utils')
+		{ getSyncOptions, loadResinSyncYml } = require('../utils')
+		{ dockerInit
+			checkForExistingImage
+			checkForExistingContainer
+			buildImage
+			removeImage
+			createContainer
+			startContainer
+			removeContainer } = require('../docker-utils')
 		{ sync } = require('../sync')('local-resin-os-device')
 
 		selectLocalResinOSDevice = ->
@@ -137,7 +148,7 @@ module.exports =
 							value: device.ip
 						}
 
-		selectAppName = Promise.method ({ preferredAppName, dockerHostIp }) ->
+		setAppName = Promise.method (resinSyncYml, preferredAppName) ->
 			form.run [
 				message: 'Select a name for the application'
 				name: 'appname'
@@ -146,24 +157,25 @@ module.exports =
 				override:
 					appname: preferredAppName
 			.get('appname')
-			.tap (appname) ->
-				checkForExistingImage({ name: appname, dockerHostIp })
-				.then (imageExists) ->
-					if imageExists
-						throw new Error """
-							Application with name #{appname} already exists.\n \
-							You can run 'rtb undeploy #{appname}', 'rtb deploy --force'\n \
-							or choose a different application name with 'rtb deploy --app-name newName'
-						"""
+			.tap (appName) ->
+				resinSyncYml['local_resinos']['app-name'] = appName
+				save(_.omit(resinSyncYml, [ 'source' ]), resinSyncYml.source)
+
+		# Returns true if it does, false if it doesnt and throws synchronously on error
+		checkFileExistsSync = (filename) ->
+			try
+				fs.accessSync(filename)
+				return true
+			catch err
+				if err.code is 'ENOENT'
+					return false
+				throw new Error("Could not access #{filename}: #{err}")
 
 		ensureDockerfileExists = Promise.method (baseDir) ->
-			fs = require('fs')
-			path = require('path')
-
 			baseDir ?= process.cwd()
-			try
-				fs.accessSync(path.join(baseDir, 'Dockerfile'))
-			catch
+			dockerfileExists = checkFileExistsSync(path.join(baseDir, 'Dockerfile'))
+
+			if not dockerfileExists
 				throw new Error("No Dockerfile was found in the project directory: #{baseDir}")
 
 		getDeviceIp = Promise.method (deviceIp) ->
@@ -175,8 +187,6 @@ module.exports =
 		getFileHash = Promise.method (file, algo = 'sha256') ->
 			new Promise (resolve, reject) ->
 				try
-					crypto = require('crypto')
-					fs = require('fs')
 
 					hash = crypto.createHash(algo)
 					input = fs.createReadStream(file)
@@ -196,87 +206,95 @@ module.exports =
 		#		'requiremenets_txt': <sha256>
 		#		'Othertrigger': <sha256>
 		#	}
-		createBuildTriggerHashes = Promise.method (baseDir, buildTriggers) ->
-			fs = require('fs')
-			path = require('path')
+		createBuildTriggerHashes = Promise.method (baseDir, buildTriggersList = []) ->
 
 			if not baseDir?
 				throw new Error('baseDir is required to create build trigger hashes')
 
-			buildTriggers ?= []
-
 			# Dockerfile and package.json are always included as build triggers
-			buildTriggers = _.union(buildTriggers, [ 'Dockerfile', 'package.json' ])
+			buildTriggersList = _.union(buildTriggersList, [ 'Dockerfile', 'package.json' ])
 
-			# Filter out empty 'build-triggers' file names (e.g. when passing 'package.json,,,trigget.txt')
+			# Filter out empty 'build-triggers' file names (e.g. when passing 'package.json,,,trigger.txt')
 			# and files that cannot be accessed
-			buildTriggers = _.chain(buildTriggers)
+			buildTriggersList = _.chain(buildTriggersList)
 				.filter((filename) -> not _.isEmpty(filename))
 				.map((filename) -> return filename.trim())
 				.filter (filename) ->
-					try
-						fs.accessSync(path.join(baseDir, filename))
-						return true
-					catch err
-						throw new Error("Could not read #{filename}: #{err}")
+					checkFileExistsSync(path.join(baseDir, filename))
 				.value()
 
-			Promise.map buildTriggers, (filename) ->
+			Promise.map buildTriggersList, (filename) ->
 				getFileHash(filename)
 				.then (hash) ->
 					result = {}
-					result[filename?.replace('.', '_')] = hash
+					result[filename] = hash
+
 					return result
 
-		checkBuildTriggers = Promise.method (baseDir, savedBuildTriggers) ->
-			fs = require('fs')
-			path = require('path')
+		setBuildTriggerHashes = Promise.method (resinSyncYml, buildTriggersList = []) ->
+			createBuildTriggerHashes(resinSyncYml['source'], buildTriggersList)
+			.then (buildTriggerHashes) ->
+				resinSyncYml['local_resinos']['build-triggers'] = buildTriggerHashes
+				save(_.omit(resinSyncYml, [ 'source' ]), resinSyncYml.source)
 
-			savedBuildTriggers = _.clone(savedBuildTriggers)
+		# resolved with 'true', if any hash has changed or if any of the files
+		# listed in local_resinos: build-triggers could not be accessed or was missing.
+		#
+		# resolves with 'false' if the hashes in local_resinos: build-triggers  match
+		# the ones of the corresponding files on the filesystem.
+		checkBuildTriggers = Promise.method (resinSyncYml) ->
 
-			savedBuildTriggers = _.map savedBuildTriggers, (val) ->
-				[ filename, hash ] = _.toPairs(val)[0]
-				filename = filename.replace('_', '.')
-				return { "#{filename}": hash }
+			savedBuildTriggers = resinSyncYml?['local_resinos']?['build-triggers']
+			if not savedBuildTriggers
+				return true
+
+			baseDir = resinSyncYml['source']
 
 			Promise.map savedBuildTriggers, (trigger) ->
 				[ filename, saved_hash ] = _.toPairs(trigger)[0]
+
 				filename = path.join(baseDir, filename)
 
 				# First, check if any of the files in 'savedBuildTriggers' is missing or is not accessible
-				try
-					fs.accessSync(filename)
-				catch
-					throw new Error("File cannot be accessed: #{filename}")
+				fileExists = checkFileExistsSync(filename)
+				if not fileExists
+					return true
 
 				# Then, check if its hash has changed
 				getFileHash(filename)
 				.then (hash) ->
 					if hash isnt saved_hash
-						throw new Error("Hashes for #{filename} do not match (saved #{saved_hash} vs found #{hash})")
-			.then ->
-				return false
-			.catch ->
+						return true
+					return false
+			.then (results) ->
+				true in results
+			.catch (err) ->
+				console.log('Error while checking build trigger hashes', err)
 				return true
 
-		buildAction = (resinSyncYml, deviceIp) ->
-			selectAppName(dockerHostIp: deviceIp, preferredAppName: resinSyncYml['local_resinos']['app-name'])
-			.then (appName) ->
-				resinSyncYml['local_resinos']['app-name'] = appName
-			.then ->
-				createBuildTriggerHashes(resinSyncYml.source, resinSyncYml['local_resinos']['build-triggers'])
-			.then (buildTriggers) ->
-				resinSyncYml['local_resinos']['build-triggers'] = buildTriggers
+		buildAction = (appName, sourceDir, outStream) ->
+			if not appName?
+				throw new Error('Please pass an image/container name to build')
 
-				save(
-					_.omit(resinSyncYml, [ 'source', 'verbose', 'progress' ])
-					resinSyncYml.source
-				)
+			console.log(chalk.yellow.bold('* Building..'))
+
+			console.log "- Removing any previous '#{appName}' container"
+			removeContainer(appName)
 			.then ->
-				buildAndRunImage
-					baseDir: resinSyncYml.source
-					appname: resinSyncYml['local_resinos']['app-name']
-					dockerHostIp: deviceIp
+				console.log "- Removing any existing container images for '#{appName}'"
+				removeImage(appName)
+			.then ->
+				console.log "- Building new '#{appName}' image"
+				buildImage
+					baseDir: sourceDir ? process.cwd()
+					name: appName
+					outStream: outStream ? process.stdout
+			.then ->
+				console.log "- Creating '#{appName}' container"
+				createContainer(appName)
+			.then ->
+				console.log "- Starting '#{appName}' container"
+				startContainer(appName)
 			.then ->
 				console.log(chalk.green.bold('\nresin deploy completed successfully!'))
 			.catch (err) ->
@@ -284,6 +302,7 @@ module.exports =
 				process.exit(1)
 
 		syncAction = (cliOptions, deviceIp) ->
+			console.log(chalk.yellow.bold('* Syncing..'))
 			getSyncOptions(cliOptions)
 			.then (syncOptions) ->
 				sync(syncOptions, deviceIp)
@@ -297,53 +316,53 @@ module.exports =
 		if options['build-triggers']?
 			options['build-triggers'] = options['build-triggers'].split(',')
 
+		cliBuildTriggersList = options['build-triggers']
+		cliAppName = options['app-name']
+		cliForceRebuild = options['force'] ? false
+
 		loadResinSyncYml(options.source)
 		.then (@resinSyncYml) =>
 			ensureDockerfileExists()
 		.then ->
 			getDeviceIp(params.deviceIp)
 		.then (@deviceIp) =>
-
+			dockerInit(@deviceIp)
+		.then =>
 			if not @resinSyncYml['local_resinos']?
-				# If local_resinos property does not exist in .resin-sync.yml:
-				#
-				# - Select an appname (option or intercative) and save it in local_resinos: app-name
-				# - Create local_resinos: buildtriggers: []
-				# - save local_resinos field in .resin-sync.yml
-				# - Build and run container
-
 				@resinSyncYml['local_resinos'] = {}
 
-				# Give precedence to command line 'build-trigger' options
-				@resinSyncYml['local_resinos']['build-triggers'] = options['build-triggers'] ? []
+			# Give precedence to cli passed 'app-name'
+			appName = cliAppName ? @resinSyncYml['local_resinos']['app-name']
+			setAppName(@resinSyncYml, appName)
+		.then (appName) =>
 
-				return buildAction(@resinSyncYml, @deviceIp)
-			else
-				# If local_resinos property exists in .resin-sync.yml:
-				#
-				# - Load appname. If it doesn't exist, prompt the user for it, save it in local_resinos: app-name and rebuild
-				# - Load buildTriggers. If the list is empty or build-trigerrs argument has been passed, create
-				# local_resinos: buildtriggers and rebuild
-				# - Sync container
+			savedBuildTriggers = @resinSyncYml['local_resinos']['build-triggers']
+			savedBuildTriggersList = _.map savedBuildTriggers, (trigger) -> _.toPairs(trigger)[0][0]
 
-				if not @resinSyncYml['local_resinos']['app-name']?
-					return buildAction(@resinSyncYml, @deviceIp)
+			buildDir = @resinSyncYml['source']
 
-				if not @resinSyncYml['local_resinos']['build-triggers']? or options['build-triggers']?
-					return buildAction(@resinSyncYml, @deviceIp)
+			# If builder trigger list is empty in resin sync yml or explicit 'build-trigger'
+			# option was passed then force rebuild
+			if _.isEmpty(savedBuildTriggers) or cliBuildTriggersList?
+				return setBuildTriggerHashes(@resinSyncYml, cliBuildTriggersList).then ->
+					buildAction(appName, buildDir)
 
-				checkForExistingImageAndContainer({ name: @resinSyncYml['local_resinos']['app-name'], dockerHostIp: @deviceIp })
-				.then (appExists) =>
-					if not appExists
-						return buildAction(@resinSyncYml, @deviceIp)
+			# If '--force' action is passed, rebuild
+			if cliForceRebuild
+				return buildAction(appName, buildDir)
 
-					checkBuildTriggers(@resinSyncYml.source, @resinSyncYml['local_resinos']['build-triggers'])
-					.then (needsRebuild) =>
-						if needsRebuild
-							return buildAction(@resinSyncYml, @deviceIp)
-						else
-							return syncAction(options, @deviceIp)
-		.catch (err) ->
-			console.log 'Error', err, err?.stack
-			throw err
+			checkBuildTriggers(@resinSyncYml)
+			.then (shouldRebuild) =>
+
+				if shouldRebuild
+					return setBuildTriggerHashes(@resinSyncYml, savedBuildTriggersList).then ->
+						buildAction(appName, buildDir)
+
+				Promise.props
+					containerExists: checkForExistingContainer(appName)
+					imageExists: checkForExistingImage(appName)
+				.then ({ containerExists, imageExists }) =>
+					if not containerExists or not imageExists
+						return buildAction(appName, buildDir)
+					return syncAction(options, @deviceIp)
 		.nodeify(done)
