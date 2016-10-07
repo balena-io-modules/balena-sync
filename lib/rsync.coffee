@@ -23,10 +23,6 @@ buildRshOption = (options = {}) ->
 
 	utils.validateObject options,
 		properties:
-			username:
-				description: 'username'
-				type: 'string'
-				required: true
 			host:
 				description: 'host'
 				type: 'string'
@@ -44,21 +40,21 @@ buildRshOption = (options = {}) ->
 				type: 'boolean'
 
 	verbose = if options.verbose then '-vv ' else ''
-	remoteCmd = options['remote-cmd'] ? ''
+	remoteCmd = options['remote-cmd']
 
-	result = """
+	sshCommand = """
 		ssh \
 		#{verbose}\
 		-p #{options.port} \
 		-o LogLevel=ERROR \
 		-o StrictHostKeyChecking=no \
 		-o UserKnownHostsFile=/dev/null \
-		-o ControlMaster=no \
-		#{options.username}@#{options.host} \
-		#{remoteCmd}
+		-o ControlMaster=no
 	"""
 
-	return result
+	sshCommand += " #{options.username}@#{options.host} #{remoteCmd}" if remoteCmd
+
+	return sshCommand
 
 ###*
 # @summary Build rsync command
@@ -67,6 +63,7 @@ buildRshOption = (options = {}) ->
 #
 # @param {Object} options - rsync options
 # @param {String} options.host - host
+# @param {String} options.username - username
 # @param {Boolean} [options.progress] - show progress
 # @param {String|String[]} [options.ignore] - pattern/s to ignore. Note that '.gitignore' is always used as a filter if it exists
 # @param {Boolean} [options.verbose] - verbose output
@@ -79,13 +76,18 @@ buildRshOption = (options = {}) ->
 # @example
 # command = rsync.buildRsyncCommand
 #		host: 'ssh.resindevice.io'
-#		source: '/home/uer/app',
+#		username: 'test'
+#		source: '/home/user/app',
 #		destination: '/usr/src/app'
 ###
 exports.buildRsyncCommand = (options = {}) ->
 
 	utils.validateObject options,
 		properties:
+			username:
+				description: 'username'
+				type: 'string'
+				required: true
 			host:
 				description: 'host'
 				type: 'string'
@@ -122,7 +124,7 @@ exports.buildRsyncCommand = (options = {}) ->
 
 	args =
 		source: '.'
-		destination: "#{options.host}:#{options.destination}"
+		destination: "#{options.username}@#{options.host}:#{options.destination}"
 		progress: options.progress
 		shell: buildRshOption(options)
 

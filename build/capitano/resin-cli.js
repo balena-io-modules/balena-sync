@@ -68,14 +68,14 @@ module.exports = {
     }
   ],
   action: function(params, options, done) {
-    var Promise, ensureDeviceIsOnline, form, getRemoteResinioOnlineDevices, getSyncOptions, save, selectOnlineDevice, sync, _, _ref;
+    var Promise, _, ensureDeviceIsOnline, form, getRemoteResinioOnlineDevices, getSyncOptions, ref, save, selectOnlineDevice, sync;
     Promise = require('bluebird');
     _ = require('lodash');
     form = require('resin-cli-form');
     save = require('../config').save;
     getSyncOptions = require('../utils').getSyncOptions;
     getRemoteResinioOnlineDevices = require('../discover').getRemoteResinioOnlineDevices;
-    _ref = require('../sync')('remote-resin-io-device'), sync = _ref.sync, ensureDeviceIsOnline = _ref.ensureDeviceIsOnline;
+    ref = require('../sync')('remote-resin-io-device'), sync = ref.sync, ensureDeviceIsOnline = ref.ensureDeviceIsOnline;
     selectOnlineDevice = function() {
       return getRemoteResinioOnlineDevices().then(function(onlineDevices) {
         if (_.isEmpty(onlineDevices)) {
@@ -87,7 +87,7 @@ module.exports = {
           "default": onlineDevices[0].uuid,
           choices: _.map(onlineDevices, function(device) {
             return {
-              name: "" + (device.name || 'Untitled') + " (" + (device.uuid.slice(0, 7)) + ")",
+              name: (device.name || 'Untitled') + " (" + (device.uuid.slice(0, 7)) + ")",
               value: device.uuid
             };
           })

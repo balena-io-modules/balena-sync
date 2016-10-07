@@ -21,7 +21,8 @@ _ = require('lodash')
 revalidator = require('revalidator')
 Spinner = require('resin-cli-visuals').Spinner
 form = require('resin-cli-form')
-{ load } = require('./config')
+{ load, save } = require('./config')
+
 
 ###*
 # @summary Validate object
@@ -138,49 +139,55 @@ exports.spinnerPromise = Promise.method (promise, startMsg, stopMsg) ->
 		throw err
 
 # Resolves with the resolved 'promise' value
-exports.startContainer = (promise) ->
+exports.startContainerSpinner = (startContainerPromise) ->
 	exports.spinnerPromise(
-		promise
+		startContainerPromise
 		'Starting application container...'
 		'Application container started.'
 	)
 
 # Resolves with the resolved 'promise' value
-exports.stopContainer = (promise) ->
+exports.stopContainerSpinner = (stopContainerPromise) ->
 	exports.spinnerPromise(
-		promise
+		stopContainerPromise
 		'Stopping application container...'
 		'Application container stopped.'
 	)
 
 # Resolves with the resolved 'promise' value
-exports.startContainerAfterError = (promise) ->
+exports.startContainerAfterErrorSpinner = (startContainerPromise) ->
 	exports.spinnerPromise(
-		promise
+		startContainerPromise
 		'Attempting to start application container after failed \'sync\'...'
 		'Application container started after failed \'sync\'.'
 	)
 
+# Resolve with .resin-sync.yml or throw
+exports.loadResinSyncYml = Promise.method (source) ->
+	try
+		if not source?
+			fs.accessSync(path.join(process.cwd(), '.resin-sync.yml'))
+			source = process.cwd()
+	catch
+		throw new Error('No --source option passed and no \'.resin-sync.yml\' file found in current directory.')
+
+	resinSyncYml = load(source)
+	resinSyncYml.source = source
+	return resinSyncYml
+
 # Get sync options from command line and `.resin-sync.yml`
 # Command line options have precedence over the ones saved in `.resin-sync.yml`
-exports.getSyncOptions = (options = {}) ->
-	Promise.try ->
-		try
-			if not options.source?
-				fs.accessSync(path.join(process.cwd(), '.resin-sync.yml'))
-				options.source = process.cwd()
-		catch
-			throw new Error('No --source option passed and no \'.resin-sync.yml\' file found in current directory.')
-
-		return load(options.source)
+exports.getSyncOptions = (cliOptions = {}) ->
+	cliOptions = _.clone(cliOptions)
+	exports.loadResinSyncYml(cliOptions.source)
 	.then	(resinSyncYml) ->
 		syncOptions = {}
 
 		# Capitano does not support comma separated options yet
-		if options.ignore?
-			options.ignore = options.ignore.split(',')
+		if cliOptions.ignore?
+			cliOptions.ignore = cliOptions.ignore.split(',')
 
-		_.mergeWith syncOptions, resinSyncYml, options, (objVal, srcVal, key) ->
+		_.mergeWith syncOptions, resinSyncYml, cliOptions, (objVal, srcVal, key) ->
 			# Give precedence to command line 'ignore' options
 			if key is 'ignore'
 				return srcVal
@@ -203,3 +210,9 @@ exports.getSyncOptions = (options = {}) ->
 		.get('destination')
 		.then (destination) ->
 			_.assign(syncOptions, destination: destination ? '/usr/src/app')
+		.then ->
+			save(
+				_.omit(syncOptions, [ 'source', 'verbose', 'progress', 'force', 'build-triggers', 'app-name' ])
+				syncOptions.source
+			)
+			return syncOptions

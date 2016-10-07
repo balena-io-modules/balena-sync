@@ -27,9 +27,9 @@ settings = require('resin-settings-client')
 shell = require('../shell')
 { buildRsyncCommand } = require('../rsync')
 { spinnerPromise
-	startContainer
-	stopContainer
-	startContainerAfterError
+	startContainerSpinner
+	stopContainerSpinner
+	startContainerAfterErrorSpinner
 } = require('../utils')
 
 MIN_HOSTOS_RSYNC = '1.1.4'
@@ -172,13 +172,13 @@ exports.sync = (syncOptions) ->
 		if before?
 			shell.runCommand(before, source)
 	.then -> # stop container
-		stopContainer(resin.models.device.stopApplication(uuid)).then (containerId) ->
+		stopContainerSpinner(resin.models.device.stopApplication(uuid)).then (containerId) ->
 			# the resolved 'containerId' value is needed for the rsync process over resin-proxy
 			_.assign(syncOptions, { containerId })
 	.then -> # sync container
 		syncContainer()
 		.then -> # start container
-			startContainer(resin.models.device.startApplication(uuid))
+			startContainerSpinner(resin.models.device.startApplication(uuid))
 		.then -> # run 'after' action
 			if after?
 				shell.runCommand(after, source)
@@ -187,7 +187,7 @@ exports.sync = (syncOptions) ->
 		.catch (err) ->
 			# Notify the user of the error and run 'startApplication()'
 			# once again to make sure that a new app container will be started
-			startContainerAfterError(resin.models.device.startApplication(uuid))
+			startContainerAfterErrorSpinner(resin.models.device.startApplication(uuid))
 			.catch (err) ->
 				console.log('Could not start application container', err)
 			.finally ->

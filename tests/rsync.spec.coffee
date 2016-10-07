@@ -32,7 +32,7 @@ assertCommand = (command, options) ->
 		.join(' ')
 
 	# node-rsync@0.4.0 bug - the single quote should normally not be escaped since it appears inside double quotes
-	expected += " . \"ssh.resindevice.io:/usr/src/app/a/b/\\` \\' @ ! \\$test \\\" end\""
+	expected += " . \"test@ssh.resindevice.io:/usr/src/app/a/b/\\` \\' @ ! \\$test \\\" end\""
 
 	m.chai.expect(command).to.equal(expected)
 

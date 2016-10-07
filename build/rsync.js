@@ -14,7 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
  */
-var buildRshOption, path, rsync, utils, _;
+var _, buildRshOption, path, rsync, utils;
 
 path = require('path');
 
@@ -25,17 +25,12 @@ rsync = require('rsync');
 utils = require('./utils');
 
 buildRshOption = function(options) {
-  var remoteCmd, result, verbose, _ref;
+  var remoteCmd, sshCommand, verbose;
   if (options == null) {
     options = {};
   }
   utils.validateObject(options, {
     properties: {
-      username: {
-        description: 'username',
-        type: 'string',
-        required: true
-      },
       host: {
         description: 'host',
         type: 'string',
@@ -58,9 +53,12 @@ buildRshOption = function(options) {
     }
   });
   verbose = options.verbose ? '-vv ' : '';
-  remoteCmd = (_ref = options['remote-cmd']) != null ? _ref : '';
-  result = "ssh " + verbose + "-p " + options.port + " -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ControlMaster=no " + options.username + "@" + options.host + " " + remoteCmd;
-  return result;
+  remoteCmd = options['remote-cmd'];
+  sshCommand = "ssh " + verbose + "-p " + options.port + " -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ControlMaster=no";
+  if (remoteCmd) {
+    sshCommand += " " + options.username + "@" + options.host + " " + remoteCmd;
+  }
+  return sshCommand;
 };
 
 
@@ -71,6 +69,7 @@ buildRshOption = function(options) {
  *
  * @param {Object} options - rsync options
  * @param {String} options.host - host
+ * @param {String} options.username - username
  * @param {Boolean} [options.progress] - show progress
  * @param {String|String[]} [options.ignore] - pattern/s to ignore. Note that '.gitignore' is always used as a filter if it exists
  * @param {Boolean} [options.verbose] - verbose output
@@ -83,17 +82,23 @@ buildRshOption = function(options) {
  * @example
  * command = rsync.buildRsyncCommand
  *		host: 'ssh.resindevice.io'
- *		source: '/home/uer/app',
+ *		username: 'test'
+ *		source: '/home/user/app',
  *		destination: '/usr/src/app'
  */
 
 exports.buildRsyncCommand = function(options) {
-  var args, gitignoreExclude, patterns, result, rsyncCmd, _ref;
+  var args, gitignoreExclude, patterns, ref, result, rsyncCmd;
   if (options == null) {
     options = {};
   }
   utils.validateObject(options, {
     properties: {
+      username: {
+        description: 'username',
+        type: 'string',
+        required: true
+      },
       host: {
         description: 'host',
         type: 'string',
@@ -139,7 +144,7 @@ exports.buildRsyncCommand = function(options) {
   });
   args = {
     source: '.',
-    destination: "" + options.host + ":" + options.destination,
+    destination: options.username + "@" + options.host + ":" + options.destination,
     progress: options.progress,
     shell: buildRshOption(options),
     flags: {
@@ -154,10 +159,10 @@ exports.buildRsyncCommand = function(options) {
       patterns = utils.gitignoreToRsyncPatterns(path.join(options.source, '.gitignore'));
       rsyncCmd.include(patterns.include);
       rsyncCmd.exclude(patterns.exclude);
-    } catch (_error) {}
+    } catch (error) {}
   }
   if (options.ignore != null) {
-    gitignoreExclude = (_ref = patterns != null ? patterns.exclude : void 0) != null ? _ref : [];
+    gitignoreExclude = (ref = patterns != null ? patterns.exclude : void 0) != null ? ref : [];
     rsyncCmd.exclude(_.difference(options.ignore, gitignoreExclude));
   }
   result = rsyncCmd.command();

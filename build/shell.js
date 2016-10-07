@@ -14,7 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
  */
-var Promise, child_process, os, rindle, _;
+var Promise, _, child_process, os, rindle;
 
 child_process = require('child_process');
 

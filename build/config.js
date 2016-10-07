@@ -14,7 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
  */
-var fs, jsYaml, path, _;
+var _, fs, jsYaml, path;
 
 fs = require('fs');
 
@@ -79,8 +79,8 @@ exports.load = function(baseDir, configFile) {
     if (!_.isPlainObject(result)) {
       throw new Error("Invalid configuration file: " + configPath);
     }
-  } catch (_error) {
-    error = _error;
+  } catch (error1) {
+    error = error1;
     if (error.code === 'ENOENT') {
       return {};
     }
@@ -117,8 +117,8 @@ exports.save = function(yamlObj, baseDir, configFile) {
     return fs.writeFileSync(configSavePath, yamlDump, {
       encoding: 'utf8'
     });
-  } catch (_error) {
-    error = _error;
+  } catch (error1) {
+    error = error1;
     if (error.code === 'ENOENT') {
       return {};
     }

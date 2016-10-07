@@ -14,7 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
  */
-var Promise, Spinner, form, fs, load, path, revalidator, unescapeSpaces, _;
+var Promise, Spinner, _, form, fs, load, path, ref, revalidator, save, unescapeSpaces;
 
 fs = require('fs');
 
@@ -30,7 +30,7 @@ Spinner = require('resin-cli-visuals').Spinner;
 
 form = require('resin-cli-form');
 
-load = require('./config').load;
+ref = require('./config'), load = ref.load, save = ref.save;
 
 
 /**
@@ -152,39 +152,45 @@ exports.spinnerPromise = Promise.method(function(promise, startMsg, stopMsg) {
   });
 });
 
-exports.startContainer = function(promise) {
-  return exports.spinnerPromise(promise, 'Starting application container...', 'Application container started.');
+exports.startContainerSpinner = function(startContainerPromise) {
+  return exports.spinnerPromise(startContainerPromise, 'Starting application container...', 'Application container started.');
 };
 
-exports.stopContainer = function(promise) {
-  return exports.spinnerPromise(promise, 'Stopping application container...', 'Application container stopped.');
+exports.stopContainerSpinner = function(stopContainerPromise) {
+  return exports.spinnerPromise(stopContainerPromise, 'Stopping application container...', 'Application container stopped.');
 };
 
-exports.startContainerAfterError = function(promise) {
-  return exports.spinnerPromise(promise, 'Attempting to start application container after failed \'sync\'...', 'Application container started after failed \'sync\'.');
+exports.startContainerAfterErrorSpinner = function(startContainerPromise) {
+  return exports.spinnerPromise(startContainerPromise, 'Attempting to start application container after failed \'sync\'...', 'Application container started after failed \'sync\'.');
 };
 
-exports.getSyncOptions = function(options) {
-  if (options == null) {
-    options = {};
-  }
-  return Promise["try"](function() {
-    try {
-      if (options.source == null) {
-        fs.accessSync(path.join(process.cwd(), '.resin-sync.yml'));
-        options.source = process.cwd();
-      }
-    } catch (_error) {
-      throw new Error('No --source option passed and no \'.resin-sync.yml\' file found in current directory.');
+exports.loadResinSyncYml = Promise.method(function(source) {
+  var resinSyncYml;
+  try {
+    if (source == null) {
+      fs.accessSync(path.join(process.cwd(), '.resin-sync.yml'));
+      source = process.cwd();
     }
-    return load(options.source);
-  }).then(function(resinSyncYml) {
+  } catch (error1) {
+    throw new Error('No --source option passed and no \'.resin-sync.yml\' file found in current directory.');
+  }
+  resinSyncYml = load(source);
+  resinSyncYml.source = source;
+  return resinSyncYml;
+});
+
+exports.getSyncOptions = function(cliOptions) {
+  if (cliOptions == null) {
+    cliOptions = {};
+  }
+  cliOptions = _.clone(cliOptions);
+  return exports.loadResinSyncYml(cliOptions.source).then(function(resinSyncYml) {
     var syncOptions;
     syncOptions = {};
-    if (options.ignore != null) {
-      options.ignore = options.ignore.split(',');
+    if (cliOptions.ignore != null) {
+      cliOptions.ignore = cliOptions.ignore.split(',');
     }
-    _.mergeWith(syncOptions, resinSyncYml, options, function(objVal, srcVal, key) {
+    _.mergeWith(syncOptions, resinSyncYml, cliOptions, function(objVal, srcVal, key) {
       if (key === 'ignore') {
         return srcVal;
       }
@@ -209,6 +215,9 @@ exports.getSyncOptions = function(options) {
       return _.assign(syncOptions, {
         destination: destination != null ? destination : '/usr/src/app'
       });
+    }).then(function() {
+      save(_.omit(syncOptions, ['source', 'verbose', 'progress', 'force', 'build-triggers', 'app-name']), syncOptions.source);
+      return syncOptions;
     });
   });
 };
