@@ -141,25 +141,25 @@ exports.spinnerPromise = Promise.method (promise, startMsg, stopMsg) ->
 		throw err
 
 # Resolves with the resolved 'promise' value
-exports.startContainer = (promise) ->
+exports.startContainerSpinner = (startContainerPromise) ->
 	exports.spinnerPromise(
-		promise
+		startContainerPromise
 		'Starting application container...'
 		'Application container started.'
 	)
 
 # Resolves with the resolved 'promise' value
-exports.stopContainer = (promise) ->
+exports.stopContainerSpinner = (stopContainerPromise) ->
 	exports.spinnerPromise(
-		promise
+		stopContainerPromise
 		'Stopping application container...'
 		'Application container stopped.'
 	)
 
 # Resolves with the resolved 'promise' value
-exports.startContainerAfterError = (promise) ->
+exports.startContainerAfterErrorSpinner = (startContainerPromise) ->
 	exports.spinnerPromise(
-		promise
+		startContainerPromise
 		'Attempting to start application container after failed \'sync\'...'
 		'Application container started after failed \'sync\'.'
 	)
@@ -358,4 +358,3 @@ exports.removeContainer = Promise.method ({ appname, dockerHostIp }) ->
 		# 304: container already stopped
 		if statusCode isnt '404' or '304'
 			throw new Error("Error while inspecting image #{name}: #{err}")
-

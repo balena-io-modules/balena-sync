@@ -26,9 +26,9 @@ Docker = require('docker-toolbelt')
 shell = require('../shell')
 { buildRsyncCommand } = require('../rsync')
 { spinnerPromise
-	startContainer
-	stopContainer
-	startContainerAfterError
+	startContainerSpinner
+	stopContainerSpinner
+	startContainerAfterErrorSpinner
 	getContainerStartOptions
 } = require('../utils')
 
@@ -124,7 +124,7 @@ exports.sync = (syncOptions, deviceIp) ->
 
 	docker = new Docker(host: deviceIp, port: 2375)
 
-	getStopContainerPromise = Promise.method (appName) ->
+	stopContainer = Promise.method (appName) ->
 		docker.getContainer(appName).stopAsync(t: 10)
 		.catch (err) ->
 			# Throw unless the error code is 304 (the container was already stopped)
@@ -134,10 +134,9 @@ exports.sync = (syncOptions, deviceIp) ->
 
 			if statusCode is '404'
 				throw new Error("Container #{appName} not found - Please use 'rtb deploy --force'")
-
 			throw err
 
-	getStartContainerPromise = (appName) ->
+	startContainer = (appName) ->
 		getContainerStartOptions(appName)
 		.then (startOptions) ->
 			docker.getContainer(appName).startAsync(startOptions)
@@ -146,7 +145,6 @@ exports.sync = (syncOptions, deviceIp) ->
 				statusCode = '' + err.statusCode
 				if statusCode is '304'
 					return
-
 				throw err
 
 	syncContainer = (appName, destination, host, port = DEVICE_SSH_PORT) ->
@@ -163,8 +161,6 @@ exports.sync = (syncOptions, deviceIp) ->
 
 			command = buildRsyncCommand(syncOptions)
 
-			console.log 'running ', command
-
 			spinnerPromise(
 				shell.runCommand(command, cwd: source)
 				"Syncing to #{destination} on '#{appName}'..."
@@ -175,18 +171,18 @@ exports.sync = (syncOptions, deviceIp) ->
 		if before?
 			shell.runCommand(before, source)
 	.then -> # stop container
-		stopContainer(getStopContainerPromise(appName))
+		stopContainerSpinner(stopContainer(appName))
 	.then -> # sync container
 		syncContainer(appName, destination, deviceIp)
 		.then -> # start container
-			startContainer(getStartContainerPromise(appName))
+			startContainerSpinner(startContainer(appName))
 		.then -> # run 'after' action
 			if after?
 				shell.runCommand(after, source)
 		.catch (err) ->
 			# Notify the user of the error and run 'startApplication()'
 			# once again to make sure that a new app container will be started
-			startContainerAfterError(getStartContainerPromise(appName))
+			startContainerAfterErrorSpinner(startContainer(appName))
 			.catch (err) ->
 				console.log('Could not start application container', err)
 			.finally ->
