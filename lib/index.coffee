@@ -18,3 +18,4 @@ module.exports =
 	capitano: (cliTool) -> require('./capitano')(cliTool)
 	sync: (target) -> require('./sync')(target)
 	config: require('./config')
+	discover: require('./discover')

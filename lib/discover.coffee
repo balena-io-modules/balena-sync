@@ -14,20 +14,58 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ###
 
-Promise = require('bluebird')
+_ = require('lodash')
 resin = require('resin-sdk')
+{ enumerateServices, findServices } = require('resin-discoverable-services')
+form = require('resin-cli-form')
+{ spinnerPromise } = require('./utils')
 
-exports.findAvahiDevices = Promise.method ->
-	return [
-		{
-			name: 'resin.local'
-			ip: '192.168.1.17'
-		}
-		{
-			name: 'resin2.local'
-			ip: '192.168.1.11'
-		}
-	]
+# Although we only check for 'resin-ssh', we know, implicitly, that ResinOS
+# devices come with 'rsync' installed that can be used over SSH.
+avahiResinSshTag = 'resin-ssh'
+
+exports.discoverLocalResinOsDevices = (timeout = 4000) ->
+	enumerateServices()
+	.then (availableServices) ->
+		services = []
+
+		for s in availableServices
+			services.push(s.service) if avahiResinSshTag in s.tags
+
+		return services
+	.then (services) ->
+		if not services? or services.length is 0
+			throw new Error("Could not find any available '#{avahiResinSshTag}' services")
+
+		findServices(services, timeout)
+	.then (services) ->
+		_.map services, (service) ->
+
+			# User referer address to get device IP. This will work fine assuming that
+			# a device only advertises own services.
+			{ referer: address: address, host, port } = service
+
+			return { address, host, port }
+
+exports.selectLocalResinOsDeviceForm = (timeout = 4000) ->
+	spinnerPromise(
+		exports.discoverLocalResinOsDevices()
+		'Discovering local ResinOS devices..'
+		'Reporting discovered devices'
+	)
+	.then (devices) ->
+		if _.isEmpty(devices)
+			throw new Error('Could not find any local ResinOS devices')
+
+		return form.ask
+			message: 'select a device'
+			type: 'list'
+			default: devices[0].ip
+			choices: _.map devices, (device) ->
+				return {
+					name: "#{device.host or 'untitled'} (#{device.address})"
+					value: device.address
+				}
 
 # Resolves with array of remote online Resin.io devices, throws on error
 exports.getRemoteResinioOnlineDevices = ->

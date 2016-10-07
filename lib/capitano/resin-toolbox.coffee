@@ -120,8 +120,8 @@ module.exports =
 		chalk = require('chalk')
 		form = require('resin-cli-form')
 		{ save } = require('../config')
-		{ findAvahiDevices } = require('../discover')
 		{ getSyncOptions, loadResinSyncYml } = require('../utils')
+		{ selectLocalResinOsDeviceForm } = require('../discover')
 		{ dockerInit
 			checkForExistingImage
 			checkForExistingContainer
@@ -131,22 +131,6 @@ module.exports =
 			startContainer
 			removeContainer } = require('../docker-utils')
 		{ sync } = require('../sync')('local-resin-os-device')
-
-		selectLocalResinOSDevice = ->
-			findAvahiDevices()
-			.then (devices) ->
-				if _.isEmpty(devices)
-					throw new Error('You don\'t have any local ResinOS devices')
-
-				return form.ask
-					message: 'select a device'
-					type: 'list'
-					default: devices[0].ip
-					choices: _.map devices, (device) ->
-						return {
-							name: "#{device.name or 'untitled'} (#{device.ip})"
-							value: device.ip
-						}
 
 		setAppName = Promise.method (resinSyncYml, preferredAppName) ->
 			form.run [
@@ -181,7 +165,7 @@ module.exports =
 		getDeviceIp = Promise.method (deviceIp) ->
 			if deviceIp?
 				return deviceIp
-			return selectLocalResinOSDevice()
+			return selectLocalResinOsDeviceForm()
 
 		# https://nodejs.org/api/crypto.html
 		getFileHash = Promise.method (file, algo = 'sha256') ->
