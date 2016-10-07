@@ -150,7 +150,11 @@ module.exports =
 				checkForExistingImage({ name: appname, dockerHostIp })
 				.then (imageExists) ->
 					if imageExists
-						throw new Error("Application with name #{appname} already exists. You can either 'rtb undeploy #{appname}' or choose a different name")
+						throw new Error """
+							Application with name #{appname} already exists.\n \
+							You can run 'rtb undeploy #{appname}', 'rtb deploy --force'\n \
+							or choose a different application name with 'rtb deploy --app-name newName'
+						"""
 
 		ensureDockerfileExists = Promise.method (baseDir) ->
 			fs = require('fs')

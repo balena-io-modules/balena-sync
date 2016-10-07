@@ -337,5 +337,25 @@ exports.buildAndRunImage = Promise.method ({ baseDir, appname, dockerHostIp }) -
 			name: appname
 	.then (container) ->
 		# start container
-		console.log('Starting container..')
+		console.log('- Starting Container..')
 		container.startAsync(exports.getContainerStartOptions(appname))
+
+exports.removeContainer = Promise.method ({ appname, dockerHostIp }) ->
+	docker = new Docker(host: dockerHostIp, port: 2375)
+
+	console.log '- Stopping Container..'
+	container = docker.getContainer(appname)
+	container.stopAsync(t: 10)
+	.then ->
+		console.log '- Removing Container..'
+		container.removeAsync(v: true)
+	.catch (err) ->
+		statusCode = '' + err.statusCode
+		# Container removal should be considered successful if we receive any
+		# of these error codes:
+		#
+		# 404: container not found
+		# 304: container already stopped
+		if statusCode isnt '404' or '304'
+			throw new Error("Error while inspecting image #{name}: #{err}")
+
