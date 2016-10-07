@@ -15,17 +15,17 @@ limitations under the License.
 ###
 
 module.exports =
-	signature: 'deploy [deviceIp]'
-	description: 'Deploy your changes to a container on local ResinOS device '
+	signature: 'push [deviceIp]'
+	description: 'Push your changes to a container on local ResinOS device '
 	help: '''
 		WARNING: If you're running Windows, this command only supports `cmd.exe`.
 
-		Use this command to deploy your local changes to a container on a LAN-accessible resinOS device on the fly.
+		Use this command to push your local changes to a container on a LAN-accessible resinOS device on the fly.
 
 		If `Dockerfile` or any file in the 'build-triggers' list is changed, a new container will be built and run on your device.
 		If not, changes will simply be synced with `rsync` into the application container.
 
-		After every 'resin deploy' the updated settings will be saved in
+		After every 'resin push' the updated settings will be saved in
 		'<source>/.resin-sync.yml' and will be used in later invocations. You can
 		also change any option by editing '.resin-sync.yml' directly.
 
@@ -47,19 +47,19 @@ module.exports =
 
 		Examples:
 
-			$ rtb deploy
-			$ rtb deploy --app-name test_server --build-triggers package.json,requirements.txt
-			$ rtb deploy --force
-			$ rtb deploy --ignore lib/
-			$ rtb deploy --verbose false
-			$ rtb deploy 192.168.2.10 --source . --destination /usr/src/app
-			$ rtb deploy 192.168.2.10 -s /home/user/myResinProject -d /usr/src/app --before 'echo Hello' --after 'echo Done'
+			$ rtb push
+			$ rtb push --app-name test_server --build-triggers package.json,requirements.txt
+			$ rtb push --force
+			$ rtb push --ignore lib/
+			$ rtb push --verbose false
+			$ rtb push 192.168.2.10 --source . --destination /usr/src/app
+			$ rtb push 192.168.2.10 -s /home/user/myResinProject -d /usr/src/app --before 'echo Hello' --after 'echo Done'
 	'''
 	primary: true
 	options: [
 			signature: 'source'
 			parameter: 'path'
-			description: 'root of project directory to deploy to device container'
+			description: 'root of project directory to push'
 			alias: 's'
 		,
 			signature: 'destination'
@@ -78,12 +78,12 @@ module.exports =
 		,
 			signature: 'before'
 			parameter: 'command'
-			description: 'execute a command before deploying'
+			description: 'execute a command before pushing'
 			alias: 'b'
 		,
 			signature: 'after'
 			parameter: 'command'
-			description: 'execute a command after deploying'
+			description: 'execute a command after pushing'
 			alias: 'a'
 		,
 			signature: 'progress'
@@ -103,7 +103,7 @@ module.exports =
 		,
 			signature: 'build-triggers'
 			parameter: 'files'
-			description: 'comma delimited file list that will trigger a container rebuild/deploy if changed'
+			description: 'comma delimited file list that will trigger a container rebuild if changed'
 			alias: 'r'
 		,
 			signature: 'force'
@@ -296,9 +296,9 @@ module.exports =
 				console.log "- Starting '#{appName}' container"
 				startContainer(appName)
 			.then ->
-				console.log(chalk.green.bold('\nresin deploy completed successfully!'))
+				console.log(chalk.green.bold('\nresin push completed successfully!'))
 			.catch (err) ->
-				console.log(chalk.red.bold('resin deploy failed.', err))
+				console.log(chalk.red.bold('resin push failed.', err))
 				process.exit(1)
 
 		syncAction = (cliOptions, deviceIp) ->
@@ -307,9 +307,9 @@ module.exports =
 			.then (syncOptions) ->
 				sync(syncOptions, deviceIp)
 			.then ->
-				console.log(chalk.green.bold('\nresin deploy completed successfully!'))
+				console.log(chalk.green.bold('\nresin push completed successfully!'))
 			.catch (err) ->
-				console.log(chalk.red.bold('resin deploy failed.', err))
+				console.log(chalk.red.bold('resin push failed.', err))
 				process.exit(1)
 
 		# Capitano does not support comma separated options yet
