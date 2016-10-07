@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+# 5.0.0
+
+* rdt: Save 'local-resinos' field in .resin-sync.yml
+* rdt: Run containers with options similar to Resin.io devices
+* rdt: Sync a folder between the dev machine and a running container on a remote device
+* rdt: Do docker builds on remote device
+
 # 4.1.0
 
 * Add resin-toolbox sync structure
