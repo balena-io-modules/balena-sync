@@ -18,7 +18,7 @@ limitations under the License.
 /**
  * @module resinSync
  */
-var MIN_HOSTOS_RSYNC, Promise, buildRsyncCommand, chalk, ensureHostOSCompatibility, resin, semver, semverRegExp, settings, shell, spinnerPromise, startContainer, startContainerAfterError, stopContainer, _, _ref;
+var MIN_HOSTOS_RSYNC, Promise, _, buildRsyncCommand, chalk, ensureHostOSCompatibility, ref, resin, semver, semverRegExp, settings, shell, spinnerPromise, startContainerAfterErrorSpinner, startContainerSpinner, stopContainerSpinner;
 
 Promise = require('bluebird');
 
@@ -36,7 +36,7 @@ shell = require('../shell');
 
 buildRsyncCommand = require('../rsync').buildRsyncCommand;
 
-_ref = require('../utils'), spinnerPromise = _ref.spinnerPromise, startContainer = _ref.startContainer, stopContainer = _ref.stopContainer, startContainerAfterError = _ref.startContainerAfterError;
+ref = require('../utils'), spinnerPromise = ref.spinnerPromise, startContainerSpinner = ref.startContainerSpinner, stopContainerSpinner = ref.stopContainerSpinner, startContainerAfterErrorSpinner = ref.startContainerAfterErrorSpinner;
 
 MIN_HOSTOS_RSYNC = '1.1.4';
 
@@ -66,8 +66,8 @@ semverRegExp = /[0-9]+\.[0-9]+\.[0-9]+(?:(-|\+)[^\s]+)?/;
  */
 
 ensureHostOSCompatibility = Promise.method(function(osRelease, minVersion) {
-  var version, _ref1;
-  version = osRelease != null ? (_ref1 = osRelease.match(semverRegExp)) != null ? _ref1[0] : void 0 : void 0;
+  var ref1, version;
+  version = osRelease != null ? (ref1 = osRelease.match(semverRegExp)) != null ? ref1[0] : void 0 : void 0;
   if (version == null) {
     throw new Error("Could not parse semantic version from HostOS release info: " + osRelease);
   }
@@ -183,14 +183,14 @@ exports.sync = function(syncOptions) {
       return shell.runCommand(before, source);
     }
   }).then(function() {
-    return stopContainer(resin.models.device.stopApplication(uuid)).then(function(containerId) {
+    return stopContainerSpinner(resin.models.device.stopApplication(uuid)).then(function(containerId) {
       return _.assign(syncOptions, {
         containerId: containerId
       });
     });
   }).then(function() {
     return syncContainer().then(function() {
-      return startContainer(resin.models.device.startApplication(uuid));
+      return startContainerSpinner(resin.models.device.startApplication(uuid));
     }).then(function() {
       if (after != null) {
         return shell.runCommand(after, source);
@@ -198,7 +198,7 @@ exports.sync = function(syncOptions) {
     }).then(function() {
       return console.log(chalk.green.bold('\nresin sync completed successfully!'));
     })["catch"](function(err) {
-      return startContainerAfterError(resin.models.device.startApplication(uuid))["catch"](function(err) {
+      return startContainerAfterErrorSpinner(resin.models.device.startApplication(uuid))["catch"](function(err) {
         return console.log('Could not start application container', err);
       })["finally"](function() {
         throw err;

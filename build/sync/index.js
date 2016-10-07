@@ -15,12 +15,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
  */
 var syncTargets,
-  __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+  indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 syncTargets = ['remote-resin-io-device', 'local-resin-os-device'];
 
 module.exports = function(target) {
-  if ((target == null) || __indexOf.call(syncTargets, target) < 0) {
+  if ((target == null) || indexOf.call(syncTargets, target) < 0) {
     throw new Error("Invalid resin-sync target '" + target + "'. Supported targets are: " + syncTargets);
   }
   return require("./" + target);

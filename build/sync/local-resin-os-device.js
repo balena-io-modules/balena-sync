@@ -14,18 +14,78 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
  */
-var Promise, chalk;
+var DEVICE_SSH_PORT, Promise, _, buildRsyncCommand, dockerInit, path, ref, ref1, shell, shellwords, spinnerPromise, startContainer, startContainerAfterErrorSpinner, startContainerSpinner, stopContainer, stopContainerSpinner;
+
+path = require('path');
 
 Promise = require('bluebird');
 
-chalk = require('chalk');
+_ = require('lodash');
 
-exports.sync = function(syncOptions) {
+shellwords = require('shellwords');
+
+shell = require('../shell');
+
+buildRsyncCommand = require('../rsync').buildRsyncCommand;
+
+ref = require('../utils'), spinnerPromise = ref.spinnerPromise, startContainerSpinner = ref.startContainerSpinner, stopContainerSpinner = ref.stopContainerSpinner, startContainerAfterErrorSpinner = ref.startContainerAfterErrorSpinner;
+
+ref1 = require('../docker-utils'), dockerInit = ref1.dockerInit, startContainer = ref1.startContainer, stopContainer = ref1.stopContainer;
+
+DEVICE_SSH_PORT = 22222;
+
+exports.sync = function(syncOptions, deviceIp) {
+  var after, appName, before, destination, ref2, source, syncContainer;
+  source = syncOptions.source, destination = syncOptions.destination, before = syncOptions.before, after = syncOptions.after, (ref2 = syncOptions.local_resinos, appName = ref2['app-name']);
+  if (destination == null) {
+    throw new Error("'destination' is a required sync option");
+  }
+  if (deviceIp == null) {
+    throw new Error("'deviceIp' is a required sync option");
+  }
+  if (appName == null) {
+    throw new Error("'app-name' is a required sync option");
+  }
+  syncContainer = function(appName, destination, host, port) {
+    var docker;
+    if (port == null) {
+      port = DEVICE_SSH_PORT;
+    }
+    docker = dockerInit(deviceIp);
+    return docker.containerRootDir(appName, host, port).then(function(containerRootDirLocation) {
+      var command, rsyncDestination;
+      rsyncDestination = path.join(containerRootDirLocation, destination);
+      _.assign(syncOptions, {
+        username: 'root',
+        host: host,
+        port: port,
+        destination: shellwords.escape(rsyncDestination)
+      });
+      command = buildRsyncCommand(syncOptions);
+      return spinnerPromise(shell.runCommand(command, {
+        cwd: source
+      }), "Syncing to " + destination + " on '" + appName + "'...", "Synced " + destination + " on '" + appName + "'.");
+    });
+  };
   return Promise["try"](function() {
-    console.log('Syncing...');
-    return console.log(chalk.green.bold('sync succeeded'));
-  })["catch"](function(err) {
-    console.log(chalk.red.bold('sync failed.', err));
-    return process.exit(1);
+    if (before != null) {
+      return shell.runCommand(before, source);
+    }
+  }).then(function() {
+    return stopContainerSpinner(stopContainer(appName));
+  }).then(function() {
+    return syncContainer(appName, destination, deviceIp).then(function() {
+      return startContainerSpinner(startContainer(appName));
+    }).then(function() {
+      if (after != null) {
+        return shell.runCommand(after, source);
+      }
+    })["catch"](function(err) {
+      return startContainerAfterErrorSpinner(startContainer(appName))["catch"](function(err) {
+        return console.log('Could not start application container', err);
+      })["finally"](function() {
+        throw err;
+      });
+    });
   });
 };

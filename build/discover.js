@@ -24,10 +24,10 @@ exports.findAvahiDevices = Promise.method(function() {
   return [
     {
       name: 'resin.local',
-      ip: '129.168.1.10'
+      ip: '192.168.1.17'
     }, {
       name: 'resin2.local',
-      ip: '129.168.1.11'
+      ip: '192.168.1.11'
     }
   ];
 });

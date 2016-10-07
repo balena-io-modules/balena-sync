@@ -15,12 +15,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
  */
 var capitanoCommands,
-  __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+  indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 capitanoCommands = ['resin-cli', 'resin-toolbox'];
 
 module.exports = function(command) {
-  if ((command == null) || __indexOf.call(capitanoCommands, command) < 0) {
+  if ((command == null) || indexOf.call(capitanoCommands, command) < 0) {
     throw new Error("Invalid resin-sync capitano command '" + command + "'. Available commands are: " + capitanoCommands);
   }
   return require("./" + command);
