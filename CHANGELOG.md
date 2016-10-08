@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+# 5.1.0
+
+* rdt: Support avahi autodiscovery and export device select form for use from
+  other modules
+* rdt: Remove /etc/resolv.conf from bind mount list
+
 # 5.0.0
 
 * rdt: Save 'local-resinos' field in .resin-sync.yml
