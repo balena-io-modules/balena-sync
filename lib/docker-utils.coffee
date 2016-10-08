@@ -222,40 +222,34 @@ module.exports =
 				ensureDockerInit()
 				docker.getContainer(name).stopAsync(t: 10)
 			.catch (err) ->
-				# Throw unless the error code is 304 (the container was already stopped)
+				# Container stop should be considered successful if we receive any
+				# of these error codes:
+				#
+				# 404: container not found
+				# 304: container already stopped
 				statusCode = '' + err.statusCode
-				if statusCode isnt '304'
+				if statusCode isnt '404' and statusCode isnt '304'
 					throw new Error("Error while stopping container #{name}: #{err}")
 
 		removeContainer: (name) ->
 			Promise.try ->
 				ensureDockerInit()
-
-				container = docker.getContainer(name)
-				container.stopAsync(t: 10)
-				.then ->
-					container.removeAsync(v: true)
+				docker.getContainer(name).removeAsync(v: true)
 			.catch (err) ->
+				# Throw unless the error code is 404 (the container was not found)
 				statusCode = '' + err.statusCode
-				# Container removal should be considered successful if we receive any
-				# of these error codes:
-				#
-				# 404: container not found
-				# 304: container already stopped
-				if statusCode isnt '404' and statusCode isnt '304'
+				if statusCode isnt '404'
 					throw new Error("Error while removing container #{name}: #{err}")
 
 		removeImage: (name) ->
 			Promise.try ->
 				ensureDockerInit()
-
-				image = docker.getImage(name)
-				image.removeAsync(force: true)
+				docker.getImage(name).removeAsync(force: true)
 			.catch (err) ->
-				statusCode = '' + err.statusCode
 				# Image removal should be considered successful if we receive any
 				# of these error codes:
 				#
 				# 404: image not found
+				statusCode = '' + err.statusCode
 				if statusCode isnt '404'
 					throw new Error("Error while removing image #{name}: #{err}")

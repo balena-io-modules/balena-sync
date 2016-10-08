@@ -269,37 +269,29 @@ module.exports = {
     })["catch"](function(err) {
       var statusCode;
       statusCode = '' + err.statusCode;
-      if (statusCode !== '304') {
+      if (statusCode !== '404' && statusCode !== '304') {
         throw new Error("Error while stopping container " + name + ": " + err);
       }
     });
   },
   removeContainer: function(name) {
     return Promise["try"](function() {
-      var container;
       ensureDockerInit();
-      container = docker.getContainer(name);
-      return container.stopAsync({
-        t: 10
-      }).then(function() {
-        return container.removeAsync({
-          v: true
-        });
+      return docker.getContainer(name).removeAsync({
+        v: true
       });
     })["catch"](function(err) {
       var statusCode;
       statusCode = '' + err.statusCode;
-      if (statusCode !== '404' && statusCode !== '304') {
+      if (statusCode !== '404') {
         throw new Error("Error while removing container " + name + ": " + err);
       }
     });
   },
   removeImage: function(name) {
     return Promise["try"](function() {
-      var image;
       ensureDockerInit();
-      image = docker.getImage(name);
-      return image.removeAsync({
+      return docker.getImage(name).removeAsync({
         force: true
       });
     })["catch"](function(err) {
