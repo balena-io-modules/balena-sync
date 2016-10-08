@@ -23,7 +23,6 @@ Spinner = require('resin-cli-visuals').Spinner
 form = require('resin-cli-form')
 { load, save } = require('./config')
 
-
 ###*
 # @summary Validate object
 # @function

@@ -46,6 +46,7 @@
     "lodash": "^4.13.1",
     "resin-cli-form": "^1.4.1",
     "resin-cli-visuals": "^1.2.8",
+    "resin-discoverable-services": "^1.0.0",
     "resin-sdk": "^5.1.0",
     "resin-settings-client": "^3.5.0",
     "revalidator": "^0.3.1",
