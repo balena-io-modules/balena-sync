@@ -129,6 +129,7 @@ module.exports =
 			removeImage
 			createContainer
 			startContainer
+			stopContainer
 			removeContainer } = require('../docker-utils')
 		{ sync } = require('../sync')('local-resin-os-device')
 
@@ -262,8 +263,10 @@ module.exports =
 
 			console.log(chalk.yellow.bold('* Building..'))
 
-			console.log "- Removing any previous '#{appName}' container"
-			removeContainer(appName)
+			console.log "- Stopping and Removing any previous '#{appName}' container"
+			stopContainer(appName)
+			.then ->
+				removeContainer(appName)
 			.then ->
 				console.log "- Removing any existing container images for '#{appName}'"
 				removeImage(appName)
