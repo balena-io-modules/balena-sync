@@ -88,6 +88,8 @@ Docker::containerRootDir = (container, host, port = 22222) ->
 					containerInfo.GraphDriver.Data.RootDir
 				when 'vfs'
 					path.join(dkroot, 'vfs/dir', destId)
+				when 'aufs'
+					path.join(dkroot, 'aufs/mnt', destId)
 				else
 					throw new Error("Unsupported driver: #{dockerInfo.Driver}/")
 
