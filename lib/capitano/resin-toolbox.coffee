@@ -127,6 +127,7 @@ module.exports =
 			checkForExistingContainer
 			buildImage
 			removeImage
+			inspectImage
 			createContainer
 			startContainer
 			stopContainer
@@ -268,14 +269,22 @@ module.exports =
 			.then ->
 				removeContainer(appName)
 			.then ->
-				console.log "- Removing any existing container images for '#{appName}'"
-				removeImage(appName)
-			.then ->
+				# Get existing image id and remove it only after building new one to preserve build cache
+				inspectImage(appName)
+				.catch (err) ->
+					statusCode = '' + err.statusCode
+					return null if statusCode is '404'
+					throw err
+			.tap ->
 				console.log "- Building new '#{appName}' image"
 				buildImage
 					baseDir: sourceDir ? process.cwd()
 					name: appName
 					outStream: outStream ? process.stdout
+			.then (imageInfo) ->
+				if imageInfo?
+					console.log "- Cleaning up previous image of '#{appName}'"
+					removeImage(imageInfo.Id)
 			.then ->
 				console.log "- Creating '#{appName}' container"
 				createContainer(appName)
