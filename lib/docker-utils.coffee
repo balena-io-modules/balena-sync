@@ -97,7 +97,6 @@ defaultVolumes = {
 	'/data': {}
 	'/lib/modules': {}
 	'/lib/firmware': {}
-	'/host/var/lib/connman': {}
 	'/host/run/dbus': {}
 }
 
@@ -108,7 +107,6 @@ defaultBinds = (dataPath) ->
 		data
 		'/lib/modules:/lib/modules'
 		'/lib/firmware:/lib/firmware'
-		'/run/dbus:/host_run/dbus'
 		'/run/dbus:/host/run/dbus'
 	]
 
