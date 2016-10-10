@@ -25,7 +25,7 @@ rsync = require('rsync');
 utils = require('./utils');
 
 buildRshOption = function(options) {
-  var remoteCmd, sshCommand, verbose;
+  var sshCommand, verbose;
   if (options == null) {
     options = {};
   }
@@ -41,11 +41,6 @@ buildRshOption = function(options) {
         type: 'number',
         required: true
       },
-      'remote-cmd': {
-        description: 'remote-cmd',
-        type: 'string',
-        required: false
-      },
       verbose: {
         description: 'verbose',
         type: 'boolean'
@@ -53,11 +48,7 @@ buildRshOption = function(options) {
     }
   });
   verbose = options.verbose ? '-vv ' : '';
-  remoteCmd = options['remote-cmd'];
   sshCommand = "ssh " + verbose + "-p " + options.port + " -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ControlMaster=no";
-  if (remoteCmd) {
-    sshCommand += " " + options.username + "@" + options.host + " " + remoteCmd;
-  }
   return sshCommand;
 };
 
@@ -139,6 +130,11 @@ exports.buildRsyncCommand = function(options) {
         type: 'any',
         required: true,
         message: 'Not a string: destination'
+      },
+      'rsync-path': {
+        description: 'rsync path',
+        type: 'string',
+        message: 'Not a string: rsync-path'
       }
     }
   });
@@ -154,6 +150,9 @@ exports.buildRsyncCommand = function(options) {
     }
   };
   rsyncCmd = rsync.build(args)["delete"]();
+  if (options['rsync-path'] != null) {
+    rsyncCmd.set('rsync-path', options['rsync-path']);
+  }
   if (!options['skip-gitignore']) {
     try {
       patterns = utils.gitignoreToRsyncPatterns(path.join(options.source, '.gitignore'));

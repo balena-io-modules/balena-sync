@@ -124,7 +124,7 @@ module.exports =
 		{ selectLocalResinOsDeviceForm } = require('../discover')
 		{ dockerInit
 			checkForExistingImage
-			checkForExistingContainer
+			checkForRunningContainer
 			buildImage
 			removeImage
 			inspectImage
@@ -287,7 +287,7 @@ module.exports =
 				.then (newImageInfo) ->
 					if oldImageInfo? and oldImageInfo.Id isnt newImageInfo.Id
 						console.log "- Cleaning up previous image of '#{appName}'"
-						removeImage(imageInfo.Id)
+						removeImage(oldImageInfo.Id)
 			.then ->
 				console.log "- Creating '#{appName}' container"
 				createContainer(appName)
@@ -353,15 +353,16 @@ module.exports =
 			checkBuildTriggers(@resinSyncYml)
 			.then (shouldRebuild) =>
 
+				# Recalculate and save all trigger hashes and rebuild if any of the saved ones has changed
 				if shouldRebuild
 					return setBuildTriggerHashes(@resinSyncYml, savedBuildTriggersList).then ->
 						buildAction(appName, buildDir)
 
 				Promise.props
-					containerExists: checkForExistingContainer(appName)
+					containerIsRunning: checkForRunningContainer(appName)
 					imageExists: checkForExistingImage(appName)
-				.then ({ containerExists, imageExists }) =>
-					if not containerExists or not imageExists
-						return buildAction(appName, buildDir)
-					return syncAction(options, @deviceIp)
+				.then ({ containerIsRunning, imageExists }) =>
+					if imageExists and containerIsRunning
+						return syncAction(options, @deviceIp)
+					return buildAction(appName, buildDir)
 		.nodeify(done)

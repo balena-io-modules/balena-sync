@@ -14,7 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
  */
-var DEVICE_SSH_PORT, Promise, _, buildRsyncCommand, dockerInit, path, ref, ref1, shell, shellwords, spinnerPromise, startContainer, startContainerAfterErrorSpinner, startContainerSpinner, stopContainer, stopContainerSpinner;
+var DEVICE_SSH_PORT, Promise, _, buildRsyncCommand, checkForRunningContainer, dockerInit, path, ref, ref1, shell, shellwords, spinnerPromise, startContainer, startContainerAfterErrorSpinner, startContainerSpinner, stopContainer, stopContainerSpinner;
 
 path = require('path');
 
@@ -30,7 +30,7 @@ buildRsyncCommand = require('../rsync').buildRsyncCommand;
 
 ref = require('../utils'), spinnerPromise = ref.spinnerPromise, startContainerSpinner = ref.startContainerSpinner, stopContainerSpinner = ref.stopContainerSpinner, startContainerAfterErrorSpinner = ref.startContainerAfterErrorSpinner;
 
-ref1 = require('../docker-utils'), dockerInit = ref1.dockerInit, startContainer = ref1.startContainer, stopContainer = ref1.stopContainer;
+ref1 = require('../docker-utils'), dockerInit = ref1.dockerInit, startContainer = ref1.startContainer, stopContainer = ref1.stopContainer, checkForRunningContainer = ref1.checkForRunningContainer;
 
 DEVICE_SSH_PORT = 22222;
 
@@ -59,12 +59,18 @@ exports.sync = function(syncOptions, deviceIp) {
         username: 'root',
         host: host,
         port: port,
-        destination: shellwords.escape(rsyncDestination)
+        destination: shellwords.escape(rsyncDestination),
+        'rsync-path': "mkdir -p \"" + rsyncDestination + "\" && nsenter --target $(pidof docker) --mount rsync"
       });
       command = buildRsyncCommand(syncOptions);
-      return spinnerPromise(shell.runCommand(command, {
-        cwd: source
-      }), "Syncing to " + destination + " on '" + appName + "'...", "Synced " + destination + " on '" + appName + "'.");
+      return checkForRunningContainer(appName).then(function(isContainerRunning) {
+        if (!isContainerRunning) {
+          throw new Error("Container must be running before attempting 'sync' action");
+        }
+        return spinnerPromise(shell.runCommand(command, {
+          cwd: source
+        }), "Syncing to " + destination + " on '" + appName + "'...", "Synced " + destination + " on '" + appName + "'.");
+      });
     });
   };
   return Promise["try"](function() {
@@ -72,9 +78,9 @@ exports.sync = function(syncOptions, deviceIp) {
       return shell.runCommand(before, source);
     }
   }).then(function() {
-    return stopContainerSpinner(stopContainer(appName));
-  }).then(function() {
     return syncContainer(appName, destination, deviceIp).then(function() {
+      return stopContainerSpinner(stopContainer(appName));
+    }).then(function() {
       return startContainerSpinner(startContainer(appName));
     }).then(function() {
       if (after != null) {

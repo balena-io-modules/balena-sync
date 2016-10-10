@@ -31,16 +31,11 @@ buildRshOption = (options = {}) ->
 				description: 'port'
 				type: 'number'
 				required: true
-			'remote-cmd':
-				description: 'remote-cmd'
-				type: 'string'
-				required: false
 			verbose:
 				description: 'verbose'
 				type: 'boolean'
 
 	verbose = if options.verbose then '-vv ' else ''
-	remoteCmd = options['remote-cmd']
 
 	sshCommand = """
 		ssh \
@@ -51,8 +46,6 @@ buildRshOption = (options = {}) ->
 		-o UserKnownHostsFile=/dev/null \
 		-o ControlMaster=no
 	"""
-
-	sshCommand += " #{options.username}@#{options.host} #{remoteCmd}" if remoteCmd
 
 	return sshCommand
 
@@ -121,6 +114,10 @@ exports.buildRsyncCommand = (options = {}) ->
 				type: 'any'
 				required: true
 				message: 'Not a string: destination'
+			'rsync-path':
+				description: 'rsync path'
+				type: 'string'
+				message: 'Not a string: rsync-path'
 
 	args =
 		source: '.'
@@ -140,6 +137,9 @@ exports.buildRsyncCommand = (options = {}) ->
 			'v': options.verbose
 
 	rsyncCmd = rsync.build(args).delete()
+
+	if options['rsync-path']?
+		rsyncCmd.set('rsync-path', options['rsync-path'])
 
 	if not options['skip-gitignore']
 		try

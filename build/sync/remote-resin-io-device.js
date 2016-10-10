@@ -170,7 +170,7 @@ exports.sync = function(syncOptions) {
     }
     _.assign(syncOptions, {
       host: "ssh." + (settings.get('proxyUrl')),
-      'remote-cmd': "rsync " + uuid + " " + containerId
+      'rsync-path': "rsync " + uuid + " " + containerId
     });
     command = buildRsyncCommand(syncOptions);
     return spinnerPromise(shell.runCommand(command, {

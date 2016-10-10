@@ -21,8 +21,11 @@ assertCommand = (command, options) ->
 	if options.progress
 		expected += ' --progress'
 
-	expected += ' --rsh=\"ssh -p 22 -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ControlMaster=no test@ssh.resindevice.io rsync 1234 4567\"'
+	expected += ' --rsh=\"ssh -p 22 -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ControlMaster=no\"'
 	expected += ' --delete'
+
+	expected += " --rsync-path=\"\\$(which rsync) 1234 4567\""
+
 	expected += ' --include=\"lib/include with space.txt\" --include=\"lib/include with space trail.txt \"'
 	expected += ' --exclude=npm-debug.log --exclude=node_modules/ --exclude=lib/* --exclude=#notacomment'
 
@@ -44,7 +47,7 @@ describe 'Rsync:', ->
 		destination: "/usr/src/app/a/b/` ' @ ! $test \" end"
 		port: 22
 		host: 'ssh.resindevice.io'
-		'remote-cmd': 'rsync 1234 4567'
+		'rsync-path': '$(which rsync) 1234 4567'
 
 	beforeEach ->
 		mockFs(filesystem)
