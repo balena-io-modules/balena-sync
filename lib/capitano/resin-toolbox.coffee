@@ -287,7 +287,7 @@ module.exports =
 				.then (newImageInfo) ->
 					if oldImageInfo? and oldImageInfo.Id isnt newImageInfo.Id
 						console.log "- Cleaning up previous image of '#{appName}'"
-						removeImage(imageInfo.Id)
+						removeImage(oldImageInfo.Id)
 			.then ->
 				console.log "- Creating '#{appName}' container"
 				createContainer(appName)
