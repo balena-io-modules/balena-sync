@@ -271,8 +271,7 @@ module.exports = {
       return getSyncOptions(cliOptions).then(function(syncOptions) {
         return sync(syncOptions, deviceIp);
       }).then(function() {
-        console.log(chalk.green.bold('\nresin push completed successfully!'));
-        return pipeContainerStream(appName, process.stdout);
+        return console.log(chalk.green.bold('\nresin push completed successfully!'));
       })["catch"](function(err) {
         console.log(chalk.red.bold('resin push failed.', err));
         return process.exit(1);
@@ -334,7 +333,9 @@ module.exports = {
             var containerIsRunning, imageExists;
             containerIsRunning = arg.containerIsRunning, imageExists = arg.imageExists;
             if (imageExists && containerIsRunning) {
-              return syncAction(options, _this.deviceIp);
+              return syncAction(options, _this.deviceIp).then(function() {
+                return pipeContainerStream(appName, process.stdout);
+              });
             }
             return buildAction(appName, buildDir);
           });
