@@ -19,7 +19,7 @@ var indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i 
 module.exports = {
   signature: 'push [deviceIp]',
   description: 'Push your changes to a container on local ResinOS device ',
-  help: 'WARNING: If you\'re running Windows, this command only supports `cmd.exe`.\n\nUse this command to push your local changes to a container on a LAN-accessible resinOS device on the fly.\n\nIf `Dockerfile` or any file in the \'build-triggers\' list is changed, a new container will be built and run on your device.\nIf not, changes will simply be synced with `rsync` into the application container.\n\nAfter every \'resin push\' the updated settings will be saved in\n\'<source>/.resin-sync.yml\' and will be used in later invocations. You can\nalso change any option by editing \'.resin-sync.yml\' directly.\n\nHere is an example \'.resin-sync.yml\' :\n\n	$ cat $PWD/.resin-sync.yml\n	destination: \'/usr/src/app\'\n	before: \'echo Hello\'\n	after: \'echo Done\'\n	ignore:\n		- .git\n		- node_modules/\n\nCommand line options have precedence over the ones saved in \'.resin-sync.yml\'.\n\nIf \'.gitignore\' is found in the source directory then all explicitly listed files will be\nexcluded when using rsync to update the container. You can choose to change this default behavior with the\n\'--skip-gitignore\' option.\n\nExamples:\n\n	$ rtb push\n	$ rtb push --app-name test_server --build-triggers package.json,requirements.txt\n	$ rtb push --force\n	$ rtb push --ignore lib/\n	$ rtb push --verbose false\n	$ rtb push 192.168.2.10 --source . --destination /usr/src/app\n	$ rtb push 192.168.2.10 -s /home/user/myResinProject -d /usr/src/app --before \'echo Hello\' --after \'echo Done\'',
+  help: 'WARNING: If you\'re running Windows, this command only supports `cmd.exe`.\n\nUse this command to push your local changes to a container on a LAN-accessible resinOS device on the fly.\n\nIf `Dockerfile` or any file in the \'build-triggers\' list is changed, a new container will be built and run on your device.\nIf not, changes will simply be synced with `rsync` into the application container.\n\nAfter every \'resin push\' the updated settings will be saved in\n\'<source>/.resin-sync.yml\' and will be used in later invocations. You can\nalso change any option by editing \'.resin-sync.yml\' directly.\n\nHere is an example \'.resin-sync.yml\' :\n\n	$ cat $PWD/.resin-sync.yml\n	destination: \'/usr/src/app\'\n	before: \'echo Hello\'\n	after: \'echo Done\'\n	ignore:\n		- .git\n		- node_modules/\n\nCommand line options have precedence over the ones saved in \'.resin-sync.yml\'.\n\nIf \'.gitignore\' is found in the source directory then all explicitly listed files will be\nexcluded when using rsync to update the container. You can choose to change this default behavior with the\n\'--skip-gitignore\' option.\n\nExamples:\n\n	$ rtb push\n	$ rtb push --app-name test_server --build-triggers package.json,requirements.txt\n	$ rtb push --force-build\n	$ rtb push --ignore lib/\n	$ rtb push --verbose false\n	$ rtb push 192.168.2.10 --source . --destination /usr/src/app\n	$ rtb push 192.168.2.10 -s /home/user/myResinProject -d /usr/src/app --before \'echo Hello\' --after \'echo Done\'',
   primary: true,
   options: [
     {
@@ -72,14 +72,14 @@ module.exports = {
       description: 'comma delimited file list that will trigger a container rebuild if changed',
       alias: 'r'
     }, {
-      signature: 'force',
+      signature: 'force-build',
       boolean: true,
       description: 'force a container build and run',
       alias: 'f'
     }
   ],
   action: function(params, options, done) {
-    var Promise, _, buildAction, buildImage, chalk, checkBuildTriggers, checkFileExistsSync, checkForExistingContainer, checkForExistingImage, cliAppName, cliBuildTriggersList, cliForceRebuild, createBuildTriggerHashes, createContainer, crypto, dockerInit, ensureDockerfileExists, form, fs, getDeviceIp, getFileHash, getSyncOptions, inspectImage, loadResinSyncYml, path, ref, ref1, ref2, removeContainer, removeImage, save, selectLocalResinOsDeviceForm, setAppName, setBuildTriggerHashes, startContainer, stopContainer, sync, syncAction;
+    var Promise, _, buildAction, buildImage, chalk, checkBuildTriggers, checkFileExistsSync, checkForExistingContainer, checkForExistingImage, cliAppName, cliBuildTriggersList, cliForceBuild, createBuildTriggerHashes, createContainer, crypto, dockerInit, ensureDockerfileExists, form, fs, getDeviceIp, getFileHash, getSyncOptions, inspectImage, loadResinSyncYml, path, ref, ref1, ref2, removeContainer, removeImage, save, selectLocalResinOsDeviceForm, setAppName, setBuildTriggerHashes, startContainer, stopContainer, sync, syncAction;
     fs = require('fs');
     path = require('path');
     crypto = require('crypto');
@@ -279,7 +279,7 @@ module.exports = {
     }
     cliBuildTriggersList = options['build-triggers'];
     cliAppName = options['app-name'];
-    cliForceRebuild = (ref2 = options['force']) != null ? ref2 : false;
+    cliForceBuild = (ref2 = options['force-build']) != null ? ref2 : false;
     return loadResinSyncYml(options.source).then((function(_this) {
       return function(resinSyncYml1) {
         _this.resinSyncYml = resinSyncYml1;
@@ -314,7 +314,7 @@ module.exports = {
             return buildAction(appName, buildDir);
           });
         }
-        if (cliForceRebuild) {
+        if (cliForceBuild) {
           return buildAction(appName, buildDir);
         }
         return checkBuildTriggers(_this.resinSyncYml).then(function(shouldRebuild) {

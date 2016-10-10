@@ -49,7 +49,7 @@ module.exports =
 
 			$ rtb push
 			$ rtb push --app-name test_server --build-triggers package.json,requirements.txt
-			$ rtb push --force
+			$ rtb push --force-build
 			$ rtb push --ignore lib/
 			$ rtb push --verbose false
 			$ rtb push 192.168.2.10 --source . --destination /usr/src/app
@@ -106,7 +106,7 @@ module.exports =
 			description: 'comma delimited file list that will trigger a container rebuild if changed'
 			alias: 'r'
 		,
-			signature: 'force'
+			signature: 'force-build'
 			boolean: true
 			description: 'force a container build and run'
 			alias: 'f'
@@ -314,7 +314,7 @@ module.exports =
 
 		cliBuildTriggersList = options['build-triggers']
 		cliAppName = options['app-name']
-		cliForceRebuild = options['force'] ? false
+		cliForceBuild = options['force-build'] ? false
 
 		loadResinSyncYml(options.source)
 		.then (@resinSyncYml) =>
@@ -343,8 +343,8 @@ module.exports =
 				return setBuildTriggerHashes(@resinSyncYml, cliBuildTriggersList).then ->
 					buildAction(appName, buildDir)
 
-			# If '--force' action is passed, rebuild
-			if cliForceRebuild
+			# If '--force-build' action is passed, rebuild
+			if cliForceBuild
 				return buildAction(appName, buildDir)
 
 			checkBuildTriggers(@resinSyncYml)
