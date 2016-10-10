@@ -106,6 +106,8 @@ Docker.prototype.containerRootDir = function(container, host, port) {
           return containerInfo.GraphDriver.Data.RootDir;
         case 'vfs':
           return path.join(dkroot, 'vfs/dir', destId);
+        case 'aufs':
+          return path.join(dkroot, 'aufs/mnt', destId);
         default:
           throw new Error("Unsupported driver: " + dockerInfo.Driver + "/");
       }
@@ -179,10 +181,11 @@ module.exports = {
       throw new Error("Error while inspecting image " + name + ": " + err);
     });
   }),
-  checkForExistingContainer: Promise.method(function(name) {
+  checkForRunningContainer: Promise.method(function(name) {
     ensureDockerInit();
     return docker.getContainer(name).inspectAsync().then(function(containerInfo) {
-      return true;
+      var ref, ref1;
+      return (ref = containerInfo != null ? (ref1 = containerInfo.State) != null ? ref1.Running : void 0 : void 0) != null ? ref : false;
     })["catch"](function(err) {
       var statusCode;
       statusCode = '' + err.statusCode;
