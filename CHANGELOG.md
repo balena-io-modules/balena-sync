@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+# 5.2.0
+
+* rdt: remove connman bind mount
+* rdt: implement inspectImage()
+* rdt: preserve docker cache by removing previous image after build
+* rdt: rename --force to --force-build
+* rdt: support rsync update for local ResinOS AUFS devices
+* rdt: stream stdout/stderr after rtd push
+
 # 5.1.1
 
 * rdt: Fix previous container removal during push
