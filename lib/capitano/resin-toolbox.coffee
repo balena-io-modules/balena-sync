@@ -312,8 +312,6 @@ module.exports =
 			.then ->
 				console.log(chalk.green.bold('\nresin push completed successfully!'))
 
-				# attach to container log stream
-				pipeContainerStream(appName, process.stdout)
 			.catch (err) ->
 				console.log(chalk.red.bold('resin push failed.', err))
 				process.exit(1)
@@ -370,6 +368,7 @@ module.exports =
 					imageExists: checkForExistingImage(appName)
 				.then ({ containerIsRunning, imageExists }) =>
 					if imageExists and containerIsRunning
-						return syncAction(options, @deviceIp)
+						return syncAction(options, @deviceIp).then ->
+							pipeContainerStream(appName, process.stdout)
 					return buildAction(appName, buildDir)
 		.nodeify(done)
