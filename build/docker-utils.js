@@ -309,5 +309,17 @@ module.exports = {
       ensureDockerInit();
       return docker.getImage(name).inspectAsync();
     });
+  },
+  pipeContainerStream: function(name, outStream) {
+    return Promise["try"](function() {
+      ensureDockerInit();
+      return docker.getContainer(name).attachAsync({
+        stream: true,
+        stdout: true,
+        stderr: true
+      }).then(function(containerStream) {
+        return containerStream.pipe(outStream);
+      });
+    });
   }
 };

@@ -79,7 +79,7 @@ module.exports = {
     }
   ],
   action: function(params, options, done) {
-    var Promise, _, buildAction, buildImage, chalk, checkBuildTriggers, checkFileExistsSync, checkForExistingImage, checkForRunningContainer, cliAppName, cliBuildTriggersList, cliForceBuild, createBuildTriggerHashes, createContainer, crypto, dockerInit, ensureDockerfileExists, form, fs, getDeviceIp, getFileHash, getSyncOptions, inspectImage, loadResinSyncYml, path, ref, ref1, ref2, removeContainer, removeImage, save, selectLocalResinOsDeviceForm, setAppName, setBuildTriggerHashes, startContainer, stopContainer, sync, syncAction;
+    var Promise, _, buildAction, buildImage, chalk, checkBuildTriggers, checkFileExistsSync, checkForExistingImage, checkForRunningContainer, cliAppName, cliBuildTriggersList, cliForceBuild, createBuildTriggerHashes, createContainer, crypto, dockerInit, ensureDockerfileExists, form, fs, getDeviceIp, getFileHash, getSyncOptions, inspectImage, loadResinSyncYml, path, pipeContainerStream, ref, ref1, ref2, removeContainer, removeImage, save, selectLocalResinOsDeviceForm, setAppName, setBuildTriggerHashes, startContainer, stopContainer, sync, syncAction;
     fs = require('fs');
     path = require('path');
     crypto = require('crypto');
@@ -90,7 +90,7 @@ module.exports = {
     save = require('../config').save;
     ref = require('../utils'), getSyncOptions = ref.getSyncOptions, loadResinSyncYml = ref.loadResinSyncYml;
     selectLocalResinOsDeviceForm = require('../discover').selectLocalResinOsDeviceForm;
-    ref1 = require('../docker-utils'), dockerInit = ref1.dockerInit, checkForExistingImage = ref1.checkForExistingImage, checkForRunningContainer = ref1.checkForRunningContainer, buildImage = ref1.buildImage, removeImage = ref1.removeImage, inspectImage = ref1.inspectImage, createContainer = ref1.createContainer, startContainer = ref1.startContainer, stopContainer = ref1.stopContainer, removeContainer = ref1.removeContainer;
+    ref1 = require('../docker-utils'), dockerInit = ref1.dockerInit, checkForExistingImage = ref1.checkForExistingImage, checkForRunningContainer = ref1.checkForRunningContainer, buildImage = ref1.buildImage, removeImage = ref1.removeImage, inspectImage = ref1.inspectImage, createContainer = ref1.createContainer, startContainer = ref1.startContainer, stopContainer = ref1.stopContainer, removeContainer = ref1.removeContainer, pipeContainerStream = ref1.pipeContainerStream;
     sync = require('../sync')('local-resin-os-device').sync;
     setAppName = Promise.method(function(resinSyncYml, preferredAppName) {
       return form.run([
@@ -259,7 +259,8 @@ module.exports = {
         console.log("- Starting '" + appName + "' container");
         return startContainer(appName);
       }).then(function() {
-        return console.log(chalk.green.bold('\nresin push completed successfully!'));
+        console.log(chalk.green.bold('\nresin push completed successfully!'));
+        return pipeContainerStream(appName, process.stdout);
       })["catch"](function(err) {
         console.log(chalk.red.bold('resin push failed.', err));
         return process.exit(1);
@@ -270,7 +271,8 @@ module.exports = {
       return getSyncOptions(cliOptions).then(function(syncOptions) {
         return sync(syncOptions, deviceIp);
       }).then(function() {
-        return console.log(chalk.green.bold('\nresin push completed successfully!'));
+        console.log(chalk.green.bold('\nresin push completed successfully!'));
+        return pipeContainerStream(appName, process.stdout);
       })["catch"](function(err) {
         console.log(chalk.red.bold('resin push failed.', err));
         return process.exit(1);
