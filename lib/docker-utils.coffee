@@ -108,7 +108,6 @@ defaultBinds = (dataPath) ->
 		'/lib/firmware:/lib/firmware'
 		'/run/dbus:/host_run/dbus'
 		'/run/dbus:/host/run/dbus'
-		'/var/lib/connman:/host/var/lib/connman'
 	]
 
 # image can be either ID or name
