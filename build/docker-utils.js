@@ -301,5 +301,11 @@ module.exports = {
         throw new Error("Error while removing image " + name + ": " + err);
       }
     });
+  },
+  inspectImage: function(name) {
+    return Promise["try"](function() {
+      ensureDockerInit();
+      return docker.getImage(name).inspectAsync();
+    });
   }
 };

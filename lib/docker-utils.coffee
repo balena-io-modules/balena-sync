@@ -252,3 +252,8 @@ module.exports =
 				statusCode = '' + err.statusCode
 				if statusCode isnt '404'
 					throw new Error("Error while removing image #{name}: #{err}")
+
+		inspectImage: (name) ->
+			Promise.try ->
+				ensureDockerInit()
+				docker.getImage(name).inspectAsync()
