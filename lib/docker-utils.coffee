@@ -151,14 +151,14 @@ module.exports =
 					return false
 				throw new Error("Error while inspecting image #{name}: #{err}")
 
-		# Resolve with true if container with 'name' exists. Resolve
+		# Resolve with true if container with 'name' exists and is running. Resolve
 		# false otherwise and reject promise on unknown error
-		checkForExistingContainer: Promise.method (name) ->
+		checkForRunningContainer: Promise.method (name) ->
 			ensureDockerInit()
 
 			docker.getContainer(name).inspectAsync()
 			.then (containerInfo) ->
-				return true
+				return containerInfo?.State?.Running ? false
 			.catch (err) ->
 				statusCode = '' + err.statusCode
 				if statusCode is '404'

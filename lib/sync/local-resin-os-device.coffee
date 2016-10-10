@@ -23,9 +23,11 @@ shell = require('../shell')
 { spinnerPromise
 	startContainerSpinner
 	stopContainerSpinner
-	startContainerAfterErrorSpinner
-} = require('../utils')
-{ dockerInit, startContainer, stopContainer } = require('../docker-utils')
+	startContainerAfterErrorSpinner } = require('../utils')
+{ dockerInit
+	startContainer
+	stopContainer
+	checkForRunningContainer } = require('../docker-utils')
 
 DEVICE_SSH_PORT = 22222
 
@@ -54,20 +56,25 @@ exports.sync = (syncOptions, deviceIp) ->
 
 			command = buildRsyncCommand(syncOptions)
 
-			spinnerPromise(
-				shell.runCommand(command, cwd: source)
-				"Syncing to #{destination} on '#{appName}'..."
-				"Synced #{destination} on '#{appName}'."
-			)
+			checkForRunningContainer(appName)
+			.then (isContainerRunning) ->
+				if not isContainerRunning
+					throw new Error("Container must be running before attempting 'sync' action")
+
+				spinnerPromise(
+					shell.runCommand(command, cwd: source)
+					"Syncing to #{destination} on '#{appName}'..."
+					"Synced #{destination} on '#{appName}'."
+				)
 
 	Promise.try ->
 		if before?
 			shell.runCommand(before, source)
-	.then -> # stop container
-		stopContainerSpinner(stopContainer(appName))
 	.then -> # sync container
 		syncContainer(appName, destination, deviceIp)
-		.then -> # start container
+		.then -> # restart container
+			stopContainerSpinner(stopContainer(appName))
+		.then ->
 			startContainerSpinner(startContainer(appName))
 		.then -> # run 'after' action
 			if after?
