@@ -257,3 +257,14 @@ module.exports =
 			Promise.try ->
 				ensureDockerInit()
 				docker.getImage(name).inspectAsync()
+
+		# Pipe stderr and stdout of container 'name' to stream
+		pipeContainerStream: (name, outStream) ->
+			Promise.try ->
+				ensureDockerInit()
+				docker.getContainer(name).attachAsync
+					stream: true
+					stdout: true
+					stderr: true
+				.then (containerStream) ->
+					containerStream.pipe(outStream)
