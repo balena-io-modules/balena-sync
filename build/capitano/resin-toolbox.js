@@ -238,18 +238,20 @@ module.exports = {
           }
           throw err;
         });
-      }).tap(function() {
+      }).then(function(oldImageInfo) {
         console.log("- Building new '" + appName + "' image");
         return buildImage({
           baseDir: sourceDir != null ? sourceDir : process.cwd(),
           name: appName,
           outStream: outStream != null ? outStream : process.stdout
+        }).then(function() {
+          return inspectImage(appName);
+        }).then(function(newImageInfo) {
+          if ((oldImageInfo != null) && oldImageInfo.Id !== newImageInfo.Id) {
+            console.log("- Cleaning up previous image of '" + appName + "'");
+            return removeImage(imageInfo.Id);
+          }
         });
-      }).then(function(imageInfo) {
-        if (imageInfo != null) {
-          console.log("- Cleaning up previous image of '" + appName + "'");
-          return removeImage(imageInfo.Id);
-        }
       }).then(function() {
         console.log("- Creating '" + appName + "' container");
         return createContainer(appName);
