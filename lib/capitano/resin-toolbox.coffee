@@ -131,7 +131,8 @@ module.exports =
 			createContainer
 			startContainer
 			stopContainer
-			removeContainer } = require('../docker-utils')
+			removeContainer
+			pipeContainerStream } = require('../docker-utils')
 		{ sync } = require('../sync')('local-resin-os-device')
 
 		setAppName = Promise.method (resinSyncYml, preferredAppName) ->
@@ -296,6 +297,9 @@ module.exports =
 				startContainer(appName)
 			.then ->
 				console.log(chalk.green.bold('\nresin push completed successfully!'))
+
+				# attach to container log stream
+				pipeContainerStream(appName, process.stdout)
 			.catch (err) ->
 				console.log(chalk.red.bold('resin push failed.', err))
 				process.exit(1)
@@ -307,6 +311,9 @@ module.exports =
 				sync(syncOptions, deviceIp)
 			.then ->
 				console.log(chalk.green.bold('\nresin push completed successfully!'))
+
+				# attach to container log stream
+				pipeContainerStream(appName, process.stdout)
 			.catch (err) ->
 				console.log(chalk.red.bold('resin push failed.', err))
 				process.exit(1)
