@@ -119,14 +119,13 @@ defaultVolumes = {
   '/data': {},
   '/lib/modules': {},
   '/lib/firmware': {},
-  '/host/var/lib/connman': {},
   '/host/run/dbus': {}
 };
 
 defaultBinds = function(dataPath) {
   var data;
   data = path.join('/resin-data', dataPath) + ':/data';
-  return [data, '/lib/modules:/lib/modules', '/lib/firmware:/lib/firmware', '/run/dbus:/host_run/dbus', '/run/dbus:/host/run/dbus'];
+  return [data, '/lib/modules:/lib/modules', '/lib/firmware:/lib/firmware', '/run/dbus:/host/run/dbus'];
 };
 
 getContainerStartOptions = Promise.method(function(image) {
