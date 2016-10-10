@@ -121,6 +121,10 @@ exports.buildRsyncCommand = (options = {}) ->
 				type: 'any'
 				required: true
 				message: 'Not a string: destination'
+			'rsync-path':
+				description: 'rsync path'
+				type: 'string'
+				message: 'Not a string: rsync-path'
 
 	args =
 		source: '.'
@@ -140,6 +144,9 @@ exports.buildRsyncCommand = (options = {}) ->
 			'v': options.verbose
 
 	rsyncCmd = rsync.build(args).delete()
+
+	if options['rsync-path']?
+		rsyncCmd.set('rsync-path', options['rsync-path'])
 
 	if not options['skip-gitignore']
 		try
