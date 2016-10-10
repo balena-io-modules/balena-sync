@@ -50,6 +50,7 @@ exports.sync = (syncOptions, deviceIp) ->
 						host: host
 						port: port
 						destination: shellwords.escape(rsyncDestination)
+						'rsync-path': "mkdir -p \"#{rsyncDestination}\" && nsenter --target $(pidof docker) --mount rsync"
 
 			command = buildRsyncCommand(syncOptions)
 
