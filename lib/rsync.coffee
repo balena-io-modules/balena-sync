@@ -31,16 +31,11 @@ buildRshOption = (options = {}) ->
 				description: 'port'
 				type: 'number'
 				required: true
-			'remote-cmd':
-				description: 'remote-cmd'
-				type: 'string'
-				required: false
 			verbose:
 				description: 'verbose'
 				type: 'boolean'
 
 	verbose = if options.verbose then '-vv ' else ''
-	remoteCmd = options['remote-cmd']
 
 	sshCommand = """
 		ssh \
@@ -51,8 +46,6 @@ buildRshOption = (options = {}) ->
 		-o UserKnownHostsFile=/dev/null \
 		-o ControlMaster=no
 	"""
-
-	sshCommand += " #{options.username}@#{options.host} #{remoteCmd}" if remoteCmd
 
 	return sshCommand
 
