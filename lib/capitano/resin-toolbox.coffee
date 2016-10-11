@@ -48,7 +48,7 @@ module.exports =
 		Examples:
 
 			$ rdt push
-			$ rdt push --app-name test_server --build-triggers package.json,requirements.txt
+			$ rdt push --app-name test-server --build-triggers package.json,requirements.txt
 			$ rdt push --force-build
 			$ rdt push --ignore lib/
 			$ rdt push --verbose false
@@ -98,7 +98,7 @@ module.exports =
 		,
 			signature: 'app-name'
 			parameter: 'name'
-			description: 'name of application container - should be unique among other containers running on the device'
+			description: 'application name - may contain lowercase characters, digits and one or more dashes. It may not start or end with a dash.'
 			alias: 'n'
 		,
 			signature: 'build-triggers'
@@ -135,7 +135,24 @@ module.exports =
 			pipeContainerStream } = require('../docker-utils')
 		{ sync } = require('../sync')('local-resin-os-device')
 
+		# Saves selected app name in '.resin-sync.yml` and resolves with its value.
+		# Throws if app name is invalid or '.resin-sync.yml' could not be updated.
 		setAppName = Promise.method (resinSyncYml, preferredAppName) ->
+
+			# Resolves with passed 'appName' if it's valid, throws otherwise
+			validateAppName = Promise.method (appName) ->
+				validCharsRegExp = new RegExp('^[a-z0-9-]+$')
+
+				if _.isEmpty(appName)
+					throw new Error('Application name should not be empty.')
+
+				hasValidChars = validCharsRegExp.test(appName)
+
+				if not hasValidChars or _.startsWith(appName, '-') or _.endsWith(appName, '-')
+					throw new Error('Application name may only contain lowercase characters, digits and one or more dashes. It may not start or end with a dash.')
+
+				return appName
+
 			form.run [
 				message: 'Select a name for the application'
 				name: 'appname'
@@ -144,6 +161,8 @@ module.exports =
 				override:
 					appname: preferredAppName
 			.get('appname')
+			.call('trim')
+			.then(validateAppName)
 			.tap (appName) ->
 				resinSyncYml['local_resinos']['app-name'] = appName
 				save(_.omit(resinSyncYml, [ 'source' ]), resinSyncYml.source)
