@@ -19,7 +19,7 @@ var indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i 
 module.exports = {
   signature: 'push [deviceIp]',
   description: 'Push your changes to a container on local ResinOS device ',
-  help: 'WARNING: If you\'re running Windows, this command only supports `cmd.exe`.\n\nUse this command to push your local changes to a container on a LAN-accessible resinOS device on the fly.\n\nIf `Dockerfile` or any file in the \'build-triggers\' list is changed, a new container will be built and run on your device.\nIf not, changes will simply be synced with `rsync` into the application container.\n\nAfter every \'rdt push\' the updated settings will be saved in\n\'<source>/.resin-sync.yml\' and will be used in later invocations. You can\nalso change any option by editing \'.resin-sync.yml\' directly.\n\nHere is an example \'.resin-sync.yml\' :\n\n	$ cat $PWD/.resin-sync.yml\n	destination: \'/usr/src/app\'\n	before: \'echo Hello\'\n	after: \'echo Done\'\n	ignore:\n		- .git\n		- node_modules/\n\nCommand line options have precedence over the ones saved in \'.resin-sync.yml\'.\n\nIf \'.gitignore\' is found in the source directory then all explicitly listed files will be\nexcluded when using rsync to update the container. You can choose to change this default behavior with the\n\'--skip-gitignore\' option.\n\nExamples:\n\n	$ rdt push\n	$ rdt push --app-name test_server --build-triggers package.json,requirements.txt\n	$ rdt push --force-build\n	$ rdt push --ignore lib/\n	$ rdt push --verbose false\n	$ rdt push 192.168.2.10 --source . --destination /usr/src/app\n	$ rdt push 192.168.2.10 -s /home/user/myResinProject -d /usr/src/app --before \'echo Hello\' --after \'echo Done\'',
+  help: 'WARNING: If you\'re running Windows, this command only supports `cmd.exe`.\n\nUse this command to push your local changes to a container on a LAN-accessible resinOS device on the fly.\n\nIf `Dockerfile` or any file in the \'build-triggers\' list is changed, a new container will be built and run on your device.\nIf not, changes will simply be synced with `rsync` into the application container.\n\nAfter every \'rdt push\' the updated settings will be saved in\n\'<source>/.resin-sync.yml\' and will be used in later invocations. You can\nalso change any option by editing \'.resin-sync.yml\' directly.\n\nHere is an example \'.resin-sync.yml\' :\n\n	$ cat $PWD/.resin-sync.yml\n	destination: \'/usr/src/app\'\n	before: \'echo Hello\'\n	after: \'echo Done\'\n	ignore:\n		- .git\n		- node_modules/\n\nCommand line options have precedence over the ones saved in \'.resin-sync.yml\'.\n\nIf \'.gitignore\' is found in the source directory then all explicitly listed files will be\nexcluded when using rsync to update the container. You can choose to change this default behavior with the\n\'--skip-gitignore\' option.\n\nExamples:\n\n	$ rdt push\n	$ rdt push --app-name test-server --build-triggers package.json,requirements.txt\n	$ rdt push --force-build\n	$ rdt push --ignore lib/\n	$ rdt push --verbose false\n	$ rdt push 192.168.2.10 --source . --destination /usr/src/app\n	$ rdt push 192.168.2.10 -s /home/user/myResinProject -d /usr/src/app --before \'echo Hello\' --after \'echo Done\'',
   primary: true,
   options: [
     {
@@ -64,7 +64,7 @@ module.exports = {
     }, {
       signature: 'app-name',
       parameter: 'name',
-      description: 'name of application container - should be unique among other containers running on the device',
+      description: 'application name - may contain lowercase characters, digits and one or more dashes. It may not start or end with a dash.',
       alias: 'n'
     }, {
       signature: 'build-triggers',
@@ -93,6 +93,19 @@ module.exports = {
     ref1 = require('../docker-utils'), dockerInit = ref1.dockerInit, checkForExistingImage = ref1.checkForExistingImage, checkForRunningContainer = ref1.checkForRunningContainer, buildImage = ref1.buildImage, removeImage = ref1.removeImage, inspectImage = ref1.inspectImage, createContainer = ref1.createContainer, startContainer = ref1.startContainer, stopContainer = ref1.stopContainer, removeContainer = ref1.removeContainer, pipeContainerStream = ref1.pipeContainerStream;
     sync = require('../sync')('local-resin-os-device').sync;
     setAppName = Promise.method(function(resinSyncYml, preferredAppName) {
+      var validateAppName;
+      validateAppName = Promise.method(function(appName) {
+        var hasValidChars, validCharsRegExp;
+        validCharsRegExp = new RegExp('^[a-z0-9-]+$');
+        if (_.isEmpty(appName)) {
+          throw new Error('Application name should not be empty.');
+        }
+        hasValidChars = validCharsRegExp.test(appName);
+        if (!hasValidChars || _.startsWith(appName, '-') || _.endsWith(appName, '-')) {
+          throw new Error('Application name may only contain lowercase characters, digits and one or more dashes. It may not start or end with a dash.');
+        }
+        return appName;
+      });
       return form.run([
         {
           message: 'Select a name for the application',
@@ -103,7 +116,7 @@ module.exports = {
         override: {
           appname: preferredAppName
         }
-      }).get('appname').tap(function(appName) {
+      }).get('appname').call('trim').then(validateAppName).tap(function(appName) {
         resinSyncYml['local_resinos']['app-name'] = appName;
         return save(_.omit(resinSyncYml, ['source']), resinSyncYml.source);
       });
