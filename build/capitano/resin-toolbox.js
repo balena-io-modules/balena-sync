@@ -19,7 +19,7 @@ var indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i 
 module.exports = {
   signature: 'push [deviceIp]',
   description: 'Push your changes to a container on local ResinOS device ',
-  help: 'WARNING: If you\'re running Windows, this command only supports `cmd.exe`.\n\nUse this command to push your local changes to a container on a LAN-accessible resinOS device on the fly.\n\nIf `Dockerfile` or any file in the \'build-triggers\' list is changed, a new container will be built and run on your device.\nIf not, changes will simply be synced with `rsync` into the application container.\n\nAfter every \'rdt push\' the updated settings will be saved in\n\'<source>/.resin-sync.yml\' and will be used in later invocations. You can\nalso change any option by editing \'.resin-sync.yml\' directly.\n\nHere is an example \'.resin-sync.yml\' :\n\n	$ cat $PWD/.resin-sync.yml\n	destination: \'/usr/src/app\'\n	before: \'echo Hello\'\n	after: \'echo Done\'\n	ignore:\n		- .git\n		- node_modules/\n\nCommand line options have precedence over the ones saved in \'.resin-sync.yml\'.\n\nIf \'.gitignore\' is found in the source directory then all explicitly listed files will be\nexcluded when using rsync to update the container. You can choose to change this default behavior with the\n\'--skip-gitignore\' option.\n\nExamples:\n\n	$ rdt push\n	$ rdt push --app-name test-server --build-triggers package.json,requirements.txt\n	$ rdt push --force-build\n	$ rdt push --ignore lib/\n	$ rdt push --verbose false\n	$ rdt push 192.168.2.10 --source . --destination /usr/src/app\n	$ rdt push 192.168.2.10 -s /home/user/myResinProject -d /usr/src/app --before \'echo Hello\' --after \'echo Done\'',
+  help: 'WARNING: If you\'re running Windows, this command only supports `cmd.exe`.\n\nUse this command to push your local changes to a container on a LAN-accessible resinOS device on the fly.\n\nIf `Dockerfile` or any file in the \'build-triggers\' list is changed, a new container will be built and run on your device.\nIf not, changes will simply be synced with `rsync` into the application container.\n\nAfter every \'rdt push\' the updated settings will be saved in\n\'<source>/.resin-sync.yml\' and will be used in later invocations. You can\nalso change any option by editing \'.resin-sync.yml\' directly.\n\nHere is an example \'.resin-sync.yml\' :\n\n	$ cat $PWD/.resin-sync.yml\n	destination: \'/usr/src/app\'\n	before: \'echo Hello\'\n	after: \'echo Done\'\n	ignore:\n		- .git\n		- node_modules/\n\nCommand line options have precedence over the ones saved in \'.resin-sync.yml\'.\n\nIf \'.gitignore\' is found in the source directory then all explicitly listed files will be\nexcluded when using rsync to update the container. You can choose to change this default behavior with the\n\'--skip-gitignore\' option.\n\nExamples:\n\n	$ rdt push\n	$ rdt push --app-name test-server --build-triggers package.json,requirements.txt\n	$ rdt push --force-build\n	$ rdt push --force-build --skip-logs\n	$ rdt push --ignore lib/\n	$ rdt push --verbose false\n	$ rdt push 192.168.2.10 --source . --destination /usr/src/app\n	$ rdt push 192.168.2.10 -s /home/user/myResinProject -d /usr/src/app --before \'echo Hello\' --after \'echo Done\'',
   primary: true,
   options: [
     {
@@ -57,6 +57,10 @@ module.exports = {
       description: 'show progress',
       alias: 'p'
     }, {
+      signature: 'skip-logs',
+      boolean: true,
+      description: 'do not stream logs after push'
+    }, {
       signature: 'verbose',
       boolean: true,
       description: 'increase verbosity',
@@ -79,7 +83,7 @@ module.exports = {
     }
   ],
   action: function(params, options, done) {
-    var Promise, _, buildAction, buildImage, chalk, checkBuildTriggers, checkFileExistsSync, checkForExistingImage, checkForRunningContainer, cliAppName, cliBuildTriggersList, cliForceBuild, createBuildTriggerHashes, createContainer, crypto, dockerInit, ensureDockerfileExists, form, fs, getDeviceIp, getFileHash, getSyncOptions, inspectImage, loadResinSyncYml, path, pipeContainerStream, ref, ref1, ref2, removeContainer, removeImage, save, selectLocalResinOsDeviceForm, setAppName, setBuildTriggerHashes, startContainer, stopContainer, sync, syncAction;
+    var Promise, _, buildAction, buildImage, chalk, checkBuildTriggers, checkFileExistsSync, checkForExistingImage, checkForRunningContainer, cliAppName, cliBuildTriggersList, cliForceBuild, cliSkipLogs, createBuildTriggerHashes, createContainer, crypto, dockerInit, ensureDockerfileExists, followContainerLogs, form, fs, getDeviceIp, getFileHash, getSyncOptions, inspectImage, loadResinSyncYml, path, pipeContainerStream, ref, ref1, ref2, ref3, removeContainer, removeImage, save, selectLocalResinOsDeviceForm, setAppName, setBuildTriggerHashes, startContainer, stopContainer, sync, syncAction;
     fs = require('fs');
     path = require('path');
     crypto = require('crypto');
@@ -234,9 +238,23 @@ module.exports = {
         return true;
       });
     });
-    buildAction = function(appName, sourceDir, outStream) {
+    followContainerLogs = Promise.method(function(appName, outStream) {
+      if (outStream == null) {
+        outStream = process.stdout;
+      }
       if (appName == null) {
-        throw new Error('Please pass an image/container name to build');
+        throw new Error('Please give an application name to stream logs from');
+      }
+      console.log(chalk.yellow.bold('* Streaming application logs..'));
+      return pipeContainerStream(appName, outStream)["catch"](function(err) {
+        return console.log('Could not stream application logs.', err);
+      });
+    });
+    buildAction = function(arg) {
+      var appName, buildDir, outStream, ref2, ref3, ref4, ref5, skipLogs;
+      ref2 = arg != null ? arg : {}, appName = ref2.appName, buildDir = (ref3 = ref2.buildDir) != null ? ref3 : process.cwd(), outStream = (ref4 = ref2.outStream) != null ? ref4 : process.stdout, skipLogs = (ref5 = ref2.skipLogs) != null ? ref5 : false;
+      if (appName == null) {
+        throw new Error('Please give an application name to build');
       }
       console.log(chalk.yellow.bold('* Building..'));
       console.log("- Stopping and Removing any previous '" + appName + "' container");
@@ -254,7 +272,7 @@ module.exports = {
       }).then(function(oldImageInfo) {
         console.log("- Building new '" + appName + "' image");
         return buildImage({
-          baseDir: sourceDir != null ? sourceDir : process.cwd(),
+          baseDir: buildDir != null ? buildDir : process.cwd(),
           name: appName,
           outStream: outStream != null ? outStream : process.stdout
         }).then(function() {
@@ -272,14 +290,25 @@ module.exports = {
         console.log("- Starting '" + appName + "' container");
         return startContainer(appName);
       }).then(function() {
-        console.log(chalk.green.bold('\nrdt push completed successfully!'));
-        return pipeContainerStream(appName, process.stdout);
+        return console.log(chalk.green.bold('\nrdt push completed successfully!'));
       })["catch"](function(err) {
         console.log(chalk.red.bold('rdt push failed.', err));
         return process.exit(1);
+      }).then(function() {
+        if (!skipLogs) {
+          return followContainerLogs(appName, process.stdout);
+        }
       });
     };
-    syncAction = function(cliOptions, deviceIp) {
+    syncAction = function(arg) {
+      var appName, cliOptions, deviceIp, ref2, ref3, skipLogs;
+      ref2 = arg != null ? arg : {}, cliOptions = ref2.cliOptions, deviceIp = ref2.deviceIp, appName = ref2.appName, skipLogs = (ref3 = ref2.skipLogs) != null ? ref3 : false;
+      if (deviceIp == null) {
+        throw new Error('Device IP is required for sync action');
+      }
+      if (appName == null) {
+        throw new Error('Application name is required for sync action');
+      }
       console.log(chalk.yellow.bold('* Syncing..'));
       return getSyncOptions(cliOptions).then(function(syncOptions) {
         return sync(syncOptions, deviceIp);
@@ -288,6 +317,10 @@ module.exports = {
       })["catch"](function(err) {
         console.log(chalk.red.bold('rdt push failed.', err));
         return process.exit(1);
+      }).then(function() {
+        if (!skipLogs) {
+          return followContainerLogs(appName, process.stdout);
+        }
       });
     };
     if (options['build-triggers'] != null) {
@@ -296,6 +329,7 @@ module.exports = {
     cliBuildTriggersList = options['build-triggers'];
     cliAppName = options['app-name'];
     cliForceBuild = (ref2 = options['force-build']) != null ? ref2 : false;
+    cliSkipLogs = (ref3 = options['skip-logs']) != null ? ref3 : false;
     return loadResinSyncYml(options.source).then((function(_this) {
       return function(resinSyncYml1) {
         _this.resinSyncYml = resinSyncYml1;
@@ -327,16 +361,28 @@ module.exports = {
         buildDir = _this.resinSyncYml['source'];
         if (_.isEmpty(savedBuildTriggers) || (cliBuildTriggersList != null)) {
           return setBuildTriggerHashes(_this.resinSyncYml, cliBuildTriggersList).then(function() {
-            return buildAction(appName, buildDir);
+            return buildAction({
+              appName: appName,
+              buildDir: buildDir,
+              skipLogs: cliSkipLogs
+            });
           });
         }
         if (cliForceBuild) {
-          return buildAction(appName, buildDir);
+          return buildAction({
+            appName: appName,
+            buildDir: buildDir,
+            skipLogs: cliSkipLogs
+          });
         }
         return checkBuildTriggers(_this.resinSyncYml).then(function(shouldRebuild) {
           if (shouldRebuild) {
             return setBuildTriggerHashes(_this.resinSyncYml, savedBuildTriggersList).then(function() {
-              return buildAction(appName, buildDir);
+              return buildAction({
+                appName: appName,
+                buildDir: buildDir,
+                skipLogs: cliSkipLogs
+              });
             });
           }
           return Promise.props({
@@ -346,11 +392,18 @@ module.exports = {
             var containerIsRunning, imageExists;
             containerIsRunning = arg.containerIsRunning, imageExists = arg.imageExists;
             if (imageExists && containerIsRunning) {
-              return syncAction(options, _this.deviceIp).then(function() {
-                return pipeContainerStream(appName, process.stdout);
+              return syncAction({
+                appName: appName,
+                cliOptions: options,
+                deviceIp: _this.deviceIp,
+                skipLogs: cliSkipLogs
               });
             }
-            return buildAction(appName, buildDir);
+            return buildAction({
+              appName: appName,
+              buildDir: buildDir,
+              skipLogs: cliSkipLogs
+            });
           });
         });
       };

@@ -216,7 +216,7 @@ exports.getSyncOptions = function(cliOptions) {
         destination: destination != null ? destination : '/usr/src/app'
       });
     }).then(function() {
-      save(_.omit(syncOptions, ['source', 'verbose', 'progress', 'force', 'build-triggers', 'app-name']), syncOptions.source);
+      save(_.omit(syncOptions, ['source', 'verbose', 'progress', 'force', 'build-triggers', 'app-name', 'skip-logs']), syncOptions.source);
       return syncOptions;
     });
   });
