@@ -204,6 +204,8 @@ module.exports =
 					Cmd: cmd
 					Tty: true
 					Volumes: defaultVolumes
+					HostConfig:
+						NetworkMode: 'host'
 					name: name
 
 		startContainer: (name) ->
