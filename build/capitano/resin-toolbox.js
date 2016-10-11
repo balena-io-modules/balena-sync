@@ -19,7 +19,7 @@ var indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i 
 module.exports = {
   signature: 'push [deviceIp]',
   description: 'Push your changes to a container on local ResinOS device ',
-  help: 'WARNING: If you\'re running Windows, this command only supports `cmd.exe`.\n\nUse this command to push your local changes to a container on a LAN-accessible resinOS device on the fly.\n\nIf `Dockerfile` or any file in the \'build-triggers\' list is changed, a new container will be built and run on your device.\nIf not, changes will simply be synced with `rsync` into the application container.\n\nAfter every \'resin push\' the updated settings will be saved in\n\'<source>/.resin-sync.yml\' and will be used in later invocations. You can\nalso change any option by editing \'.resin-sync.yml\' directly.\n\nHere is an example \'.resin-sync.yml\' :\n\n	$ cat $PWD/.resin-sync.yml\n	destination: \'/usr/src/app\'\n	before: \'echo Hello\'\n	after: \'echo Done\'\n	ignore:\n		- .git\n		- node_modules/\n\nCommand line options have precedence over the ones saved in \'.resin-sync.yml\'.\n\nIf \'.gitignore\' is found in the source directory then all explicitly listed files will be\nexcluded when using rsync to update the container. You can choose to change this default behavior with the\n\'--skip-gitignore\' option.\n\nExamples:\n\n	$ rtb push\n	$ rtb push --app-name test_server --build-triggers package.json,requirements.txt\n	$ rtb push --force-build\n	$ rtb push --ignore lib/\n	$ rtb push --verbose false\n	$ rtb push 192.168.2.10 --source . --destination /usr/src/app\n	$ rtb push 192.168.2.10 -s /home/user/myResinProject -d /usr/src/app --before \'echo Hello\' --after \'echo Done\'',
+  help: 'WARNING: If you\'re running Windows, this command only supports `cmd.exe`.\n\nUse this command to push your local changes to a container on a LAN-accessible resinOS device on the fly.\n\nIf `Dockerfile` or any file in the \'build-triggers\' list is changed, a new container will be built and run on your device.\nIf not, changes will simply be synced with `rsync` into the application container.\n\nAfter every \'rdt push\' the updated settings will be saved in\n\'<source>/.resin-sync.yml\' and will be used in later invocations. You can\nalso change any option by editing \'.resin-sync.yml\' directly.\n\nHere is an example \'.resin-sync.yml\' :\n\n	$ cat $PWD/.resin-sync.yml\n	destination: \'/usr/src/app\'\n	before: \'echo Hello\'\n	after: \'echo Done\'\n	ignore:\n		- .git\n		- node_modules/\n\nCommand line options have precedence over the ones saved in \'.resin-sync.yml\'.\n\nIf \'.gitignore\' is found in the source directory then all explicitly listed files will be\nexcluded when using rsync to update the container. You can choose to change this default behavior with the\n\'--skip-gitignore\' option.\n\nExamples:\n\n	$ rdt push\n	$ rdt push --app-name test_server --build-triggers package.json,requirements.txt\n	$ rdt push --force-build\n	$ rdt push --ignore lib/\n	$ rdt push --verbose false\n	$ rdt push 192.168.2.10 --source . --destination /usr/src/app\n	$ rdt push 192.168.2.10 -s /home/user/myResinProject -d /usr/src/app --before \'echo Hello\' --after \'echo Done\'',
   primary: true,
   options: [
     {
@@ -259,10 +259,10 @@ module.exports = {
         console.log("- Starting '" + appName + "' container");
         return startContainer(appName);
       }).then(function() {
-        console.log(chalk.green.bold('\nresin push completed successfully!'));
+        console.log(chalk.green.bold('\nrdt push completed successfully!'));
         return pipeContainerStream(appName, process.stdout);
       })["catch"](function(err) {
-        console.log(chalk.red.bold('resin push failed.', err));
+        console.log(chalk.red.bold('rdt push failed.', err));
         return process.exit(1);
       });
     };
@@ -271,9 +271,9 @@ module.exports = {
       return getSyncOptions(cliOptions).then(function(syncOptions) {
         return sync(syncOptions, deviceIp);
       }).then(function() {
-        return console.log(chalk.green.bold('\nresin push completed successfully!'));
+        return console.log(chalk.green.bold('\nrdt push completed successfully!'));
       })["catch"](function(err) {
-        console.log(chalk.red.bold('resin push failed.', err));
+        console.log(chalk.red.bold('rdt push failed.', err));
         return process.exit(1);
       });
     };

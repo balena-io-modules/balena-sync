@@ -25,7 +25,7 @@ module.exports =
 		If `Dockerfile` or any file in the 'build-triggers' list is changed, a new container will be built and run on your device.
 		If not, changes will simply be synced with `rsync` into the application container.
 
-		After every 'resin push' the updated settings will be saved in
+		After every 'rdt push' the updated settings will be saved in
 		'<source>/.resin-sync.yml' and will be used in later invocations. You can
 		also change any option by editing '.resin-sync.yml' directly.
 
@@ -47,13 +47,13 @@ module.exports =
 
 		Examples:
 
-			$ rtb push
-			$ rtb push --app-name test_server --build-triggers package.json,requirements.txt
-			$ rtb push --force-build
-			$ rtb push --ignore lib/
-			$ rtb push --verbose false
-			$ rtb push 192.168.2.10 --source . --destination /usr/src/app
-			$ rtb push 192.168.2.10 -s /home/user/myResinProject -d /usr/src/app --before 'echo Hello' --after 'echo Done'
+			$ rdt push
+			$ rdt push --app-name test_server --build-triggers package.json,requirements.txt
+			$ rdt push --force-build
+			$ rdt push --ignore lib/
+			$ rdt push --verbose false
+			$ rdt push 192.168.2.10 --source . --destination /usr/src/app
+			$ rdt push 192.168.2.10 -s /home/user/myResinProject -d /usr/src/app --before 'echo Hello' --after 'echo Done'
 	'''
 	primary: true
 	options: [
@@ -296,12 +296,12 @@ module.exports =
 				console.log "- Starting '#{appName}' container"
 				startContainer(appName)
 			.then ->
-				console.log(chalk.green.bold('\nresin push completed successfully!'))
+				console.log(chalk.green.bold('\nrdt push completed successfully!'))
 
 				# attach to container log stream
 				pipeContainerStream(appName, process.stdout)
 			.catch (err) ->
-				console.log(chalk.red.bold('resin push failed.', err))
+				console.log(chalk.red.bold('rdt push failed.', err))
 				process.exit(1)
 
 		syncAction = (cliOptions, deviceIp) ->
@@ -310,10 +310,10 @@ module.exports =
 			.then (syncOptions) ->
 				sync(syncOptions, deviceIp)
 			.then ->
-				console.log(chalk.green.bold('\nresin push completed successfully!'))
+				console.log(chalk.green.bold('\nrdt push completed successfully!'))
 
 			.catch (err) ->
-				console.log(chalk.red.bold('resin push failed.', err))
+				console.log(chalk.red.bold('rdt push failed.', err))
 				process.exit(1)
 
 		# Capitano does not support comma separated options yet
