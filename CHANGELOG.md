@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+# 5.3.1
+
+* rdt: create containers with 'host' network configuration
+
 # 5.3.0
 
 * rdt: use "rdt" CLI name in help and other messages
