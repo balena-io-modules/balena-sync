@@ -50,6 +50,7 @@ module.exports =
 			$ rdt push
 			$ rdt push --app-name test-server --build-triggers package.json,requirements.txt
 			$ rdt push --force-build
+			$ rdt push --force-build --skip-logs
 			$ rdt push --ignore lib/
 			$ rdt push --verbose false
 			$ rdt push 192.168.2.10 --source . --destination /usr/src/app
@@ -90,6 +91,10 @@ module.exports =
 			boolean: true
 			description: 'show progress'
 			alias: 'p'
+		,
+			signature: 'skip-logs'
+			boolean: true
+			description: 'do not stream logs after push'
 		,
 			signature: 'verbose'
 			boolean: true
@@ -278,9 +283,18 @@ module.exports =
 				console.log('Error while checking build trigger hashes', err)
 				return true
 
-		buildAction = (appName, sourceDir, outStream) ->
+		followContainerLogs = Promise.method (appName, outStream = process.stdout) ->
 			if not appName?
-				throw new Error('Please pass an image/container name to build')
+				throw new Error('Please give an application name to stream logs from')
+
+			console.log(chalk.yellow.bold('* Streaming application logs..'))
+			pipeContainerStream(appName, outStream)
+			.catch (err) ->
+				console.log('Could not stream application logs.', err)
+
+		buildAction = ({ appName, buildDir = process.cwd(), outStream = process.stdout, skipLogs = false } = {}) ->
+			if not appName?
+				throw new Error('Please give an application name to build')
 
 			console.log(chalk.yellow.bold('* Building..'))
 
@@ -298,7 +312,7 @@ module.exports =
 			.then (oldImageInfo) ->
 				console.log "- Building new '#{appName}' image"
 				buildImage
-					baseDir: sourceDir ? process.cwd()
+					baseDir: buildDir ? process.cwd()
 					name: appName
 					outStream: outStream ? process.stdout
 				.then ->
@@ -316,24 +330,27 @@ module.exports =
 				startContainer(appName)
 			.then ->
 				console.log(chalk.green.bold('\nrdt push completed successfully!'))
-
-				# attach to container log stream
-				pipeContainerStream(appName, process.stdout)
 			.catch (err) ->
 				console.log(chalk.red.bold('rdt push failed.', err))
 				process.exit(1)
+			.then ->
+				followContainerLogs(appName, process.stdout) if not skipLogs
 
-		syncAction = (cliOptions, deviceIp) ->
+		syncAction = ({ cliOptions, deviceIp, appName, skipLogs = false } = {}) ->
+			throw new Error('Device IP is required for sync action') if not deviceIp?
+			throw new Error('Application name is required for sync action') if not appName?
+
 			console.log(chalk.yellow.bold('* Syncing..'))
 			getSyncOptions(cliOptions)
 			.then (syncOptions) ->
 				sync(syncOptions, deviceIp)
 			.then ->
 				console.log(chalk.green.bold('\nrdt push completed successfully!'))
-
 			.catch (err) ->
 				console.log(chalk.red.bold('rdt push failed.', err))
 				process.exit(1)
+			.then ->
+				followContainerLogs(appName, process.stdout) if not skipLogs
 
 		# Capitano does not support comma separated options yet
 		if options['build-triggers']?
@@ -342,6 +359,10 @@ module.exports =
 		cliBuildTriggersList = options['build-triggers']
 		cliAppName = options['app-name']
 		cliForceBuild = options['force-build'] ? false
+
+		# XXX: capitano defaults non-passed boolean options to 'false' and does not seem
+		# to recognize 'default' option configuration setting
+		cliSkipLogs = options['skip-logs'] ? false
 
 		loadResinSyncYml(options.source)
 		.then (@resinSyncYml) =>
@@ -368,11 +389,11 @@ module.exports =
 			# option was passed then force rebuild
 			if _.isEmpty(savedBuildTriggers) or cliBuildTriggersList?
 				return setBuildTriggerHashes(@resinSyncYml, cliBuildTriggersList).then ->
-					buildAction(appName, buildDir)
+					buildAction({ appName, buildDir, skipLogs: cliSkipLogs })
 
 			# If '--force-build' action is passed, rebuild
 			if cliForceBuild
-				return buildAction(appName, buildDir)
+				return buildAction({ appName, buildDir, skipLogs: cliSkipLogs })
 
 			checkBuildTriggers(@resinSyncYml)
 			.then (shouldRebuild) =>
@@ -380,14 +401,13 @@ module.exports =
 				# Recalculate and save all trigger hashes and rebuild if any of the saved ones has changed
 				if shouldRebuild
 					return setBuildTriggerHashes(@resinSyncYml, savedBuildTriggersList).then ->
-						buildAction(appName, buildDir)
+						buildAction({ appName, buildDir, skipLogs: cliSkipLogs })
 
 				Promise.props
 					containerIsRunning: checkForRunningContainer(appName)
 					imageExists: checkForExistingImage(appName)
 				.then ({ containerIsRunning, imageExists }) =>
 					if imageExists and containerIsRunning
-						return syncAction(options, @deviceIp).then ->
-							pipeContainerStream(appName, process.stdout)
-					return buildAction(appName, buildDir)
+						return syncAction({ appName, cliOptions: options, deviceIp: @deviceIp, skipLogs: cliSkipLogs })
+					return buildAction({ appName, buildDir, skipLogs: cliSkipLogs })
 		.nodeify(done)

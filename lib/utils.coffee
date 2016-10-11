@@ -211,7 +211,7 @@ exports.getSyncOptions = (cliOptions = {}) ->
 			_.assign(syncOptions, destination: destination ? '/usr/src/app')
 		.then ->
 			save(
-				_.omit(syncOptions, [ 'source', 'verbose', 'progress', 'force', 'build-triggers', 'app-name' ])
+				_.omit(syncOptions, [ 'source', 'verbose', 'progress', 'force', 'build-triggers', 'app-name', 'skip-logs' ])
 				syncOptions.source
 			)
 			return syncOptions
