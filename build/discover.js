@@ -34,15 +34,18 @@ exports.discoverLocalResinOsDevices = function(timeout) {
     timeout = 4000;
   }
   return enumerateServices().then(function(availableServices) {
-    var i, len, s, services;
-    services = [];
-    for (i = 0, len = availableServices.length; i < len; i++) {
-      s = availableServices[i];
-      if (indexOf.call(s.tags, avahiResinSshTag) >= 0) {
-        services.push(s.service);
+    var s;
+    return (function() {
+      var i, len, results;
+      results = [];
+      for (i = 0, len = availableServices.length; i < len; i++) {
+        s = availableServices[i];
+        if (indexOf.call(s.tags, avahiResinSshTag) >= 0) {
+          results.push(s.service);
+        }
       }
-    }
-    return services;
+      return results;
+    })();
   }).then(function(services) {
     if ((services == null) || services.length === 0) {
       throw new Error("Could not find any available '" + avahiResinSshTag + "' services");

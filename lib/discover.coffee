@@ -27,12 +27,7 @@ avahiResinSshTag = 'resin-ssh'
 exports.discoverLocalResinOsDevices = (timeout = 4000) ->
 	enumerateServices()
 	.then (availableServices) ->
-		services = []
-
-		for s in availableServices
-			services.push(s.service) if avahiResinSshTag in s.tags
-
-		return services
+		return (s.service for s in availableServices when avahiResinSshTag in s.tags)
 	.then (services) ->
 		if not services? or services.length is 0
 			throw new Error("Could not find any available '#{avahiResinSshTag}' services")
