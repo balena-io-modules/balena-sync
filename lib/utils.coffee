@@ -19,7 +19,7 @@ path = require('path')
 Promise = require('bluebird')
 _ = require('lodash')
 revalidator = require('revalidator')
-Spinner = require('resin-cli-visuals').Spinner
+{ SpinnerPromise } = require('resin-cli-visuals')
 form = require('resin-cli-form')
 { load, save } = require('./config')
 
@@ -123,43 +123,25 @@ exports.gitignoreToRsyncPatterns = (gitignoreFile) ->
 	}
 
 # Resolves with the resolved 'promise' value
-exports.spinnerPromise = Promise.method (promise, startMsg, stopMsg) ->
-
-	clearSpinner = (spinner, msg) ->
-		spinner.stop() if spinner?
-		console.log(msg) if msg?
-
-	spinner = new Spinner(startMsg)
-	spinner.start()
-	promise.tap (value) ->
-		clearSpinner(spinner, stopMsg)
-	.catch (err) ->
-		clearSpinner(spinner)
-		throw err
-
-# Resolves with the resolved 'promise' value
 exports.startContainerSpinner = (startContainerPromise) ->
-	exports.spinnerPromise(
-		startContainerPromise
-		'Starting application container...'
-		'Application container started.'
-	)
+	new SpinnerPromise
+		promise: startContainerPromise
+		startMessage: 'Starting application container...'
+		stopMessage: 'Application container started.'
 
 # Resolves with the resolved 'promise' value
 exports.stopContainerSpinner = (stopContainerPromise) ->
-	exports.spinnerPromise(
-		stopContainerPromise
-		'Stopping application container...'
-		'Application container stopped.'
-	)
+	new SpinnerPromise
+		promise: stopContainerPromise
+		startMessage: 'Stopping application container...'
+		stopMessage: 'Application container stopped.'
 
 # Resolves with the resolved 'promise' value
 exports.startContainerAfterErrorSpinner = (startContainerPromise) ->
-	exports.spinnerPromise(
-		startContainerPromise
-		'Attempting to start application container after failed \'sync\'...'
-		'Application container started after failed \'sync\'.'
-	)
+	new SpinnerPromise
+		promise: startContainerPromise
+		startMessage: 'Attempting to start application container after failed \'sync\'...'
+		stopMessage: 'Application container started after failed \'sync\'.'
 
 # Resolve with .resin-sync.yml or throw
 exports.loadResinSyncYml = Promise.method (source) ->

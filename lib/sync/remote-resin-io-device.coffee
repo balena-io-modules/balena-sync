@@ -25,9 +25,9 @@ semver = require('semver')
 resin = require('resin-sdk')
 settings = require('resin-settings-client')
 shell = require('../shell')
+{ SpinnerPromise } = require('resin-cli-visuals')
 { buildRsyncCommand } = require('../rsync')
-{ spinnerPromise
-	startContainerSpinner
+{	startContainerSpinner
 	stopContainerSpinner
 	startContainerAfterErrorSpinner
 } = require('../utils')
@@ -159,11 +159,10 @@ exports.sync = (syncOptions) ->
 
 		command = buildRsyncCommand(syncOptions)
 
-		spinnerPromise(
-			shell.runCommand(command, cwd: source)
-			"Syncing to #{destination} on #{uuid.substring(0, 7)}..."
-			"Synced #{destination} on #{uuid.substring(0, 7)}."
-		)
+		new SpinnerPromise
+			promise: shell.runCommand(command, cwd: source)
+			startMessage: "Syncing to #{destination} on #{uuid.substring(0, 7)}..."
+			stopMessage: "Synced #{destination} on #{uuid.substring(0, 7)}."
 
 	{ source, uuid, before, after } = syncOptions
 
