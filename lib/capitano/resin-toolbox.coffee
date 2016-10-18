@@ -16,7 +16,7 @@ limitations under the License.
 
 module.exports =
 	signature: 'push [deviceIp]'
-	description: 'Push your changes to a container on local ResinOS device '
+	description: 'Push your changes to a container on local resinOS device '
 	help: '''
 		WARNING: If you're running Windows, this command only supports `cmd.exe`.
 
