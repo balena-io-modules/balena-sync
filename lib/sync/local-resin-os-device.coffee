@@ -19,9 +19,9 @@ Promise = require('bluebird')
 _ = require('lodash')
 shellwords = require('shellwords')
 shell = require('../shell')
+{ SpinnerPromise } = require('resin-cli-visuals')
 { buildRsyncCommand } = require('../rsync')
-{ spinnerPromise
-	startContainerSpinner
+{	startContainerSpinner
 	stopContainerSpinner
 	startContainerAfterErrorSpinner } = require('../utils')
 { dockerInit
@@ -61,11 +61,10 @@ exports.sync = (syncOptions, deviceIp) ->
 				if not isContainerRunning
 					throw new Error("Container must be running before attempting 'sync' action")
 
-				spinnerPromise(
-					shell.runCommand(command, cwd: source)
-					"Syncing to #{destination} on '#{appName}'..."
-					"Synced #{destination} on '#{appName}'."
-				)
+				new SpinnerPromise
+					promise: shell.runCommand(command, cwd: source)
+					startMessage: "Syncing to #{destination} on '#{appName}'..."
+					stopMessage: "Synced #{destination} on '#{appName}'."
 
 	Promise.try ->
 		if before?

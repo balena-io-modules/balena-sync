@@ -18,9 +18,9 @@ _ = require('lodash')
 resin = require('resin-sdk')
 { enumerateServices, findServices } = require('resin-discoverable-services')
 form = require('resin-cli-form')
-{ spinnerPromise } = require('./utils')
+{ SpinnerPromise } = require('resin-cli-visuals')
 
-# Although we only check for 'resin-ssh', we know, implicitly, that ResinOS
+# Although we only check for 'resin-ssh', we know, implicitly, that resinOS
 # devices come with 'rsync' installed that can be used over SSH.
 avahiResinSshTag = 'resin-ssh'
 
@@ -43,14 +43,13 @@ exports.discoverLocalResinOsDevices = (timeout = 4000) ->
 			return { address, host, port }
 
 exports.selectLocalResinOsDeviceForm = (timeout = 4000) ->
-	spinnerPromise(
-		exports.discoverLocalResinOsDevices()
-		'Discovering local ResinOS devices..'
-		'Reporting discovered devices'
-	)
+	new SpinnerPromise
+		promise: exports.discoverLocalResinOsDevices()
+		startMessage: 'Discovering local resinOS devices..'
+		stopMessage: 'Reporting discovered devices'
 	.then (devices) ->
 		if _.isEmpty(devices)
-			throw new Error('Could not find any local ResinOS devices')
+			throw new Error('Could not find any local resinOS devices')
 
 		return form.ask
 			message: 'select a device'
