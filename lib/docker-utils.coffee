@@ -101,7 +101,7 @@ defaultVolumes = {
 }
 
 defaultBinds = (dataPath) ->
-	data = path.join('/resin-data', dataPath) + ':/data'
+	data = path.join('/mnt/data/resin-data', dataPath) + ':/data'
 
 	return [
 		data
@@ -109,22 +109,6 @@ defaultBinds = (dataPath) ->
 		'/lib/firmware:/lib/firmware'
 		'/run/dbus:/host/run/dbus'
 	]
-
-# image can be either ID or name
-getContainerStartOptions = Promise.method (image) ->
-	throw new Error('Please give an image name or ID') if not image
-
-	# TODO: add kmod bind mount
-	binds = defaultBinds(image)
-
-	return {
-		Privileged: true
-		NetworkMode: 'host'
-		Binds: binds
-		RestartPolicy:
-			Name: 'always'
-			MaximumRetryCount: 0
-	}
 
 ensureDockerInit = ->
 	throw new Error('Docker client not initialized') if not docker?
@@ -202,16 +186,20 @@ module.exports =
 				docker.createContainerAsync
 					Image: name
 					Cmd: cmd
-					Tty: true
-					Volumes: defaultVolumes
-					HostConfig:
-						NetworkMode: 'host'
 					name: name
 
 		startContainer: (name) ->
 			Promise.try ->
 				ensureDockerInit()
-				docker.getContainer(name).startAsync(getContainerStartOptions(name))
+				docker.getContainer(name).startAsync
+					Volumes: defaultVolumes
+					Privileged: true
+					Tty: true
+					Binds: defaultBinds(name)
+					NetworkMode: 'host'
+					RestartPolicy:
+						Name: 'always'
+						MaximumRetryCount: 0
 			.catch (err) ->
 				# Throw unless the error code is 304 (the container was already started)
 				statusCode = '' + err.statusCode
