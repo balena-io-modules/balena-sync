@@ -2,7 +2,6 @@ fs = require('fs')
 path = require('path')
 Docker = require('docker-toolbelt')
 Promise = require('bluebird')
-es = require 'event-stream'
 JSONStream = require 'JSONStream'
 tar = require('tar-fs')
 ssh2 = require('ssh2')
@@ -113,6 +112,75 @@ defaultBinds = (dataPath) ->
 ensureDockerInit = ->
 	throw new Error('Docker client not initialized') if not docker?
 
+# 'dockerProgressStream' is a stream of JSON objects emitted during the build
+# 'outStream' is the output stream to pretty-print docker progress
+#
+# This function returns a promise that is rejected on error or resolves with 'true'
+#
+# Based on https://github.com/docker/docker/blob/master/pkg/jsonmessage/jsonmessage.go
+#
+prettyPrintDockerProgress = (dockerProgressStream, outStream = process.stdout) ->
+	esc = '\u001B'
+
+	clearCurrentLine = "#{esc}[2K\r"
+
+	moveCursorUp = (rows = 0) ->
+		"#{esc}[#{rows}A"
+
+	moveCursorDown = (rows = 0) ->
+		"#{esc}[#{rows}B"
+
+	display = (jsonEvent = {}) ->
+		{ id, progress, stream, status } = jsonEvent
+
+		outStream.write(clearCurrentLine)
+
+		if not _.isEmpty(id)
+			outStream.write("#{id}: ")
+
+		if not _.isEmpty(progress)
+			outStream.write("#{status} #{progress}\r")
+		else if not _.isEmpty(stream)
+			outStream.write("#{stream}\r")
+		else
+			outStream.write("#{status}\r")
+
+	new Promise (resolve, reject) ->
+		if not dockerProgressStream?
+			return reject(new Error("Missing parameter 'dockerProgressStream'"))
+
+		ids = {}
+
+		dockerProgressStream.pipe(JSONStream.parse())
+		.on 'data', (jsonEvent = {}) ->
+			{ error, id } = jsonEvent
+
+			if error?
+				return reject(new Error(error))
+
+			diff = 0
+			line = ids[id]
+
+			if id?
+				if not line?
+					line = _.size(ids)
+					ids[id] = line
+					outStream.write('\n')
+				else
+					diff = _.size(ids) - line
+				outStream.write(moveCursorUp(diff))
+			else
+				ids = {}
+
+			display(jsonEvent)
+
+			if id?
+				outStream.write(moveCursorDown(diff))
+		.on 'end', ->
+			resolve(true)
+		.on 'error', (error) ->
+			reject(error)
+
 module.exports =
 		dockerInit: (dockerHostIp = '127.0.0.1', dockerPort = 2375) ->
 			if not docker?
@@ -155,23 +223,8 @@ module.exports =
 				tarStream = tar.pack(baseDir)
 
 				docker.buildImageAsync(tarStream, t: "#{name}")
-			.then (output) ->
-				new Promise (resolve, reject) ->
-					output.pipe(JSONStream.parse())
-					.pipe(es.through (data) ->
-						if data.error?
-							return reject(new Error(data.error))
-
-						if data.stream?
-							str = "#{data.stream}\r"
-						else if data.status in [ 'Downloading', 'Extracting' ]
-							str = "#{data.status} #{data.progress ? ''}\r"
-						else
-							str = "#{data.status}\n"
-
-						@emit('data', str) if str?
-					, -> resolve(true))
-					.pipe(outStream)
+			.then (dockerProgressOutput) ->
+				prettyPrintDockerProgress(dockerProgressOutput, outStream)
 
 		createContainer: (name) ->
 			Promise.try ->
