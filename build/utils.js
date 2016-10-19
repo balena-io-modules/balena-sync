@@ -14,7 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
  */
-var Promise, Spinner, _, form, fs, load, path, ref, revalidator, save, unescapeSpaces;
+var Promise, SpinnerPromise, _, form, fs, load, path, ref, revalidator, save, unescapeSpaces;
 
 fs = require('fs');
 
@@ -26,7 +26,7 @@ _ = require('lodash');
 
 revalidator = require('revalidator');
 
-Spinner = require('resin-cli-visuals').Spinner;
+SpinnerPromise = require('resin-cli-visuals').SpinnerPromise;
 
 form = require('resin-cli-form');
 
@@ -132,36 +132,28 @@ exports.gitignoreToRsyncPatterns = function(gitignoreFile) {
   };
 };
 
-exports.spinnerPromise = Promise.method(function(promise, startMsg, stopMsg) {
-  var clearSpinner, spinner;
-  clearSpinner = function(spinner, msg) {
-    if (spinner != null) {
-      spinner.stop();
-    }
-    if (msg != null) {
-      return console.log(msg);
-    }
-  };
-  spinner = new Spinner(startMsg);
-  spinner.start();
-  return promise.tap(function(value) {
-    return clearSpinner(spinner, stopMsg);
-  })["catch"](function(err) {
-    clearSpinner(spinner);
-    throw err;
-  });
-});
-
 exports.startContainerSpinner = function(startContainerPromise) {
-  return exports.spinnerPromise(startContainerPromise, 'Starting application container...', 'Application container started.');
+  return new SpinnerPromise({
+    promise: startContainerPromise,
+    startMessage: 'Starting application container...',
+    stopMessage: 'Application container started.'
+  });
 };
 
 exports.stopContainerSpinner = function(stopContainerPromise) {
-  return exports.spinnerPromise(stopContainerPromise, 'Stopping application container...', 'Application container stopped.');
+  return new SpinnerPromise({
+    promise: stopContainerPromise,
+    startMessage: 'Stopping application container...',
+    stopMessage: 'Application container stopped.'
+  });
 };
 
 exports.startContainerAfterErrorSpinner = function(startContainerPromise) {
-  return exports.spinnerPromise(startContainerPromise, 'Attempting to start application container after failed \'sync\'...', 'Application container started after failed \'sync\'.');
+  return new SpinnerPromise({
+    promise: startContainerPromise,
+    startMessage: 'Attempting to start application container after failed \'sync\'...',
+    stopMessage: 'Application container started after failed \'sync\'.'
+  });
 };
 
 exports.loadResinSyncYml = Promise.method(function(source) {

@@ -1,4 +1,4 @@
-var Docker, JSONStream, Promise, _, defaultBinds, defaultVolumes, docker, ensureDockerInit, es, fs, getContainerStartOptions, path, readFileViaSSH, semver, ssh2, tar;
+var Docker, JSONStream, Promise, _, defaultBinds, defaultVolumes, docker, ensureDockerInit, fs, path, prettyPrintDockerProgress, readFileViaSSH, semver, ssh2, tar;
 
 fs = require('fs');
 
@@ -7,8 +7,6 @@ path = require('path');
 Docker = require('docker-toolbelt');
 
 Promise = require('bluebird');
-
-es = require('event-stream');
 
 JSONStream = require('JSONStream');
 
@@ -124,31 +122,92 @@ defaultVolumes = {
 
 defaultBinds = function(dataPath) {
   var data;
-  data = path.join('/resin-data', dataPath) + ':/data';
+  data = path.join('/mnt/data/resin-data', dataPath) + ':/data';
   return [data, '/lib/modules:/lib/modules', '/lib/firmware:/lib/firmware', '/run/dbus:/host/run/dbus'];
 };
-
-getContainerStartOptions = Promise.method(function(image) {
-  var binds;
-  if (!image) {
-    throw new Error('Please give an image name or ID');
-  }
-  binds = defaultBinds(image);
-  return {
-    Privileged: true,
-    NetworkMode: 'host',
-    Binds: binds,
-    RestartPolicy: {
-      Name: 'always',
-      MaximumRetryCount: 0
-    }
-  };
-});
 
 ensureDockerInit = function() {
   if (docker == null) {
     throw new Error('Docker client not initialized');
   }
+};
+
+prettyPrintDockerProgress = function(dockerProgressStream, outStream) {
+  var clearCurrentLine, display, esc, moveCursorDown, moveCursorUp;
+  if (outStream == null) {
+    outStream = process.stdout;
+  }
+  esc = '\u001B';
+  clearCurrentLine = esc + "[2K\r";
+  moveCursorUp = function(rows) {
+    if (rows == null) {
+      rows = 0;
+    }
+    return esc + "[" + rows + "A";
+  };
+  moveCursorDown = function(rows) {
+    if (rows == null) {
+      rows = 0;
+    }
+    return esc + "[" + rows + "B";
+  };
+  display = function(jsonEvent) {
+    var id, progress, status, stream;
+    if (jsonEvent == null) {
+      jsonEvent = {};
+    }
+    id = jsonEvent.id, progress = jsonEvent.progress, stream = jsonEvent.stream, status = jsonEvent.status;
+    outStream.write(clearCurrentLine);
+    if (!_.isEmpty(id)) {
+      outStream.write(id + ": ");
+    }
+    if (!_.isEmpty(progress)) {
+      return outStream.write(status + " " + progress + "\r");
+    } else if (!_.isEmpty(stream)) {
+      return outStream.write(stream + "\r");
+    } else {
+      return outStream.write(status + "\r");
+    }
+  };
+  return new Promise(function(resolve, reject) {
+    var ids;
+    if (dockerProgressStream == null) {
+      return reject(new Error("Missing parameter 'dockerProgressStream'"));
+    }
+    ids = {};
+    return dockerProgressStream.pipe(JSONStream.parse()).on('data', function(jsonEvent) {
+      var diff, error, id, line;
+      if (jsonEvent == null) {
+        jsonEvent = {};
+      }
+      error = jsonEvent.error, id = jsonEvent.id;
+      if (error != null) {
+        return reject(new Error(error));
+      }
+      diff = 0;
+      line = ids[id];
+      if (id != null) {
+        if (line == null) {
+          line = _.size(ids);
+          ids[id] = line;
+          outStream.write('\n');
+        } else {
+          diff = _.size(ids) - line;
+        }
+        outStream.write(moveCursorUp(diff));
+      } else {
+        ids = {};
+      }
+      display(jsonEvent);
+      if (id != null) {
+        return outStream.write(moveCursorDown(diff));
+      }
+    }).on('end', function() {
+      return resolve(true);
+    }).on('error', function(error) {
+      return reject(error);
+    });
+  });
 };
 
 module.exports = {
@@ -207,27 +266,8 @@ module.exports = {
       return docker.buildImageAsync(tarStream, {
         t: "" + name
       });
-    }).then(function(output) {
-      return new Promise(function(resolve, reject) {
-        return output.pipe(JSONStream.parse()).pipe(es.through(function(data) {
-          var ref, ref1, str;
-          if (data.error != null) {
-            return reject(new Error(data.error));
-          }
-          if (data.stream != null) {
-            str = data.stream + "\r";
-          } else if ((ref = data.status) === 'Downloading' || ref === 'Extracting') {
-            str = data.status + " " + ((ref1 = data.progress) != null ? ref1 : '') + "\r";
-          } else {
-            str = data.status + "\n";
-          }
-          if (str != null) {
-            return this.emit('data', str);
-          }
-        }, function() {
-          return resolve(true);
-        })).pipe(outStream);
-      });
+    }).then(function(dockerProgressOutput) {
+      return prettyPrintDockerProgress(dockerProgressOutput, outStream);
     });
   },
   createContainer: function(name) {
@@ -244,11 +284,6 @@ module.exports = {
       return docker.createContainerAsync({
         Image: name,
         Cmd: cmd,
-        Tty: true,
-        Volumes: defaultVolumes,
-        HostConfig: {
-          NetworkMode: 'host'
-        },
         name: name
       });
     });
@@ -256,7 +291,17 @@ module.exports = {
   startContainer: function(name) {
     return Promise["try"](function() {
       ensureDockerInit();
-      return docker.getContainer(name).startAsync(getContainerStartOptions(name));
+      return docker.getContainer(name).startAsync({
+        Volumes: defaultVolumes,
+        Privileged: true,
+        Tty: true,
+        Binds: defaultBinds(name),
+        NetworkMode: 'host',
+        RestartPolicy: {
+          Name: 'always',
+          MaximumRetryCount: 0
+        }
+      });
     })["catch"](function(err) {
       var statusCode;
       statusCode = '' + err.statusCode;

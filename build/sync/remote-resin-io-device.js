@@ -18,7 +18,7 @@ limitations under the License.
 /**
  * @module resinSync
  */
-var MIN_HOSTOS_RSYNC, Promise, _, buildRsyncCommand, chalk, ensureHostOSCompatibility, ref, resin, semver, semverRegExp, settings, shell, spinnerPromise, startContainerAfterErrorSpinner, startContainerSpinner, stopContainerSpinner;
+var MIN_HOSTOS_RSYNC, Promise, SpinnerPromise, _, buildRsyncCommand, chalk, ensureHostOSCompatibility, ref, resin, semver, semverRegExp, settings, shell, startContainerAfterErrorSpinner, startContainerSpinner, stopContainerSpinner;
 
 Promise = require('bluebird');
 
@@ -34,9 +34,11 @@ settings = require('resin-settings-client');
 
 shell = require('../shell');
 
+SpinnerPromise = require('resin-cli-visuals').SpinnerPromise;
+
 buildRsyncCommand = require('../rsync').buildRsyncCommand;
 
-ref = require('../utils'), spinnerPromise = ref.spinnerPromise, startContainerSpinner = ref.startContainerSpinner, stopContainerSpinner = ref.stopContainerSpinner, startContainerAfterErrorSpinner = ref.startContainerAfterErrorSpinner;
+ref = require('../utils'), startContainerSpinner = ref.startContainerSpinner, stopContainerSpinner = ref.stopContainerSpinner, startContainerAfterErrorSpinner = ref.startContainerAfterErrorSpinner;
 
 MIN_HOSTOS_RSYNC = '1.1.4';
 
@@ -173,9 +175,13 @@ exports.sync = function(syncOptions) {
       'rsync-path': "rsync " + uuid + " " + containerId
     });
     command = buildRsyncCommand(syncOptions);
-    return spinnerPromise(shell.runCommand(command, {
-      cwd: source
-    }), "Syncing to " + destination + " on " + (uuid.substring(0, 7)) + "...", "Synced " + destination + " on " + (uuid.substring(0, 7)) + ".");
+    return new SpinnerPromise({
+      promise: shell.runCommand(command, {
+        cwd: source
+      }),
+      startMessage: "Syncing to " + destination + " on " + (uuid.substring(0, 7)) + "...",
+      stopMessage: "Synced " + destination + " on " + (uuid.substring(0, 7)) + "."
+    });
   });
   source = syncOptions.source, uuid = syncOptions.uuid, before = syncOptions.before, after = syncOptions.after;
   return getDeviceInfo().then(function() {

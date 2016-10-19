@@ -14,7 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
  */
-var _, avahiResinSshTag, enumerateServices, findServices, form, ref, resin, spinnerPromise,
+var SpinnerPromise, _, avahiResinSshTag, enumerateServices, findServices, form, ref, resin,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 _ = require('lodash');
@@ -25,7 +25,7 @@ ref = require('resin-discoverable-services'), enumerateServices = ref.enumerateS
 
 form = require('resin-cli-form');
 
-spinnerPromise = require('./utils').spinnerPromise;
+SpinnerPromise = require('resin-cli-visuals').SpinnerPromise;
 
 avahiResinSshTag = 'resin-ssh';
 
@@ -68,9 +68,13 @@ exports.selectLocalResinOsDeviceForm = function(timeout) {
   if (timeout == null) {
     timeout = 4000;
   }
-  return spinnerPromise(exports.discoverLocalResinOsDevices(), 'Discovering local ResinOS devices..', 'Reporting discovered devices').then(function(devices) {
+  return new SpinnerPromise({
+    promise: exports.discoverLocalResinOsDevices(),
+    startMessage: 'Discovering local resinOS devices..',
+    stopMessage: 'Reporting discovered devices'
+  }).then(function(devices) {
     if (_.isEmpty(devices)) {
-      throw new Error('Could not find any local ResinOS devices');
+      throw new Error('Could not find any local resinOS devices');
     }
     return form.ask({
       message: 'select a device',

@@ -14,7 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
  */
-var DEVICE_SSH_PORT, Promise, _, buildRsyncCommand, checkForRunningContainer, dockerInit, path, ref, ref1, shell, shellwords, spinnerPromise, startContainer, startContainerAfterErrorSpinner, startContainerSpinner, stopContainer, stopContainerSpinner;
+var DEVICE_SSH_PORT, Promise, SpinnerPromise, _, buildRsyncCommand, checkForRunningContainer, dockerInit, path, ref, ref1, shell, shellwords, startContainer, startContainerAfterErrorSpinner, startContainerSpinner, stopContainer, stopContainerSpinner;
 
 path = require('path');
 
@@ -26,9 +26,11 @@ shellwords = require('shellwords');
 
 shell = require('../shell');
 
+SpinnerPromise = require('resin-cli-visuals').SpinnerPromise;
+
 buildRsyncCommand = require('../rsync').buildRsyncCommand;
 
-ref = require('../utils'), spinnerPromise = ref.spinnerPromise, startContainerSpinner = ref.startContainerSpinner, stopContainerSpinner = ref.stopContainerSpinner, startContainerAfterErrorSpinner = ref.startContainerAfterErrorSpinner;
+ref = require('../utils'), startContainerSpinner = ref.startContainerSpinner, stopContainerSpinner = ref.stopContainerSpinner, startContainerAfterErrorSpinner = ref.startContainerAfterErrorSpinner;
 
 ref1 = require('../docker-utils'), dockerInit = ref1.dockerInit, startContainer = ref1.startContainer, stopContainer = ref1.stopContainer, checkForRunningContainer = ref1.checkForRunningContainer;
 
@@ -67,9 +69,13 @@ exports.sync = function(syncOptions, deviceIp) {
         if (!isContainerRunning) {
           throw new Error("Container must be running before attempting 'sync' action");
         }
-        return spinnerPromise(shell.runCommand(command, {
-          cwd: source
-        }), "Syncing to " + destination + " on '" + appName + "'...", "Synced " + destination + " on '" + appName + "'.");
+        return new SpinnerPromise({
+          promise: shell.runCommand(command, {
+            cwd: source
+          }),
+          startMessage: "Syncing to " + destination + " on '" + appName + "'...",
+          stopMessage: "Synced " + destination + " on '" + appName + "'."
+        });
       });
     });
   };
