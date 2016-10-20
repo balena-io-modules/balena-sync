@@ -305,9 +305,14 @@ module.exports =
 		pipeContainerStream: (name, outStream) ->
 			Promise.try ->
 				ensureDockerInit()
-				docker.getContainer(name).attachAsync
-					stream: true
-					stdout: true
-					stderr: true
+				container = docker.getContainer(name)
+				container.inspectAsync().then (containerInfo) ->
+					return containerInfo?.State?.Running
+				.then (isRunning) ->
+					container.attachAsync
+						logs: not isRunning
+						stream: isRunning
+						stdout: true
+						stderr: true
 				.then (containerStream) ->
 					containerStream.pipe(outStream)
