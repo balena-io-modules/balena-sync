@@ -360,11 +360,19 @@ module.exports = {
   },
   pipeContainerStream: function(name, outStream) {
     return Promise["try"](function() {
+      var container;
       ensureDockerInit();
-      return docker.getContainer(name).attachAsync({
-        stream: true,
-        stdout: true,
-        stderr: true
+      container = docker.getContainer(name);
+      return container.inspectAsync().then(function(containerInfo) {
+        var ref;
+        return containerInfo != null ? (ref = containerInfo.State) != null ? ref.Running : void 0 : void 0;
+      }).then(function(isRunning) {
+        return container.attachAsync({
+          logs: !isRunning,
+          stream: isRunning,
+          stdout: true,
+          stderr: true
+        });
       }).then(function(containerStream) {
         return containerStream.pipe(outStream);
       });
