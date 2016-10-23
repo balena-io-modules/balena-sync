@@ -1,4 +1,5 @@
 m = require('mochainon')
+mockFs = require('mock-fs')
 utils = require('../lib/utils')
 
 describe 'Utils:', ->
@@ -47,3 +48,20 @@ describe 'Utils:', ->
 							required: true
 							message: 'Bar should be a string'
 			.to.throw('Foo should be a number')
+
+	describe 'fileExists()', ->
+		filesystem =
+			'package.json': 'package.json contents'
+			'Dockerfile': 'Dockerfile contents'
+
+		beforeEach ->
+			mockFs(filesystem)
+
+		afterEach ->
+			mockFs.restore()
+
+		it 'should return true if file exists', ->
+			m.chai.expect(utils.fileExists('package.json')).to.be.true
+
+		it 'should return false if file does not exist', ->
+			m.chai.expect(utils.fileExists('test.json')).to.be.false

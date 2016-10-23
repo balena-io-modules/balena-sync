@@ -15,13 +15,9 @@ limitations under the License.
 ###
 
 fs = require('fs')
-path = require('path')
-Promise = require('bluebird')
 _ = require('lodash')
 revalidator = require('revalidator')
 { SpinnerPromise } = require('resin-cli-visuals')
-form = require('resin-cli-form')
-{ load, save } = require('./config')
 
 ###*
 # @summary Validate object
@@ -143,57 +139,23 @@ exports.startContainerAfterErrorSpinner = (startContainerPromise) ->
 		startMessage: 'Attempting to start application container after failed \'sync\'...'
 		stopMessage: 'Application container started after failed \'sync\'.'
 
-# Resolve with .resin-sync.yml or throw
-exports.loadResinSyncYml = Promise.method (source) ->
+###*
+# @summary Check if file exists
+# @function fileExists
+#
+# @param {Object} filename - file path
+#
+# @returns {Boolean}
+# @throws Exception on error
+#
+# @example
+# dockerfileExists = fileExists('Dockerfile')
+###
+exports.fileExists = (filename) ->
 	try
-		if not source?
-			fs.accessSync(path.join(process.cwd(), '.resin-sync.yml'))
-			source = process.cwd()
-	catch
-		throw new Error('No --source option passed and no \'.resin-sync.yml\' file found in current directory.')
-
-	resinSyncYml = load(source)
-	resinSyncYml.source = source
-	return resinSyncYml
-
-# Get sync options from command line and `.resin-sync.yml`
-# Command line options have precedence over the ones saved in `.resin-sync.yml`
-exports.getSyncOptions = (cliOptions = {}) ->
-	cliOptions = _.clone(cliOptions)
-	exports.loadResinSyncYml(cliOptions.source)
-	.then	(resinSyncYml) ->
-		syncOptions = {}
-
-		# Capitano does not support comma separated options yet
-		if cliOptions.ignore?
-			cliOptions.ignore = cliOptions.ignore.split(',')
-
-		_.mergeWith syncOptions, resinSyncYml, cliOptions, (objVal, srcVal, key) ->
-			# Give precedence to command line 'ignore' options
-			if key is 'ignore'
-				return srcVal
-
-		# Filter out empty 'ignore' paths
-		syncOptions.ignore = _.filter(syncOptions.ignore, (item) -> not _.isEmpty(item))
-
-		# Only add default 'ignore' options if user has not explicitly set an empty
-		# 'ignore' setting in '.resin-sync.yml'
-		if syncOptions.ignore.length is 0 and not resinSyncYml.ignore?
-			syncOptions.ignore = [ '.git', 'node_modules/' ]
-
-		form.run [
-			message: 'Destination directory on device container [/usr/src/app]'
-			name: 'destination'
-			type: 'input'
-		],
-			override:
-				destination: syncOptions.destination
-		.get('destination')
-		.then (destination) ->
-			_.assign(syncOptions, destination: destination ? '/usr/src/app')
-		.then ->
-			save(
-				_.omit(syncOptions, [ 'source', 'verbose', 'progress', 'force', 'build-triggers', 'app-name', 'skip-logs' ])
-				syncOptions.source
-			)
-			return syncOptions
+		fs.accessSync(filename)
+		return true
+	catch err
+		if err.code is 'ENOENT'
+			return false
+		throw new Error("Could not access #{filename}: #{err}")

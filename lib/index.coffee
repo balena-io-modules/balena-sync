@@ -17,5 +17,5 @@ limitations under the License.
 module.exports =
 	capitano: (cliTool) -> require('./capitano')(cliTool)
 	sync: (target) -> require('./sync')(target)
-	config: require('./config')
-	discover: require('./discover')
+	config: require('./yaml-config')
+	forms: require('./forms')

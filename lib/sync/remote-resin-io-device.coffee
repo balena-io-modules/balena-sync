@@ -19,7 +19,6 @@ limitations under the License.
 ###
 
 Promise = require('bluebird')
-_ = require('lodash')
 chalk = require('chalk')
 semver = require('semver')
 resin = require('resin-sdk')
@@ -105,30 +104,31 @@ exports.ensureDeviceIsOnline = (uuid) ->
 #
 # @param {Object} [syncOptions] - cli options
 # @param {String} [syncOptions.uuid] - device uuid
-# @param {String} [syncOptions.source] - source directory on local host
+# @param {String} [syncOptions.baseDir] - project base dir
 # @param {String} [syncOptions.destination=/usr/src/app] - destination directory on device
-# @param {Number} [syncOptions.port] - ssh port
 # @param {String} [syncOptions.before] - command to execute before sync
 # @param {String} [syncOptions.after] - command to execute after sync
 # @param {String[]} [syncOptions.ignore] - ignore paths
-# @param {Boolean} [syncOptions.skip-gitignore] - skip .gitignore when parsing exclude/include files
-# @param {Boolean} [syncOptions.progress] - display rsync progress
-# @param {Boolean} [syncOptions.verbose] - display verbose info
+# @param {Number} [syncOptions.port=22] - ssh port
+# @param {Boolean} [syncOptions.skipGitignore=lfase] - skip .gitignore when parsing exclude/include files
+# @param {Boolean} [syncOptions.progress=false] - display rsync progress
+# @param {Boolean} [syncOptions.verbose=false] - display verbose info
 #
 # @example
 # sync({
 #		uuid: '7a4e3dc',
-#		source: '.',
+#		baseDir: '.',
 #		destination: '/usr/src/app',
 #   ignore: [ '.git', 'node_modules' ],
 #   progress: false
 # });
 ###
-exports.sync = (syncOptions) ->
+exports.sync = ({ uuid, baseDir, destination, before, after, ignore, port = 22, skipGitignore = false, progress = false, verbose = false }) ->
 
-	getDeviceInfo = ->
-		{ uuid } = syncOptions
+	throw new Error("'destination' is a required sync option") if not destination?
+	throw new Error("'uuid' is a required sync option") if not uuid?
 
+	getDeviceInfo = (uuid) ->
 		console.info("Getting information for device: #{uuid}")
 
 		resin.models.device.isOnline(uuid).then (isOnline) ->
@@ -141,46 +141,48 @@ exports.sync = (syncOptions) ->
 					throw new Error('Resin sync is permitted to the device owner only. The device owner is the user who provisioned it.')
 		.tap (device) ->
 			ensureHostOSCompatibility(device.os_version, MIN_HOSTOS_RSYNC)
-		.then (device) ->
-			Promise.props
-				uuid: device.uuid	# get full uuid
-				username: resin.auth.whoami()
-			.then(_.partial(_.assign, syncOptions))
+		.get('uuid') # get full uuid
 
-	syncContainer = Promise.method ->
-		{ uuid, containerId, source, destination } = syncOptions
-
+	syncContainer = Promise.method ({ fullUuid, username, containerId, baseDir = process.cwd(), destination }) ->
 		if not containerId?
 			throw new Error('No stopped application container found')
 
-		_.assign syncOptions,
-					host: "ssh.#{settings.get('proxyUrl')}"
-					'rsync-path': "rsync #{uuid} #{containerId}"
+		syncOptions =
+			username: username
+			host: "ssh.#{settings.get('proxyUrl')}"
+			source: baseDir
+			destination: destination
+			ignore: ignore
+			skipGitignore: skipGitignore
+			verbose: verbose
+			port: port
+			progress: progress
+			extraSshOptions: "#{username}@ssh.#{settings.get('proxyUrl')} rsync #{uuid} #{containerId}"
 
 		command = buildRsyncCommand(syncOptions)
 
 		new SpinnerPromise
-			promise: shell.runCommand(command, cwd: source)
+			promise: shell.runCommand(command, cwd: baseDir)
 			startMessage: "Syncing to #{destination} on #{uuid.substring(0, 7)}..."
 			stopMessage: "Synced #{destination} on #{uuid.substring(0, 7)}."
 
-	{ source, uuid, before, after } = syncOptions
-
-	getDeviceInfo()
-	.then -> # run 'before' action
+	Promise.props
+		fullUuid: getDeviceInfo(uuid)
+		username: resin.auth.whoami()
+	.tap -> # run 'before' action
 		if before?
-			shell.runCommand(before, source)
-	.then -> # stop container
+			shell.runCommand(before, baseDir)
+	.then ({ fullUuid, username }) -> # stop container
 		stopContainerSpinner(resin.models.device.stopApplication(uuid)).then (containerId) ->
 			# the resolved 'containerId' value is needed for the rsync process over resin-proxy
-			_.assign(syncOptions, { containerId })
-	.then -> # sync container
-		syncContainer()
+			return { containerId, fullUuid, username }
+	.then ({ containerId, fullUuid, username }) -> # sync container
+		syncContainer({ fullUuid, username, containerId, baseDir, destination })
 		.then -> # start container
 			startContainerSpinner(resin.models.device.startApplication(uuid))
 		.then -> # run 'after' action
 			if after?
-				shell.runCommand(after, source)
+				shell.runCommand(after, baseDir)
 		.then ->
 			console.log(chalk.green.bold('\nresin sync completed successfully!'))
 		.catch (err) ->

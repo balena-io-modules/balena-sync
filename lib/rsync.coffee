@@ -34,6 +34,9 @@ buildRshOption = (options = {}) ->
 			verbose:
 				description: 'verbose'
 				type: 'boolean'
+			extraSshOptions:
+				description: 'extraSshOptions'
+				type: 'string'
 
 	verbose = if options.verbose then '-vv ' else ''
 
@@ -47,6 +50,8 @@ buildRshOption = (options = {}) ->
 		-o ControlMaster=no
 	"""
 
+	sshCommand += " #{options.extraSshOptions}" if options.extraSshOptions?
+
 	return sshCommand
 
 ###*
@@ -55,14 +60,15 @@ buildRshOption = (options = {}) ->
 # @protected
 #
 # @param {Object} options - rsync options
-# @param {String} options.host - host
 # @param {String} options.username - username
+# @param {String} options.host - host
 # @param {Boolean} [options.progress] - show progress
 # @param {String|String[]} [options.ignore] - pattern/s to ignore. Note that '.gitignore' is always used as a filter if it exists
+# @param {Boolean} [options.skipGitignore] - skip gitignore
 # @param {Boolean} [options.verbose] - verbose output
-# @param {Boolean} [options.skip-gitignore] - skip gitignore
 # @param {String} options.source - source directory on local machine
 # @param {String} options.destination - destination directory on device
+# @param {String} options.rsyncPath - set --rsync-path rsync option
 #
 # @returns {String} rsync command
 #
@@ -96,7 +102,7 @@ exports.buildRsyncCommand = (options = {}) ->
 				description: 'ignore'
 				type: [ 'string', 'array' ]
 				message: 'Not a string or array: ignore'
-			'skip-gitignore':
+			skipGitignore:
 				description: 'skip-gitignore'
 				type: 'boolean'
 				message: 'Not a boolean: skip-gitignore'
@@ -114,7 +120,7 @@ exports.buildRsyncCommand = (options = {}) ->
 				type: 'any'
 				required: true
 				message: 'Not a string: destination'
-			'rsync-path':
+			rsyncPath:
 				description: 'rsync path'
 				type: 'string'
 				message: 'Not a string: rsync-path'
@@ -138,10 +144,10 @@ exports.buildRsyncCommand = (options = {}) ->
 
 	rsyncCmd = rsync.build(args).delete()
 
-	if options['rsync-path']?
-		rsyncCmd.set('rsync-path', options['rsync-path'])
+	if options['rsyncPath']?
+		rsyncCmd.set('rsync-path', options['rsyncPath'])
 
-	if not options['skip-gitignore']
+	if not options['skipGitignore']
 		try
 			patterns = utils.gitignoreToRsyncPatterns(path.join(options.source, '.gitignore'))
 

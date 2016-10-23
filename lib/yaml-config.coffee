@@ -14,24 +14,33 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ###
 
+###*
+# Helper methods to manipulate the rdt push / resin sync configuration file (currently .resin-sync.yml)
+# @module build-trigger
+###
+#
 fs = require('fs')
 _ = require('lodash')
 path = require('path')
 jsYaml = require('js-yaml')
+{ fileExists } = require('./utils')
+
+exports.CONFIG_FILE = CONFIG_FILE = '.resin-sync.yml'
 
 ###*
 # @summary Get config path
 # @function
 # @private
 #
-# @param {String} baseDir
+# @param {String} [baseDir=process.cwd()]
+# @param {String} [configFile=CONFIG_FILE]
 #
 # @returns {String} config path
 #
 # @example
 # configPath = config.getPath('.')
 ###
-exports.getPath = (baseDir = process.cwd(), configFile = '.resin-sync.yml') ->
+exports.getPath = (baseDir = process.cwd(), configFile = CONFIG_FILE) ->
 	return path.join(baseDir, configFile)
 
 ###*
@@ -42,26 +51,27 @@ exports.getPath = (baseDir = process.cwd(), configFile = '.resin-sync.yml') ->
 # @description
 # If no configuration file is found, return an empty object.
 #
-# @param {String} baseDir
+# @param {String} [baseDir=process.cwd()]
+# @param {String} [configFile=CONFIG_FILE]
 #
-# @returns {Object} configuration
+# @returns {Object} YAML configuration as object
+# @throws Exception on error
 #
 # @example
 # options = config.load('.')
 ###
-exports.load = (baseDir, configFile = '.resin-sync.yml') ->
+exports.load = (baseDir = process.cwd(), configFile = CONFIG_FILE) ->
 	configPath = exports.getPath(baseDir, configFile)
 
-	try
-		config = fs.readFileSync(configPath, encoding: 'utf8')
-		result = jsYaml.safeLoad(config)
+	# fileExists() will throw on any error other than 'ENOENT' (file not found)
+	if not fileExists(configPath)
+		return {}
 
-		if not _.isPlainObject(result)
-			throw new Error("Invalid configuration file: #{configPath}")
-	catch error
-		if error.code is 'ENOENT'
-			return {}
-		throw error
+	config = fs.readFileSync(configPath, encoding: 'utf8')
+	result = jsYaml.safeLoad(config)
+
+	if not _.isPlainObject(result)
+		throw new Error("Invalid configuration file: #{configPath}")
 
 	return result
 #
@@ -70,20 +80,16 @@ exports.load = (baseDir, configFile = '.resin-sync.yml') ->
 # @function
 # @protected
 #
-# @param {String} yamlObj
-# @param {String} baseDir
+# @param {String} yamlObj - YAML object to save
+# @param {String} [baseDir=process.cwd()]
+# @param {String} [configFile=CONFIG_FILE]
 #
 # @throws Exception on error
 # @example
-# options = config.save(yamlObj, '.')
+# config.save(yamlObj)
 ###
-exports.save = (yamlObj = {}, baseDir, configFile = '.resin-sync.yml') ->
+exports.save = (yamlObj, baseDir = process.cwd(), configFile = CONFIG_FILE) ->
 	configSavePath = exports.getPath(baseDir, configFile)
 
-	try
-		yamlDump = jsYaml.safeDump(yamlObj)
-		fs.writeFileSync(configSavePath, yamlDump, encoding: 'utf8')
-	catch error
-		if error.code is 'ENOENT'
-			return {}
-		throw error
+	yamlDump = jsYaml.safeDump(yamlObj)
+	fs.writeFileSync(configSavePath, yamlDump, encoding: 'utf8')
