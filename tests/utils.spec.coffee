@@ -65,3 +65,27 @@ describe 'Utils:', ->
 
 		it 'should return false if file does not exist', ->
 			m.chai.expect(utils.fileExists('test.json')).to.be.false
+
+	describe 'validateEnvVar()', ->
+		validEnvVars = [ 'DEBUG=*', 'PATH=/bin:/usr/bin', 'XPC_FLAGS=0x0', '_=/usr/bin/env', 'LC_ALL=en_US.UTF-8' ]
+		invalidEnvVars = [ '0TEST=1', '=1', '==' ]
+
+		it 'should return empty array when called with no arguments', ->
+			m.chai.expect(utils.validateEnvVar()).to.empty
+
+		it 'should validate simple env var', ->
+			m.chai.expect(utils.validateEnvVar(validEnvVars[0])).to.deep.equal([ validEnvVars[0] ])
+
+		it 'should validate a list of env vars', ->
+			m.chai.expect(utils.validateEnvVar(validEnvVars)).to.deep.equal(validEnvVars)
+
+		it 'should throw on invalid env var', ->
+			for v in invalidEnvVars
+				m.chai.expect ->
+					utils.validateEnvVar(v)
+				.to.throw("Invalid environment variable: #{v}")
+
+		it 'should throw on invalid env var in list of env vars', ->
+			m.chai.expect ->
+				utils.validateEnvVar([validEnvVars..., invalidEnvVars])
+			.to.throw("Invalid environment variable: #{invalidEnvVars[0]}")

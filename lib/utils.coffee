@@ -159,3 +159,29 @@ exports.fileExists = (filename) ->
 		if err.code is 'ENOENT'
 			return false
 		throw new Error("Could not access #{filename}: #{err}")
+
+###*
+# @summary Validate 'ENV=value' environment variable(s)
+# @function validateEnvVar
+#
+# @param {String|Array} [env=[]] - 'ENV_NAME=value' string
+#
+# @returns {Array} - returns array of passed env var(s) if valid
+# @throws Exception if a variable name is not valid in accordance with
+# IEEE Std 1003.1-2008, 2016 Edition, Ch. 8, p. 1
+#
+###
+exports.validateEnvVar = (env = []) ->
+	envVarRegExp = new RegExp('^[a-zA-Z_][a-zA-Z0-9_]*=.*$')
+
+	if not _.isString(env) and not _.isArray(env)
+		throw new Error('validateEnvVar(): expecting either Array or String parameter')
+
+	if _.isString(env)
+		env = [env]
+
+	for e in env
+		if not envVarRegExp.test(e)
+			throw new Error("Invalid environment variable: #{e}")
+
+	return env

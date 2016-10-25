@@ -8,6 +8,7 @@ ssh2 = require('ssh2')
 Promise.promisifyAll(ssh2.Client)
 semver = require('semver')
 _ = require('lodash')
+{ validateEnvVar } = require('./utils')
 
 # resolved with file contents, rejects on error
 readFileViaSSH = Promise.method (host, port, file) ->
@@ -174,8 +175,22 @@ class RdtDockerUtils
 		.then (dockerProgressOutput) ->
 			prettyPrintDockerProgress(dockerProgressOutput, outStream)
 
-	createContainer: (name) ->
+	###*
+	# @summary Create a container
+	# @function createContainer
+	#
+	# @param {String} name - Container name - and Image with the same name must already exist
+	# @param {Object} [options] - options
+	# @param {Array} [options.env=[]] - environment variables in the form [ 'ENV=value' ]
+	#
+	# @returns {}
+	# @throws Exception on error
+	###
+	createContainer: (name, { env = [] } = {}) ->
 		Promise.try =>
+			if not _.isArray(env)
+				throw new Error('createContainer(): expecting an array of environment variables')
+
 			@docker.getImage(name).inspectAsync()
 		.then (imageInfo) =>
 			if imageInfo?.Config?.Cmd
@@ -187,6 +202,7 @@ class RdtDockerUtils
 				Image: name
 				Cmd: cmd
 				name: name
+				Env: validateEnvVar(env)
 
 	startContainer: (name) ->
 		Promise.try =>
