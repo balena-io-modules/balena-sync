@@ -9,8 +9,6 @@ Promise.promisifyAll(ssh2.Client)
 semver = require('semver')
 _ = require('lodash')
 
-docker = null
-
 # resolved with file contents, rejects on error
 readFileViaSSH = Promise.method (host, port, file) ->
 	getSSHConnection = ->
@@ -49,49 +47,6 @@ readFileViaSSH = Promise.method (host, port, file) ->
 					throw new Error("Could not read file from Docker Host. Code: #{code}")
 			.get('data')
 
-# Gets a string `container` (id or name) as input and returns a promise that
-# resolves to the absolute path of the root directory for that container
-#
-# Setting the 'host' parameter implies that the docker host is located on a network-accessible device,
-# so any file reads will take place on that host (instead of locally) over SSH.
-#
-Docker::containerRootDir = (container, host, port = 22222) ->
-	Promise.all [
-		@infoAsync()
-		@versionAsync().get('Version')
-		@getContainer(container).inspectAsync()
-	]
-	.spread (dockerInfo, dockerVersion, containerInfo) ->
-		dkroot = dockerInfo.DockerRootDir
-
-		containerId = containerInfo.Id
-
-		Promise.try ->
-			if semver.lt(dockerVersion, '1.10.0')
-				return containerId
-
-			destFile = path.join(dkroot, "image/#{dockerInfo.Driver}/layerdb/mounts", containerId, 'mount-id')
-
-			if host?
-				readFile = _.partial(readFileViaSSH, host, port)
-			else
-				readFile = fs.readFileAsync
-
-			# Resolves with 'destId'
-			readFile(destFile)
-		.then (destId) ->
-			switch dockerInfo.Driver
-				when 'btrfs'
-					path.join(dkroot, 'btrfs/subvolumes', destId)
-				when 'overlay'
-					containerInfo.GraphDriver.Data.RootDir
-				when 'vfs'
-					path.join(dkroot, 'vfs/dir', destId)
-				when 'aufs'
-					path.join(dkroot, 'aufs/mnt', destId)
-				else
-					throw new Error("Unsupported driver: #{dockerInfo.Driver}/")
-
 defaultVolumes = {
 	'/data': {}
 	'/lib/modules': {}
@@ -108,9 +63,6 @@ defaultBinds = (dataPath) ->
 		'/lib/firmware:/lib/firmware'
 		'/run/dbus:/host/run/dbus'
 	]
-
-ensureDockerInit = ->
-	throw new Error('Docker client not initialized') if not docker?
 
 # 'dockerProgressStream' is a stream of JSON objects emitted during the build
 # 'outStream' is the output stream to pretty-print docker progress
@@ -181,18 +133,17 @@ prettyPrintDockerProgress = (dockerProgressStream, outStream = process.stdout) -
 		.on 'error', (error) ->
 			reject(error)
 
-module.exports =
-		dockerInit: (dockerHostIp = '127.0.0.1', dockerPort = 2375) ->
-			if not docker?
-				docker = new Docker(host: dockerHostIp, port: dockerPort)
-			return docker
+class RdtDockerUtils
+	constructor: (dockerHostIp, dockerPort = 2375) ->
+		if not dockerHostIp?
+			throw new Error('Device Ip/Host is required to instantiate an RdtDockerUtils client')
+		@docker = new Docker(host: dockerHostIp, port: dockerPort)
 
-		# Resolve with true if image with 'name' exists. Resolve
-		# false otherwise and reject promise on unknown error
-		checkForExistingImage: Promise.method (name) ->
-			ensureDockerInit()
-
-			docker.getImage(name).inspectAsync()
+	# Resolve with true if image with 'name' exists. Resolve
+	# false otherwise and reject promise on unknown error
+	checkForExistingImage: (name) ->
+		Promise.try =>
+			@docker.getImage(name).inspectAsync()
 			.then (imageInfo) ->
 				return true
 			.catch (err) ->
@@ -201,12 +152,11 @@ module.exports =
 					return false
 				throw new Error("Error while inspecting image #{name}: #{err}")
 
-		# Resolve with true if container with 'name' exists and is running. Resolve
-		# false otherwise and reject promise on unknown error
-		checkForRunningContainer: Promise.method (name) ->
-			ensureDockerInit()
-
-			docker.getContainer(name).inspectAsync()
+	# Resolve with true if container with 'name' exists and is running. Resolve
+	# false otherwise and reject promise on unknown error
+	checkForRunningContainer: (name) ->
+		Promise.try =>
+			@docker.getContainer(name).inspectAsync()
 			.then (containerInfo) ->
 				return containerInfo?.State?.Running ? false
 			.catch (err) ->
@@ -215,104 +165,147 @@ module.exports =
 					return false
 				throw new Error("Error while inspecting container #{name}: #{err}")
 
-		buildImage: ({ baseDir, name, outStream }) ->
+	buildImage: ({ baseDir, name, outStream }) ->
+		Promise.try =>
+			outStream ?= process.stdout
+			tarStream = tar.pack(baseDir)
+
+			@docker.buildImageAsync(tarStream, t: "#{name}")
+		.then (dockerProgressOutput) ->
+			prettyPrintDockerProgress(dockerProgressOutput, outStream)
+
+	createContainer: (name) ->
+		Promise.try =>
+			@docker.getImage(name).inspectAsync()
+		.then (imageInfo) =>
+			if imageInfo?.Config?.Cmd
+				cmd = imageInfo.Config.Cmd
+			else
+				cmd = [ '/bin/bash', '-c', '/start' ]
+
+			@docker.createContainerAsync
+				Image: name
+				Cmd: cmd
+				name: name
+
+	startContainer: (name) ->
+		Promise.try =>
+			@docker.getContainer(name).startAsync
+				Volumes: defaultVolumes
+				Privileged: true
+				Tty: true
+				Binds: defaultBinds(name)
+				NetworkMode: 'host'
+				RestartPolicy:
+					Name: 'always'
+					MaximumRetryCount: 0
+		.catch (err) ->
+			# Throw unless the error code is 304 (the container was already started)
+			statusCode = '' + err.statusCode
+			if statusCode isnt '304'
+				throw new Error("Error while starting container #{name}: #{err}")
+
+	stopContainer: (name) ->
+		Promise.try =>
+			@docker.getContainer(name).stopAsync(t: 10)
+		.catch (err) ->
+			# Container stop should be considered successful if we receive any
+			# of these error codes:
+			#
+			# 404: container not found
+			# 304: container already stopped
+			statusCode = '' + err.statusCode
+			if statusCode isnt '404' and statusCode isnt '304'
+				throw new Error("Error while stopping container #{name}: #{err}")
+
+	removeContainer: (name) ->
+		Promise.try =>
+			@docker.getContainer(name).removeAsync(v: true)
+		.catch (err) ->
+			# Throw unless the error code is 404 (the container was not found)
+			statusCode = '' + err.statusCode
+			if statusCode isnt '404'
+				throw new Error("Error while removing container #{name}: #{err}")
+
+	removeImage: (name) ->
+		Promise.try =>
+			@docker.getImage(name).removeAsync(force: true)
+		.catch (err) ->
+			# Image removal should be considered successful if we receive any
+			# of these error codes:
+			#
+			# 404: image not found
+			statusCode = '' + err.statusCode
+			if statusCode isnt '404'
+				throw new Error("Error while removing image #{name}: #{err}")
+
+	inspectImage: (name) ->
+		Promise.try =>
+			@docker.getImage(name).inspectAsync()
+
+	# Pipe stderr and stdout of container 'name' to stream
+	pipeContainerStream: (name, outStream = process.stdout) ->
+		Promise.try =>
+			container = @docker.getContainer(name)
+			container.inspectAsync().then (containerInfo) ->
+				return containerInfo?.State?.Running
+			.then (isRunning) ->
+				container.attachAsync
+					logs: not isRunning
+					stream: isRunning
+					stdout: true
+					stderr: true
+			.then (containerStream) ->
+				containerStream.pipe(outStream)
+
+	followContainerLogs: (appName, outStream = process.stdout) ->
+		Promise.try =>
+			if not appName?
+				throw new Error('Please give an application name to stream logs from')
+
+			@pipeContainerStream(appName, outStream)
+
+	# Gets a string `container` (id or name) as input and returns a promise that
+	# resolves to the absolute path of the root directory for that container
+	#
+	# Setting the 'host' parameter implies that the docker host is located on a network-accessible device,
+	# so any file reads will take place on that host (instead of locally) over SSH.
+	#
+	containerRootDir: (container, host, port) ->
+		Promise.all [
+			@docker.infoAsync()
+			@docker.versionAsync().get('Version')
+			@docker.getContainer(container).inspectAsync()
+		]
+		.spread (dockerInfo, dockerVersion, containerInfo) ->
+			dkroot = dockerInfo.DockerRootDir
+
+			containerId = containerInfo.Id
+
 			Promise.try ->
-				ensureDockerInit()
+				if semver.lt(dockerVersion, '1.10.0')
+					return containerId
 
-				outStream ?= process.stdout
-				tarStream = tar.pack(baseDir)
+				destFile = path.join(dkroot, "image/#{dockerInfo.Driver}/layerdb/mounts", containerId, 'mount-id')
 
-				docker.buildImageAsync(tarStream, t: "#{name}")
-			.then (dockerProgressOutput) ->
-				prettyPrintDockerProgress(dockerProgressOutput, outStream)
-
-		createContainer: (name) ->
-			Promise.try ->
-				ensureDockerInit()
-				docker.getImage(name).inspectAsync()
-			.then (imageInfo) ->
-				if imageInfo?.Config?.Cmd
-					cmd = imageInfo.Config.Cmd
+				if host?
+					readFile = _.partial(readFileViaSSH, host, port)
 				else
-					cmd = [ '/bin/bash', '-c', '/start' ]
+					readFile = fs.readFileAsync
 
-				docker.createContainerAsync
-					Image: name
-					Cmd: cmd
-					name: name
+				# Resolves with 'destId'
+				readFile(destFile)
+			.then (destId) ->
+				switch dockerInfo.Driver
+					when 'btrfs'
+						path.join(dkroot, 'btrfs/subvolumes', destId)
+					when 'overlay'
+						containerInfo.GraphDriver.Data.RootDir
+					when 'vfs'
+						path.join(dkroot, 'vfs/dir', destId)
+					when 'aufs'
+						path.join(dkroot, 'aufs/mnt', destId)
+					else
+						throw new Error("Unsupported driver: #{dockerInfo.Driver}/")
 
-		startContainer: (name) ->
-			Promise.try ->
-				ensureDockerInit()
-				docker.getContainer(name).startAsync
-					Volumes: defaultVolumes
-					Privileged: true
-					Tty: true
-					Binds: defaultBinds(name)
-					NetworkMode: 'host'
-					RestartPolicy:
-						Name: 'always'
-						MaximumRetryCount: 0
-			.catch (err) ->
-				# Throw unless the error code is 304 (the container was already started)
-				statusCode = '' + err.statusCode
-				if statusCode isnt '304'
-					throw new Error("Error while starting container #{name}: #{err}")
-
-		stopContainer: (name) ->
-			Promise.try ->
-				ensureDockerInit()
-				docker.getContainer(name).stopAsync(t: 10)
-			.catch (err) ->
-				# Container stop should be considered successful if we receive any
-				# of these error codes:
-				#
-				# 404: container not found
-				# 304: container already stopped
-				statusCode = '' + err.statusCode
-				if statusCode isnt '404' and statusCode isnt '304'
-					throw new Error("Error while stopping container #{name}: #{err}")
-
-		removeContainer: (name) ->
-			Promise.try ->
-				ensureDockerInit()
-				docker.getContainer(name).removeAsync(v: true)
-			.catch (err) ->
-				# Throw unless the error code is 404 (the container was not found)
-				statusCode = '' + err.statusCode
-				if statusCode isnt '404'
-					throw new Error("Error while removing container #{name}: #{err}")
-
-		removeImage: (name) ->
-			Promise.try ->
-				ensureDockerInit()
-				docker.getImage(name).removeAsync(force: true)
-			.catch (err) ->
-				# Image removal should be considered successful if we receive any
-				# of these error codes:
-				#
-				# 404: image not found
-				statusCode = '' + err.statusCode
-				if statusCode isnt '404'
-					throw new Error("Error while removing image #{name}: #{err}")
-
-		inspectImage: (name) ->
-			Promise.try ->
-				ensureDockerInit()
-				docker.getImage(name).inspectAsync()
-
-		# Pipe stderr and stdout of container 'name' to stream
-		pipeContainerStream: (name, outStream) ->
-			Promise.try ->
-				ensureDockerInit()
-				container = docker.getContainer(name)
-				container.inspectAsync().then (containerInfo) ->
-					return containerInfo?.State?.Running
-				.then (isRunning) ->
-					container.attachAsync
-						logs: not isRunning
-						stream: isRunning
-						stdout: true
-						stderr: true
-				.then (containerStream) ->
-					containerStream.pipe(outStream)
+module.exports = RdtDockerUtils

@@ -103,10 +103,11 @@ module.exports =
 		Promise = require('bluebird')
 		_ = require('lodash')
 		form = require('resin-cli-form')
-		{ save } = require('../config')
-		{ getSyncOptions } = require('../utils')
+		yamlConfig = require('../yaml-config')
+		parseOptions = require('./parse-options')
 		{ getRemoteResinioOnlineDevices } = require('../discover')
-		{ sync, ensureDeviceIsOnline, } = require('../sync')('remote-resin-io-device')
+		{ selectSyncDestination } = require('../forms')
+		{ sync, ensureDeviceIsOnline } = require('../sync')('remote-resin-io-device')
 
 		# Resolves with uuid of selected online device, throws on error
 		selectOnlineDevice = ->
@@ -125,31 +126,50 @@ module.exports =
 							value: device.uuid
 						}
 
+		{ runtimeOptions, configYml } = parseOptions(options, params)
+
 		Promise.try ->
 			# If uuid was explicitly passed as a parameter then make sure it exists or fail otherwise
 			if params?.uuid
 				return ensureDeviceIsOnline(params.uuid)
 
-			getSyncOptions(options)
-			.then (@syncOptions) =>
-				if @syncOptions.uuid?
-					# If the saved uuid in .resin-sync.yml refers to a device that does not exist
-					# or is offline then present device selection dialog instead of failing with an error
-					return ensureDeviceIsOnline(@syncOptions.uuid).catch ->
-						console.log "Device #{@syncOptions.uuid} not found or is offline."
-						return selectOnlineDevice()
 
+			if configYml.uuid?
+				# If the saved uuid in .resin-sync.yml refers to a device that does not exist
+				# or is offline then present device selection dialog instead of failing with an error
+				return ensureDeviceIsOnline(configYml.uuid).catch ->
+					console.log "Device #{configYml.uuid} not found or is offline."
+					return selectOnlineDevice()
+			else
 				# If no saved uuid was found, present dialog to select an online device
 				return selectOnlineDevice()
-			.then (uuid) =>
-				_.assign(@syncOptions, { uuid })
-				_.defaults(@syncOptions, port: 22)
+		.then (uuid) ->
+			# Update runtime option based on user choice
+			runtimeOptions.uuid = uuid
 
-				# Save options to `.resin-sync.yml`
-				save(
-					_.omit(@syncOptions, [ 'source', 'verbose', 'progress' ])
-					@syncOptions.source
-				)
-			.then =>
-				sync(@syncOptions)
+			# Select sync destination
+			selectSyncDestination(runtimeOptions.destination)
+		.then (destination) ->
+			# Update runtime option based on user choice
+			runtimeOptions.destination = destination
+
+			# Save config file before starting sync
+			notNil = (val) -> not _.isNil(val)
+			yamlConfig.save(
+				_.assign({}, configYml, _(runtimeOptions).pick([ 'uuid', 'destination', 'ignore', 'before', 'after' ]).pickBy(notNil).value())
+				configYml.baseDir
+			)
+		.then ->
+			sync _.pick runtimeOptions, [
+				'uuid'
+				'baseDir'
+				'appName'
+				'destination'
+				'before'
+				'after'
+				'progress'
+				'verbose'
+				'skipGitignore'
+				'ignore'
+			]
 		.nodeify(done)

@@ -16,72 +16,91 @@ limitations under the License.
 
 path = require('path')
 Promise = require('bluebird')
-_ = require('lodash')
 shellwords = require('shellwords')
 shell = require('../shell')
+RdtDockerUtils = require('../docker-utils')
 { SpinnerPromise } = require('resin-cli-visuals')
 { buildRsyncCommand } = require('../rsync')
 {	startContainerSpinner
 	stopContainerSpinner
 	startContainerAfterErrorSpinner } = require('../utils')
-{ dockerInit
-	startContainer
-	stopContainer
-	checkForRunningContainer } = require('../docker-utils')
 
 DEVICE_SSH_PORT = 22222
 
-exports.sync = (syncOptions, deviceIp) ->
-
-	{ source, destination, before, after, local_resinos: 'app-name': appName } = syncOptions
+###*
+# @summary Run rsync on a local resinOS device
+# @function sync
+#
+# @param {Object} options - options
+# @param {String} options.deviceIp - Destination device ip/host
+# @param {String} options.baseDir - Project base dir
+# @param {String} options.appName - Application container name
+# @param {String} options.destination - Sync destination folder in container
+# @param {String} [options.before] - Action to execute locally before sync
+# @param {String} [options.after] - Action to execute locally after sync
+# @param {String} [options.progress=false] - Show progress
+# @param {String} [options.verbose=false] - Show progress
+# @param {String} [options.skipGitignore=false] - Skip .gitignore parsing
+# @param {String} [options.ignore] - rsync ignore list
+#
+# @returns {}
+# @throws Exception on error
+#
+# @example
+# sync()
+###
+exports.sync = ({ deviceIp, baseDir, appName, destination, before, after, progress = false, verbose = false, skipGitignore = false, ignore } = {}) ->
 
 	throw new Error("'destination' is a required sync option") if not destination?
 	throw new Error("'deviceIp' is a required sync option") if not deviceIp?
 	throw new Error("'app-name' is a required sync option") if not appName?
 
-	syncContainer = (appName, destination, host, port = DEVICE_SSH_PORT) ->
-		docker = dockerInit(deviceIp)
+	docker = new RdtDockerUtils(deviceIp)
 
-		docker.containerRootDir(appName, host, port)
+	Promise.try ->
+		if before?
+			shell.runCommand(before, baseDir)
+	.then -> # sync container
+		docker.containerRootDir(appName, deviceIp, DEVICE_SSH_PORT)
 		.then (containerRootDirLocation) ->
 
 			rsyncDestination = path.join(containerRootDirLocation, destination)
 
-			_.assign syncOptions,
-						username: 'root'
-						host: host
-						port: port
-						destination: shellwords.escape(rsyncDestination)
-						'rsync-path': "mkdir -p \"#{rsyncDestination}\" && nsenter --target $(pidof docker) --mount rsync"
+			syncOptions =
+				username: 'root'
+				host: deviceIp
+				port: DEVICE_SSH_PORT
+				progress: progress
+				ignore: ignore
+				skipGitignore: skipGitignore
+				verbose: verbose
+				source: baseDir
+				destination: shellwords.escape(rsyncDestination)
+				rsyncPath: "mkdir -p \"#{rsyncDestination}\" && nsenter --target $(pidof docker) --mount rsync"
 
 			command = buildRsyncCommand(syncOptions)
 
-			checkForRunningContainer(appName)
+			docker.checkForRunningContainer(appName)
 			.then (isContainerRunning) ->
 				if not isContainerRunning
 					throw new Error("Container must be running before attempting 'sync' action")
 
 				new SpinnerPromise
-					promise: shell.runCommand(command, cwd: source)
+					promise: shell.runCommand(command, cwd: baseDir)
 					startMessage: "Syncing to #{destination} on '#{appName}'..."
 					stopMessage: "Synced #{destination} on '#{appName}'."
 
-	Promise.try ->
-		if before?
-			shell.runCommand(before, source)
-	.then -> # sync container
-		syncContainer(appName, destination, deviceIp)
 		.then -> # restart container
-			stopContainerSpinner(stopContainer(appName))
+			stopContainerSpinner(docker.stopContainer(appName))
 		.then ->
-			startContainerSpinner(startContainer(appName))
+			startContainerSpinner(docker.startContainer(appName))
 		.then -> # run 'after' action
 			if after?
-				shell.runCommand(after, source)
+				shell.runCommand(after, baseDir)
 		.catch (err) ->
 			# Notify the user of the error and run 'startApplication()'
 			# once again to make sure that a new app container will be started
-			startContainerAfterErrorSpinner(startContainer(appName))
+			startContainerAfterErrorSpinner(docker.startContainer(appName))
 			.catch (err) ->
 				console.log('Could not start application container', err)
 			.finally ->

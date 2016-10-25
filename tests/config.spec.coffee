@@ -1,7 +1,7 @@
 m = require('mochainon')
 path = require('path')
 mockFs = require('mock-fs')
-config = require('../lib/config')
+config = require('../lib/yaml-config')
 
 describe 'Config:', ->
 
