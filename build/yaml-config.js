@@ -14,7 +14,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
  */
-var _, fs, jsYaml, path;
+
+/**
+ * Helper methods to manipulate the rdt push / resin sync configuration file (currently .resin-sync.yml)
+ * @module build-trigger
+ */
+var CONFIG_FILE, _, fileExists, fs, jsYaml, path;
 
 fs = require('fs');
 
@@ -24,13 +29,18 @@ path = require('path');
 
 jsYaml = require('js-yaml');
 
+fileExists = require('./utils').fileExists;
+
+exports.CONFIG_FILE = CONFIG_FILE = '.resin-sync.yml';
+
 
 /**
  * @summary Get config path
  * @function
  * @private
  *
- * @param {String} baseDir
+ * @param {String} [baseDir=process.cwd()]
+ * @param {String} [configFile=CONFIG_FILE]
  *
  * @returns {String} config path
  *
@@ -43,7 +53,7 @@ exports.getPath = function(baseDir, configFile) {
     baseDir = process.cwd();
   }
   if (configFile == null) {
-    configFile = '.resin-sync.yml';
+    configFile = CONFIG_FILE;
   }
   return path.join(baseDir, configFile);
 };
@@ -57,34 +67,34 @@ exports.getPath = function(baseDir, configFile) {
  * @description
  * If no configuration file is found, return an empty object.
  *
- * @param {String} baseDir
+ * @param {String} [baseDir=process.cwd()]
+ * @param {String} [configFile=CONFIG_FILE]
  *
- * @returns {Object} configuration
+ * @returns {Object} YAML configuration as object
+ * @throws Exception on error
  *
  * @example
  * options = config.load('.')
  */
 
 exports.load = function(baseDir, configFile) {
-  var config, configPath, error, result;
+  var config, configPath, result;
+  if (baseDir == null) {
+    baseDir = process.cwd();
+  }
   if (configFile == null) {
-    configFile = '.resin-sync.yml';
+    configFile = CONFIG_FILE;
   }
   configPath = exports.getPath(baseDir, configFile);
-  try {
-    config = fs.readFileSync(configPath, {
-      encoding: 'utf8'
-    });
-    result = jsYaml.safeLoad(config);
-    if (!_.isPlainObject(result)) {
-      throw new Error("Invalid configuration file: " + configPath);
-    }
-  } catch (error1) {
-    error = error1;
-    if (error.code === 'ENOENT') {
-      return {};
-    }
-    throw error;
+  if (!fileExists(configPath)) {
+    return {};
+  }
+  config = fs.readFileSync(configPath, {
+    encoding: 'utf8'
+  });
+  result = jsYaml.safeLoad(config);
+  if (!_.isPlainObject(result)) {
+    throw new Error("Invalid configuration file: " + configPath);
   }
   return result;
 };
@@ -95,33 +105,26 @@ exports.load = function(baseDir, configFile) {
  * @function
  * @protected
  *
- * @param {String} yamlObj
- * @param {String} baseDir
+ * @param {String} yamlObj - YAML object to save
+ * @param {String} [baseDir=process.cwd()]
+ * @param {String} [configFile=CONFIG_FILE]
  *
  * @throws Exception on error
  * @example
- * options = config.save(yamlObj, '.')
+ * config.save(yamlObj)
  */
 
 exports.save = function(yamlObj, baseDir, configFile) {
-  var configSavePath, error, yamlDump;
-  if (yamlObj == null) {
-    yamlObj = {};
+  var configSavePath, yamlDump;
+  if (baseDir == null) {
+    baseDir = process.cwd();
   }
   if (configFile == null) {
-    configFile = '.resin-sync.yml';
+    configFile = CONFIG_FILE;
   }
   configSavePath = exports.getPath(baseDir, configFile);
-  try {
-    yamlDump = jsYaml.safeDump(yamlObj);
-    return fs.writeFileSync(configSavePath, yamlDump, {
-      encoding: 'utf8'
-    });
-  } catch (error1) {
-    error = error1;
-    if (error.code === 'ENOENT') {
-      return {};
-    }
-    throw error;
-  }
+  yamlDump = jsYaml.safeDump(yamlObj);
+  return fs.writeFileSync(configSavePath, yamlDump, {
+    encoding: 'utf8'
+  });
 };

@@ -18,11 +18,9 @@ limitations under the License.
 /**
  * @module resinSync
  */
-var MIN_HOSTOS_RSYNC, Promise, SpinnerPromise, _, buildRsyncCommand, chalk, ensureHostOSCompatibility, ref, resin, semver, semverRegExp, settings, shell, startContainerAfterErrorSpinner, startContainerSpinner, stopContainerSpinner;
+var MIN_HOSTOS_RSYNC, Promise, SpinnerPromise, buildRsyncCommand, chalk, ensureHostOSCompatibility, ref, resin, semver, semverRegExp, settings, shell, startContainerAfterErrorSpinner, startContainerSpinner, stopContainerSpinner;
 
 Promise = require('bluebird');
-
-_ = require('lodash');
 
 chalk = require('chalk');
 
@@ -118,31 +116,36 @@ exports.ensureDeviceIsOnline = function(uuid) {
  *
  * @param {Object} [syncOptions] - cli options
  * @param {String} [syncOptions.uuid] - device uuid
- * @param {String} [syncOptions.source] - source directory on local host
+ * @param {String} [syncOptions.baseDir] - project base dir
  * @param {String} [syncOptions.destination=/usr/src/app] - destination directory on device
- * @param {Number} [syncOptions.port] - ssh port
  * @param {String} [syncOptions.before] - command to execute before sync
  * @param {String} [syncOptions.after] - command to execute after sync
  * @param {String[]} [syncOptions.ignore] - ignore paths
- * @param {Boolean} [syncOptions.skip-gitignore] - skip .gitignore when parsing exclude/include files
- * @param {Boolean} [syncOptions.progress] - display rsync progress
- * @param {Boolean} [syncOptions.verbose] - display verbose info
+ * @param {Number} [syncOptions.port=22] - ssh port
+ * @param {Boolean} [syncOptions.skipGitignore=lfase] - skip .gitignore when parsing exclude/include files
+ * @param {Boolean} [syncOptions.progress=false] - display rsync progress
+ * @param {Boolean} [syncOptions.verbose=false] - display verbose info
  *
  * @example
  * sync({
  *		uuid: '7a4e3dc',
- *		source: '.',
+ *		baseDir: '.',
  *		destination: '/usr/src/app',
  *   ignore: [ '.git', 'node_modules' ],
  *   progress: false
  * });
  */
 
-exports.sync = function(syncOptions) {
-  var after, before, getDeviceInfo, source, syncContainer, uuid;
-  getDeviceInfo = function() {
-    var uuid;
-    uuid = syncOptions.uuid;
+exports.sync = function(arg) {
+  var after, baseDir, before, destination, getDeviceInfo, ignore, port, progress, ref1, ref2, ref3, ref4, skipGitignore, syncContainer, uuid, verbose;
+  uuid = arg.uuid, baseDir = arg.baseDir, destination = arg.destination, before = arg.before, after = arg.after, ignore = arg.ignore, port = (ref1 = arg.port) != null ? ref1 : 22, skipGitignore = (ref2 = arg.skipGitignore) != null ? ref2 : false, progress = (ref3 = arg.progress) != null ? ref3 : false, verbose = (ref4 = arg.verbose) != null ? ref4 : false;
+  if (destination == null) {
+    throw new Error("'destination' is a required sync option");
+  }
+  if (uuid == null) {
+    throw new Error("'uuid' is a required sync option");
+  }
+  getDeviceInfo = function(uuid) {
     console.info("Getting information for device: " + uuid);
     return resin.models.device.isOnline(uuid).then(function(isOnline) {
       if (!isOnline) {
@@ -157,49 +160,66 @@ exports.sync = function(syncOptions) {
       });
     }).tap(function(device) {
       return ensureHostOSCompatibility(device.os_version, MIN_HOSTOS_RSYNC);
-    }).then(function(device) {
-      return Promise.props({
-        uuid: device.uuid,
-        username: resin.auth.whoami()
-      }).then(_.partial(_.assign, syncOptions));
-    });
+    }).get('uuid');
   };
-  syncContainer = Promise.method(function() {
-    var command, containerId, destination, source, uuid;
-    uuid = syncOptions.uuid, containerId = syncOptions.containerId, source = syncOptions.source, destination = syncOptions.destination;
+  syncContainer = Promise.method(function(arg1) {
+    var baseDir, command, containerId, destination, fullUuid, ref5, syncOptions, username;
+    fullUuid = arg1.fullUuid, username = arg1.username, containerId = arg1.containerId, baseDir = (ref5 = arg1.baseDir) != null ? ref5 : process.cwd(), destination = arg1.destination;
     if (containerId == null) {
       throw new Error('No stopped application container found');
     }
-    _.assign(syncOptions, {
+    syncOptions = {
+      username: username,
       host: "ssh." + (settings.get('proxyUrl')),
-      'rsync-path': "rsync " + uuid + " " + containerId
-    });
+      source: baseDir,
+      destination: destination,
+      ignore: ignore,
+      skipGitignore: skipGitignore,
+      verbose: verbose,
+      port: port,
+      progress: progress,
+      extraSshOptions: username + "@ssh." + (settings.get('proxyUrl')) + " rsync " + uuid + " " + containerId
+    };
     command = buildRsyncCommand(syncOptions);
     return new SpinnerPromise({
       promise: shell.runCommand(command, {
-        cwd: source
+        cwd: baseDir
       }),
       startMessage: "Syncing to " + destination + " on " + (uuid.substring(0, 7)) + "...",
       stopMessage: "Synced " + destination + " on " + (uuid.substring(0, 7)) + "."
     });
   });
-  source = syncOptions.source, uuid = syncOptions.uuid, before = syncOptions.before, after = syncOptions.after;
-  return getDeviceInfo().then(function() {
+  return Promise.props({
+    fullUuid: getDeviceInfo(uuid),
+    username: resin.auth.whoami()
+  }).tap(function() {
     if (before != null) {
-      return shell.runCommand(before, source);
+      return shell.runCommand(before, baseDir);
     }
-  }).then(function() {
+  }).then(function(arg1) {
+    var fullUuid, username;
+    fullUuid = arg1.fullUuid, username = arg1.username;
     return stopContainerSpinner(resin.models.device.stopApplication(uuid)).then(function(containerId) {
-      return _.assign(syncOptions, {
-        containerId: containerId
-      });
+      return {
+        containerId: containerId,
+        fullUuid: fullUuid,
+        username: username
+      };
     });
-  }).then(function() {
-    return syncContainer().then(function() {
+  }).then(function(arg1) {
+    var containerId, fullUuid, username;
+    containerId = arg1.containerId, fullUuid = arg1.fullUuid, username = arg1.username;
+    return syncContainer({
+      fullUuid: fullUuid,
+      username: username,
+      containerId: containerId,
+      baseDir: baseDir,
+      destination: destination
+    }).then(function() {
       return startContainerSpinner(resin.models.device.startApplication(uuid));
     }).then(function() {
       if (after != null) {
-        return shell.runCommand(after, source);
+        return shell.runCommand(after, baseDir);
       }
     }).then(function() {
       return console.log(chalk.green.bold('\nresin sync completed successfully!'));

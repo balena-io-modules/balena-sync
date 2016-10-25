@@ -14,7 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
  */
-var SpinnerPromise, _, avahiResinSshTag, enumerateServices, findServices, form, ref, resin,
+var _, avahiResinSshTag, enumerateServices, findServices, ref, resin,
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 _ = require('lodash');
@@ -22,10 +22,6 @@ _ = require('lodash');
 resin = require('resin-sdk');
 
 ref = require('resin-discoverable-services'), enumerateServices = ref.enumerateServices, findServices = ref.findServices;
-
-form = require('resin-cli-form');
-
-SpinnerPromise = require('resin-cli-visuals').SpinnerPromise;
 
 avahiResinSshTag = 'resin-ssh';
 
@@ -60,32 +56,6 @@ exports.discoverLocalResinOsDevices = function(timeout) {
         host: host,
         port: port
       };
-    });
-  });
-};
-
-exports.selectLocalResinOsDeviceForm = function(timeout) {
-  if (timeout == null) {
-    timeout = 4000;
-  }
-  return new SpinnerPromise({
-    promise: exports.discoverLocalResinOsDevices(),
-    startMessage: 'Discovering local resinOS devices..',
-    stopMessage: 'Reporting discovered devices'
-  }).then(function(devices) {
-    if (_.isEmpty(devices)) {
-      throw new Error('Could not find any local resinOS devices');
-    }
-    return form.ask({
-      message: 'select a device',
-      type: 'list',
-      "default": devices[0].ip,
-      choices: _.map(devices, function(device) {
-        return {
-          name: (device.host || 'untitled') + " (" + device.address + ")",
-          value: device.address
-        };
-      })
     });
   });
 };

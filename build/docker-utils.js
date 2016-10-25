@@ -1,4 +1,4 @@
-var Docker, JSONStream, Promise, _, defaultBinds, defaultVolumes, docker, ensureDockerInit, fs, path, prettyPrintDockerProgress, readFileViaSSH, semver, ssh2, tar;
+var Docker, JSONStream, Promise, RdtDockerUtils, _, defaultBinds, defaultVolumes, fs, path, prettyPrintDockerProgress, readFileViaSSH, semver, ssh2, tar, validateEnvVar;
 
 fs = require('fs');
 
@@ -20,7 +20,7 @@ semver = require('semver');
 
 _ = require('lodash');
 
-docker = null;
+validateEnvVar = require('./utils').validateEnvVar;
 
 readFileViaSSH = Promise.method(function(host, port, file) {
   var getSSHConnection;
@@ -76,43 +76,6 @@ readFileViaSSH = Promise.method(function(host, port, file) {
   });
 });
 
-Docker.prototype.containerRootDir = function(container, host, port) {
-  if (port == null) {
-    port = 22222;
-  }
-  return Promise.all([this.infoAsync(), this.versionAsync().get('Version'), this.getContainer(container).inspectAsync()]).spread(function(dockerInfo, dockerVersion, containerInfo) {
-    var containerId, dkroot;
-    dkroot = dockerInfo.DockerRootDir;
-    containerId = containerInfo.Id;
-    return Promise["try"](function() {
-      var destFile, readFile;
-      if (semver.lt(dockerVersion, '1.10.0')) {
-        return containerId;
-      }
-      destFile = path.join(dkroot, "image/" + dockerInfo.Driver + "/layerdb/mounts", containerId, 'mount-id');
-      if (host != null) {
-        readFile = _.partial(readFileViaSSH, host, port);
-      } else {
-        readFile = fs.readFileAsync;
-      }
-      return readFile(destFile);
-    }).then(function(destId) {
-      switch (dockerInfo.Driver) {
-        case 'btrfs':
-          return path.join(dkroot, 'btrfs/subvolumes', destId);
-        case 'overlay':
-          return containerInfo.GraphDriver.Data.RootDir;
-        case 'vfs':
-          return path.join(dkroot, 'vfs/dir', destId);
-        case 'aufs':
-          return path.join(dkroot, 'aufs/mnt', destId);
-        default:
-          throw new Error("Unsupported driver: " + dockerInfo.Driver + "/");
-      }
-    });
-  });
-};
-
 defaultVolumes = {
   '/data': {},
   '/lib/modules': {},
@@ -124,12 +87,6 @@ defaultBinds = function(dataPath) {
   var data;
   data = path.join('/mnt/data/resin-data', dataPath) + ':/data';
   return [data, '/lib/modules:/lib/modules', '/lib/firmware:/lib/firmware', '/run/dbus:/host/run/dbus'];
-};
-
-ensureDockerInit = function() {
-  if (docker == null) {
-    throw new Error('Docker client not initialized');
-  }
 };
 
 prettyPrintDockerProgress = function(dockerProgressStream, outStream) {
@@ -210,172 +167,270 @@ prettyPrintDockerProgress = function(dockerProgressStream, outStream) {
   });
 };
 
-module.exports = {
-  dockerInit: function(dockerHostIp, dockerPort) {
-    if (dockerHostIp == null) {
-      dockerHostIp = '127.0.0.1';
-    }
+RdtDockerUtils = (function() {
+  function RdtDockerUtils(dockerHostIp, dockerPort) {
     if (dockerPort == null) {
       dockerPort = 2375;
     }
-    if (docker == null) {
-      docker = new Docker({
-        host: dockerHostIp,
-        port: dockerPort
-      });
+    if (dockerHostIp == null) {
+      throw new Error('Device Ip/Host is required to instantiate an RdtDockerUtils client');
     }
-    return docker;
-  },
-  checkForExistingImage: Promise.method(function(name) {
-    ensureDockerInit();
-    return docker.getImage(name).inspectAsync().then(function(imageInfo) {
-      return true;
-    })["catch"](function(err) {
-      var statusCode;
-      statusCode = '' + err.statusCode;
-      if (statusCode === '404') {
-        return false;
-      }
-      throw new Error("Error while inspecting image " + name + ": " + err);
+    this.docker = new Docker({
+      host: dockerHostIp,
+      port: dockerPort
     });
-  }),
-  checkForRunningContainer: Promise.method(function(name) {
-    ensureDockerInit();
-    return docker.getContainer(name).inspectAsync().then(function(containerInfo) {
-      var ref, ref1;
-      return (ref = containerInfo != null ? (ref1 = containerInfo.State) != null ? ref1.Running : void 0 : void 0) != null ? ref : false;
-    })["catch"](function(err) {
-      var statusCode;
-      statusCode = '' + err.statusCode;
-      if (statusCode === '404') {
-        return false;
-      }
-      throw new Error("Error while inspecting container " + name + ": " + err);
-    });
-  }),
-  buildImage: function(arg) {
+  }
+
+  RdtDockerUtils.prototype.checkForExistingImage = function(name) {
+    return Promise["try"]((function(_this) {
+      return function() {
+        return _this.docker.getImage(name).inspectAsync().then(function(imageInfo) {
+          return true;
+        })["catch"](function(err) {
+          var statusCode;
+          statusCode = '' + err.statusCode;
+          if (statusCode === '404') {
+            return false;
+          }
+          throw new Error("Error while inspecting image " + name + ": " + err);
+        });
+      };
+    })(this));
+  };
+
+  RdtDockerUtils.prototype.checkForRunningContainer = function(name) {
+    return Promise["try"]((function(_this) {
+      return function() {
+        return _this.docker.getContainer(name).inspectAsync().then(function(containerInfo) {
+          var ref, ref1;
+          return (ref = containerInfo != null ? (ref1 = containerInfo.State) != null ? ref1.Running : void 0 : void 0) != null ? ref : false;
+        })["catch"](function(err) {
+          var statusCode;
+          statusCode = '' + err.statusCode;
+          if (statusCode === '404') {
+            return false;
+          }
+          throw new Error("Error while inspecting container " + name + ": " + err);
+        });
+      };
+    })(this));
+  };
+
+  RdtDockerUtils.prototype.buildImage = function(arg) {
     var baseDir, name, outStream;
     baseDir = arg.baseDir, name = arg.name, outStream = arg.outStream;
-    return Promise["try"](function() {
-      var tarStream;
-      ensureDockerInit();
-      if (outStream == null) {
-        outStream = process.stdout;
-      }
-      tarStream = tar.pack(baseDir);
-      return docker.buildImageAsync(tarStream, {
-        t: "" + name
-      });
-    }).then(function(dockerProgressOutput) {
+    return Promise["try"]((function(_this) {
+      return function() {
+        var tarStream;
+        if (outStream == null) {
+          outStream = process.stdout;
+        }
+        tarStream = tar.pack(baseDir);
+        return _this.docker.buildImageAsync(tarStream, {
+          t: "" + name
+        });
+      };
+    })(this)).then(function(dockerProgressOutput) {
       return prettyPrintDockerProgress(dockerProgressOutput, outStream);
     });
-  },
-  createContainer: function(name) {
-    return Promise["try"](function() {
-      ensureDockerInit();
-      return docker.getImage(name).inspectAsync();
-    }).then(function(imageInfo) {
-      var cmd, ref;
-      if (imageInfo != null ? (ref = imageInfo.Config) != null ? ref.Cmd : void 0 : void 0) {
-        cmd = imageInfo.Config.Cmd;
-      } else {
-        cmd = ['/bin/bash', '-c', '/start'];
-      }
-      return docker.createContainerAsync({
-        Image: name,
-        Cmd: cmd,
-        name: name
-      });
-    });
-  },
-  startContainer: function(name) {
-    return Promise["try"](function() {
-      ensureDockerInit();
-      return docker.getContainer(name).startAsync({
-        Volumes: defaultVolumes,
-        Privileged: true,
-        Tty: true,
-        Binds: defaultBinds(name),
-        NetworkMode: 'host',
-        RestartPolicy: {
-          Name: 'always',
-          MaximumRetryCount: 0
+  };
+
+
+  /**
+  	 * @summary Create a container
+  	 * @function createContainer
+  	 *
+  	 * @param {String} name - Container name - and Image with the same name must already exist
+  	 * @param {Object} [options] - options
+  	 * @param {Array} [options.env=[]] - environment variables in the form [ 'ENV=value' ]
+  	 *
+  	 * @returns {}
+  	 * @throws Exception on error
+   */
+
+  RdtDockerUtils.prototype.createContainer = function(name, arg) {
+    var env, ref;
+    env = (ref = (arg != null ? arg : {}).env) != null ? ref : [];
+    return Promise["try"]((function(_this) {
+      return function() {
+        if (!_.isArray(env)) {
+          throw new Error('createContainer(): expecting an array of environment variables');
         }
-      });
-    })["catch"](function(err) {
+        return _this.docker.getImage(name).inspectAsync();
+      };
+    })(this)).then((function(_this) {
+      return function(imageInfo) {
+        var cmd, ref1;
+        if (imageInfo != null ? (ref1 = imageInfo.Config) != null ? ref1.Cmd : void 0 : void 0) {
+          cmd = imageInfo.Config.Cmd;
+        } else {
+          cmd = ['/bin/bash', '-c', '/start'];
+        }
+        return _this.docker.createContainerAsync({
+          Image: name,
+          Cmd: cmd,
+          name: name,
+          Env: validateEnvVar(env)
+        });
+      };
+    })(this));
+  };
+
+  RdtDockerUtils.prototype.startContainer = function(name) {
+    return Promise["try"]((function(_this) {
+      return function() {
+        return _this.docker.getContainer(name).startAsync({
+          Volumes: defaultVolumes,
+          Privileged: true,
+          Tty: true,
+          Binds: defaultBinds(name),
+          NetworkMode: 'host',
+          RestartPolicy: {
+            Name: 'always',
+            MaximumRetryCount: 0
+          }
+        });
+      };
+    })(this))["catch"](function(err) {
       var statusCode;
       statusCode = '' + err.statusCode;
       if (statusCode !== '304') {
         throw new Error("Error while starting container " + name + ": " + err);
       }
     });
-  },
-  stopContainer: function(name) {
-    return Promise["try"](function() {
-      ensureDockerInit();
-      return docker.getContainer(name).stopAsync({
-        t: 10
-      });
-    })["catch"](function(err) {
+  };
+
+  RdtDockerUtils.prototype.stopContainer = function(name) {
+    return Promise["try"]((function(_this) {
+      return function() {
+        return _this.docker.getContainer(name).stopAsync({
+          t: 10
+        });
+      };
+    })(this))["catch"](function(err) {
       var statusCode;
       statusCode = '' + err.statusCode;
       if (statusCode !== '404' && statusCode !== '304') {
         throw new Error("Error while stopping container " + name + ": " + err);
       }
     });
-  },
-  removeContainer: function(name) {
-    return Promise["try"](function() {
-      ensureDockerInit();
-      return docker.getContainer(name).removeAsync({
-        v: true
-      });
-    })["catch"](function(err) {
+  };
+
+  RdtDockerUtils.prototype.removeContainer = function(name) {
+    return Promise["try"]((function(_this) {
+      return function() {
+        return _this.docker.getContainer(name).removeAsync({
+          v: true
+        });
+      };
+    })(this))["catch"](function(err) {
       var statusCode;
       statusCode = '' + err.statusCode;
       if (statusCode !== '404') {
         throw new Error("Error while removing container " + name + ": " + err);
       }
     });
-  },
-  removeImage: function(name) {
-    return Promise["try"](function() {
-      ensureDockerInit();
-      return docker.getImage(name).removeAsync({
-        force: true
-      });
-    })["catch"](function(err) {
+  };
+
+  RdtDockerUtils.prototype.removeImage = function(name) {
+    return Promise["try"]((function(_this) {
+      return function() {
+        return _this.docker.getImage(name).removeAsync({
+          force: true
+        });
+      };
+    })(this))["catch"](function(err) {
       var statusCode;
       statusCode = '' + err.statusCode;
       if (statusCode !== '404') {
         throw new Error("Error while removing image " + name + ": " + err);
       }
     });
-  },
-  inspectImage: function(name) {
-    return Promise["try"](function() {
-      ensureDockerInit();
-      return docker.getImage(name).inspectAsync();
-    });
-  },
-  pipeContainerStream: function(name, outStream) {
-    return Promise["try"](function() {
-      var container;
-      ensureDockerInit();
-      container = docker.getContainer(name);
-      return container.inspectAsync().then(function(containerInfo) {
-        var ref;
-        return containerInfo != null ? (ref = containerInfo.State) != null ? ref.Running : void 0 : void 0;
-      }).then(function(isRunning) {
-        return container.attachAsync({
-          logs: !isRunning,
-          stream: isRunning,
-          stdout: true,
-          stderr: true
+  };
+
+  RdtDockerUtils.prototype.inspectImage = function(name) {
+    return Promise["try"]((function(_this) {
+      return function() {
+        return _this.docker.getImage(name).inspectAsync();
+      };
+    })(this));
+  };
+
+  RdtDockerUtils.prototype.pipeContainerStream = function(name, outStream) {
+    if (outStream == null) {
+      outStream = process.stdout;
+    }
+    return Promise["try"]((function(_this) {
+      return function() {
+        var container;
+        container = _this.docker.getContainer(name);
+        return container.inspectAsync().then(function(containerInfo) {
+          var ref;
+          return containerInfo != null ? (ref = containerInfo.State) != null ? ref.Running : void 0 : void 0;
+        }).then(function(isRunning) {
+          return container.attachAsync({
+            logs: !isRunning,
+            stream: isRunning,
+            stdout: true,
+            stderr: true
+          });
+        }).then(function(containerStream) {
+          return containerStream.pipe(outStream);
         });
-      }).then(function(containerStream) {
-        return containerStream.pipe(outStream);
+      };
+    })(this));
+  };
+
+  RdtDockerUtils.prototype.followContainerLogs = function(appName, outStream) {
+    if (outStream == null) {
+      outStream = process.stdout;
+    }
+    return Promise["try"]((function(_this) {
+      return function() {
+        if (appName == null) {
+          throw new Error('Please give an application name to stream logs from');
+        }
+        return _this.pipeContainerStream(appName, outStream);
+      };
+    })(this));
+  };
+
+  RdtDockerUtils.prototype.containerRootDir = function(container, host, port) {
+    return Promise.all([this.docker.infoAsync(), this.docker.versionAsync().get('Version'), this.docker.getContainer(container).inspectAsync()]).spread(function(dockerInfo, dockerVersion, containerInfo) {
+      var containerId, dkroot;
+      dkroot = dockerInfo.DockerRootDir;
+      containerId = containerInfo.Id;
+      return Promise["try"](function() {
+        var destFile, readFile;
+        if (semver.lt(dockerVersion, '1.10.0')) {
+          return containerId;
+        }
+        destFile = path.join(dkroot, "image/" + dockerInfo.Driver + "/layerdb/mounts", containerId, 'mount-id');
+        if (host != null) {
+          readFile = _.partial(readFileViaSSH, host, port);
+        } else {
+          readFile = fs.readFileAsync;
+        }
+        return readFile(destFile);
+      }).then(function(destId) {
+        switch (dockerInfo.Driver) {
+          case 'btrfs':
+            return path.join(dkroot, 'btrfs/subvolumes', destId);
+          case 'overlay':
+            return containerInfo.GraphDriver.Data.RootDir;
+          case 'vfs':
+            return path.join(dkroot, 'vfs/dir', destId);
+          case 'aufs':
+            return path.join(dkroot, 'aufs/mnt', destId);
+          default:
+            throw new Error("Unsupported driver: " + dockerInfo.Driver + "/");
+        }
       });
     });
-  }
-};
+  };
+
+  return RdtDockerUtils;
+
+})();
+
+module.exports = RdtDockerUtils;

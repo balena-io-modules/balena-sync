@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+# 6.0.0
+
+* Chore: code refactor
+* rdt: push: support enviornment variable setting
+
 # 5.3.3
 
 * rdt: push: improve log streaming

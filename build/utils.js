@@ -14,23 +14,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
  */
-var Promise, SpinnerPromise, _, form, fs, load, path, ref, revalidator, save, unescapeSpaces;
+var SpinnerPromise, _, fs, revalidator, unescapeSpaces;
 
 fs = require('fs');
-
-path = require('path');
-
-Promise = require('bluebird');
 
 _ = require('lodash');
 
 revalidator = require('revalidator');
 
 SpinnerPromise = require('resin-cli-visuals').SpinnerPromise;
-
-form = require('resin-cli-form');
-
-ref = require('./config'), load = ref.load, save = ref.save;
 
 
 /**
@@ -156,60 +148,64 @@ exports.startContainerAfterErrorSpinner = function(startContainerPromise) {
   });
 };
 
-exports.loadResinSyncYml = Promise.method(function(source) {
-  var resinSyncYml;
-  try {
-    if (source == null) {
-      fs.accessSync(path.join(process.cwd(), '.resin-sync.yml'));
-      source = process.cwd();
-    }
-  } catch (error1) {
-    throw new Error('No --source option passed and no \'.resin-sync.yml\' file found in current directory.');
-  }
-  resinSyncYml = load(source);
-  resinSyncYml.source = source;
-  return resinSyncYml;
-});
 
-exports.getSyncOptions = function(cliOptions) {
-  if (cliOptions == null) {
-    cliOptions = {};
+/**
+ * @summary Check if file exists
+ * @function fileExists
+ *
+ * @param {Object} filename - file path
+ *
+ * @returns {Boolean}
+ * @throws Exception on error
+ *
+ * @example
+ * dockerfileExists = fileExists('Dockerfile')
+ */
+
+exports.fileExists = function(filename) {
+  var err;
+  try {
+    fs.accessSync(filename);
+    return true;
+  } catch (error1) {
+    err = error1;
+    if (err.code === 'ENOENT') {
+      return false;
+    }
+    throw new Error("Could not access " + filename + ": " + err);
   }
-  cliOptions = _.clone(cliOptions);
-  return exports.loadResinSyncYml(cliOptions.source).then(function(resinSyncYml) {
-    var syncOptions;
-    syncOptions = {};
-    if (cliOptions.ignore != null) {
-      cliOptions.ignore = cliOptions.ignore.split(',');
+};
+
+
+/**
+ * @summary Validate 'ENV=value' environment variable(s)
+ * @function validateEnvVar
+ *
+ * @param {String|Array} [env=[]] - 'ENV_NAME=value' string
+ *
+ * @returns {Array} - returns array of passed env var(s) if valid
+ * @throws Exception if a variable name is not valid in accordance with
+ * IEEE Std 1003.1-2008, 2016 Edition, Ch. 8, p. 1
+ *
+ */
+
+exports.validateEnvVar = function(env) {
+  var e, envVarRegExp, i, len;
+  if (env == null) {
+    env = [];
+  }
+  envVarRegExp = new RegExp('^[a-zA-Z_][a-zA-Z0-9_]*=.*$');
+  if (!_.isString(env) && !_.isArray(env)) {
+    throw new Error('validateEnvVar(): expecting either Array or String parameter');
+  }
+  if (_.isString(env)) {
+    env = [env];
+  }
+  for (i = 0, len = env.length; i < len; i++) {
+    e = env[i];
+    if (!envVarRegExp.test(e)) {
+      throw new Error("Invalid environment variable: " + e);
     }
-    _.mergeWith(syncOptions, resinSyncYml, cliOptions, function(objVal, srcVal, key) {
-      if (key === 'ignore') {
-        return srcVal;
-      }
-    });
-    syncOptions.ignore = _.filter(syncOptions.ignore, function(item) {
-      return !_.isEmpty(item);
-    });
-    if (syncOptions.ignore.length === 0 && (resinSyncYml.ignore == null)) {
-      syncOptions.ignore = ['.git', 'node_modules/'];
-    }
-    return form.run([
-      {
-        message: 'Destination directory on device container [/usr/src/app]',
-        name: 'destination',
-        type: 'input'
-      }
-    ], {
-      override: {
-        destination: syncOptions.destination
-      }
-    }).get('destination').then(function(destination) {
-      return _.assign(syncOptions, {
-        destination: destination != null ? destination : '/usr/src/app'
-      });
-    }).then(function() {
-      save(_.omit(syncOptions, ['source', 'verbose', 'progress', 'force', 'build-triggers', 'app-name', 'skip-logs']), syncOptions.source);
-      return syncOptions;
-    });
-  });
+  }
+  return env;
 };

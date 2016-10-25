@@ -68,13 +68,14 @@ module.exports = {
     }
   ],
   action: function(params, options, done) {
-    var Promise, _, ensureDeviceIsOnline, form, getRemoteResinioOnlineDevices, getSyncOptions, ref, save, selectOnlineDevice, sync;
+    var Promise, _, configYml, ensureDeviceIsOnline, form, getRemoteResinioOnlineDevices, parseOptions, ref, ref1, runtimeOptions, selectOnlineDevice, selectSyncDestination, sync, yamlConfig;
     Promise = require('bluebird');
     _ = require('lodash');
     form = require('resin-cli-form');
-    save = require('../config').save;
-    getSyncOptions = require('../utils').getSyncOptions;
+    yamlConfig = require('../yaml-config');
+    parseOptions = require('./parse-options');
     getRemoteResinioOnlineDevices = require('../discover').getRemoteResinioOnlineDevices;
+    selectSyncDestination = require('../forms').selectSyncDestination;
     ref = require('../sync')('remote-resin-io-device'), sync = ref.sync, ensureDeviceIsOnline = ref.ensureDeviceIsOnline;
     selectOnlineDevice = function() {
       return getRemoteResinioOnlineDevices().then(function(onlineDevices) {
@@ -94,36 +95,31 @@ module.exports = {
         });
       });
     };
+    ref1 = parseOptions(options, params), runtimeOptions = ref1.runtimeOptions, configYml = ref1.configYml;
     return Promise["try"](function() {
       if (params != null ? params.uuid : void 0) {
         return ensureDeviceIsOnline(params.uuid);
       }
-      return getSyncOptions(options).then((function(_this) {
-        return function(syncOptions) {
-          _this.syncOptions = syncOptions;
-          if (_this.syncOptions.uuid != null) {
-            return ensureDeviceIsOnline(_this.syncOptions.uuid)["catch"](function() {
-              console.log("Device " + this.syncOptions.uuid + " not found or is offline.");
-              return selectOnlineDevice();
-            });
-          }
+      if (configYml.uuid != null) {
+        return ensureDeviceIsOnline(configYml.uuid)["catch"](function() {
+          console.log("Device " + configYml.uuid + " not found or is offline.");
           return selectOnlineDevice();
-        };
-      })(this)).then((function(_this) {
-        return function(uuid) {
-          _.assign(_this.syncOptions, {
-            uuid: uuid
-          });
-          _.defaults(_this.syncOptions, {
-            port: 22
-          });
-          return save(_.omit(_this.syncOptions, ['source', 'verbose', 'progress']), _this.syncOptions.source);
-        };
-      })(this)).then((function(_this) {
-        return function() {
-          return sync(_this.syncOptions);
-        };
-      })(this));
+        });
+      } else {
+        return selectOnlineDevice();
+      }
+    }).then(function(uuid) {
+      runtimeOptions.uuid = uuid;
+      return selectSyncDestination(runtimeOptions.destination);
+    }).then(function(destination) {
+      var notNil;
+      runtimeOptions.destination = destination;
+      notNil = function(val) {
+        return !_.isNil(val);
+      };
+      return yamlConfig.save(_.assign({}, configYml, _(runtimeOptions).pick(['uuid', 'destination', 'ignore', 'before', 'after']).pickBy(notNil).value()), configYml.baseDir);
+    }).then(function() {
+      return sync(_.pick(runtimeOptions, ['uuid', 'baseDir', 'appName', 'destination', 'before', 'after', 'progress', 'verbose', 'skipGitignore', 'ignore']));
     }).nodeify(done);
   }
 };
