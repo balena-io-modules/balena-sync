@@ -115,6 +115,11 @@ module.exports =
 			boolean: true
 			description: 'force a container build and run'
 			alias: 'f'
+		,
+			signature: 'env'
+			parameter: 'env'
+			description: "environment variable (e.g. --env 'ENV=value'). Multiple --env parameters are supported."
+			alias: 'e'
 	]
 	action: (params, options, done) ->
 		path = require('path')
@@ -144,7 +149,7 @@ module.exports =
 		# @example
 		# build(appName: 'test', deviceIp: '192.168.1.1')
 		###
-		build = ({ appName, deviceIp, baseDir = process.cwd() } = {}) ->
+		build = ({ appName, deviceIp, env = [], baseDir = process.cwd() } = {}) ->
 			throw new Error("Missing application name for 'rtd push'") if not appName?
 			throw new Error("Missing device ip/host for 'rtd push'") if not deviceIp?
 
@@ -178,7 +183,7 @@ module.exports =
 						docker.removeImage(oldImageInfo.Id)
 			.then ->
 				console.log "- Creating '#{appName}' container"
-				docker.createContainer(appName)
+				docker.createContainer(appName, { env })
 			.then ->
 				console.log "- Starting '#{appName}' container"
 				docker.startContainer(appName)
@@ -239,6 +244,7 @@ module.exports =
 							'baseDir'
 							'deviceIp'
 							'appName'
+							'env'
 						]
 				else
 					console.log(chalk.yellow.bold('* Syncing..'))

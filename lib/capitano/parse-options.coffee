@@ -1,7 +1,7 @@
 path = require('path')
 _ = require('lodash')
 yamlConfig = require('../yaml-config')
-{ fileExists } = require('../utils')
+{ fileExists, validateEnvVar } = require('../utils')
 
 defaultSyncIgnorePaths = [ '.git', 'node_modules/' ]
 
@@ -69,4 +69,5 @@ module.exports = (cliOptions = {}, cliParams = {}) ->
 			savedBuildTriggerFiles: savedBuildTriggerFiles
 			uuid: cliParams['uuid']
 			port: cliOptions['port']
+			env: validateEnvVar(cliOptions['env'] ? configYml['local_resinos']['environment'])
 	}
