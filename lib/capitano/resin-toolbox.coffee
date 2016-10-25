@@ -232,7 +232,10 @@ module.exports =
 					# Calculate new hashes
 					createBuildTriggerHashes(baseDir: runtimeOptions.baseDir, files: runtimeOptions.buildTriggerFiles)
 					.then (buildTriggerHashes) ->
+
+						# Options to save in yamlConfig
 						configYml['local_resinos']['build-triggers'] = buildTriggerHashes
+						configYml['local_resinos']['environment'] = runtimeOptions.env
 
 						# Save config file before starting build
 						yamlConfig.save(
