@@ -22,5 +22,6 @@ module.exports = {
     return require('./sync')(target);
   },
   config: require('./yaml-config'),
+  discover: require('./discover'),
   forms: require('./forms')
 };
