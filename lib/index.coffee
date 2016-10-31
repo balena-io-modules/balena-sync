@@ -18,4 +18,5 @@ module.exports =
 	capitano: (cliTool) -> require('./capitano')(cliTool)
 	sync: (target) -> require('./sync')(target)
 	config: require('./yaml-config')
+	discover: require('./discover')
 	forms: require('./forms')
