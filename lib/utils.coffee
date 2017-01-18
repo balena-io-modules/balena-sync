@@ -133,6 +133,13 @@ exports.stopContainerSpinner = (stopContainerPromise) ->
 		stopMessage: 'Application container stopped.'
 
 # Resolves with the resolved 'promise' value
+exports.infoContainerSpinner = (infoContainerPromise) ->
+	new SpinnerPromise
+		promise: infoContainerPromise
+		startMessage: 'Getting application container info...'
+		stopMessage: 'Got application container info.'
+
+# Resolves with the resolved 'promise' value
 exports.startContainerAfterErrorSpinner = (startContainerPromise) ->
 	new SpinnerPromise
 		promise: startContainerPromise

@@ -68,6 +68,6 @@ module.exports = (cliOptions = {}, cliParams = {}) ->
 			buildTriggerFiles: cliOptions['build-triggers'] ? savedBuildTriggerFiles
 			savedBuildTriggerFiles: savedBuildTriggerFiles
 			uuid: cliParams['uuid']
-			port: cliOptions['port']
+			port: cliOptions['port'] ? configYml['port']
 			env: validateEnvVar(cliOptions['env'] ? configYml['local_resinos']['environment'])
 	}

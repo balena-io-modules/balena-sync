@@ -18,7 +18,9 @@ module.exports =
 	signature: 'sync [uuid]'
 	description: '(beta) sync your changes to a device'
 	help: '''
-		WARNING: If you're running Windows, this command only supports `cmd.exe`.
+		Warning: 'resin sync' requires an openssh-compatible client and 'rsync' to
+		be correctly installed in your shell environment. For more information (including
+		Windows support) please check the README here: https://github.com/resin-io/resin-cli
 
 		Use this command to sync your local changes to a certain device on the fly.
 
@@ -156,12 +158,13 @@ module.exports =
 			# Save config file before starting sync
 			notNil = (val) -> not _.isNil(val)
 			yamlConfig.save(
-				_.assign({}, configYml, _(runtimeOptions).pick([ 'uuid', 'destination', 'ignore', 'before', 'after' ]).pickBy(notNil).value())
+				_.assign({}, configYml, _(runtimeOptions).pick([ 'uuid', 'destination', 'port', 'ignore', 'before', 'after' ]).pickBy(notNil).value())
 				configYml.baseDir
 			)
 		.then ->
 			sync _.pick runtimeOptions, [
 				'uuid'
+				'port'
 				'baseDir'
 				'appName'
 				'destination'
