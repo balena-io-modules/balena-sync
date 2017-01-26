@@ -75,6 +75,10 @@ module.exports =
 			boolean: true
 			description: 'do not parse excluded/included files from .gitignore'
 		,
+			signature: 'skip-restart'
+			boolean: true
+			description: 'do not restart container after syncing'
+		,
 			signature: 'before'
 			parameter: 'command'
 			description: 'execute a command before syncing'
@@ -172,6 +176,7 @@ module.exports =
 				'after'
 				'progress'
 				'verbose'
+				'skipRestart'
 				'skipGitignore'
 				'ignore'
 			]

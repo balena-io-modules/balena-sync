@@ -61,6 +61,7 @@ module.exports = (cliOptions = {}, cliParams = {}) ->
 			after: cliOptions['after'] ? configYml['after']
 			progress: cliOptions['progress'] ? false
 			verbose: cliOptions['verbose'] ? false
+			skipRestart: cliOptions['skip-restart'] ? false
 			skipGitignore: cliOptions['skip-gitignore'] ? false
 			ignore: ignoreFiles
 			skipLogs: cliOptions['skip-logs'] ? false

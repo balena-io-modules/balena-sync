@@ -27,14 +27,13 @@ settings = require('resin-settings-client')
 shell = require('../shell')
 { SpinnerPromise } = require('resin-cli-visuals')
 { buildRsyncCommand } = require('../rsync')
-{	startContainerSpinner
-	stopContainerSpinner
+{	stopContainerSpinner
+	startContainerSpinner
 	infoContainerSpinner
 	startContainerAfterErrorSpinner
 } = require('../utils')
 
 MIN_HOSTOS_RSYNC = '1.1.4'
-MIN_AUFS_RESINOS_VER = '2.0.0-alpha'
 
 # Extract semver from device.os_version, since its format
 # can be in a form similar to 'Resin OS 1.1.0 (fido)'
@@ -113,7 +112,8 @@ exports.ensureDeviceIsOnline = (uuid) ->
 # @param {String} [syncOptions.after] - command to execute after sync
 # @param {String[]} [syncOptions.ignore] - ignore paths
 # @param {Number} [syncOptions.port=22] - ssh port
-# @param {Boolean} [syncOptions.skipGitignore=lfase] - skip .gitignore when parsing exclude/include files
+# @param {Boolean} [syncOptions.skipGitignore=false] - skip .gitignore when parsing exclude/include files
+# @param {Boolean} [syncOptions.skipRestart=false] - do not restart container after sync
 # @param {Boolean} [syncOptions.progress=false] - display rsync progress
 # @param {Boolean} [syncOptions.verbose=false] - display verbose info
 #
@@ -126,7 +126,7 @@ exports.ensureDeviceIsOnline = (uuid) ->
 #   progress: false
 # });
 ###
-exports.sync = ({ uuid, baseDir, destination, before, after, ignore, port = 22, skipGitignore = false, progress = false, verbose = false }) ->
+exports.sync = ({ uuid, baseDir, destination, before, after, ignore, port = 22, skipGitignore = false, skipRestart = false, progress = false, verbose = false } = {}) ->
 
 	throw new Error("'destination' is a required sync option") if not destination?
 	throw new Error("'uuid' is a required sync option") if not uuid?
@@ -135,7 +135,6 @@ exports.sync = ({ uuid, baseDir, destination, before, after, ignore, port = 22, 
 	#
 	#	{
 	#		fullUuid: <string, full resin.io device UUID>
-	#		isAUFS: <true|false, depending on if the device is running on AUFS>
 	#	}
 	#
 	getDeviceInfo = (uuid) ->
@@ -162,12 +161,11 @@ exports.sync = ({ uuid, baseDir, destination, before, after, ignore, port = 22, 
 		resin.models.device.isOnline(uuid).then (isOnline) ->
 			throw new Error('Device is not online') if not isOnline
 			resin.models.device.get(uuid)
-		.then(ensureDeviceRequirements)
-		.then ({ uuid, os_version }) ->
-			Promise.props(
-				isAUFS: ensureHostOSCompatibility(os_version, MIN_AUFS_RESINOS_VER).return(true).catchReturn(false)
+		.then(ensureDeviceRequirements) # Fail early if 'resin sync'-specific requirements are not met
+		.then ({ uuid }) ->
+			return {
 				fullUuid: uuid
-			)
+			}
 
 	syncContainer = Promise.method ({ fullUuid, username, containerId, baseDir = process.cwd(), destination }) ->
 		if not containerId?
@@ -192,28 +190,26 @@ exports.sync = ({ uuid, baseDir, destination, before, after, ignore, port = 22, 
 			startMessage: "Syncing to #{destination} on #{uuid.substring(0, 7)}..."
 			stopMessage: "Synced #{destination} on #{uuid.substring(0, 7)}."
 
-	Promise.join(
-		getDeviceInfo(uuid)
-		resin.auth.whoami()
-		({ fullUuid, isAUFS }, username) ->
-			return { fullUuid, isAUFS, username }
+	Promise.props(
+		fullUuid: getDeviceInfo(uuid).get('fullUuid')
+		username: resin.auth.whoami()
 	)
 	.tap -> # run 'before' action
 		if before?
 			shell.runCommand(before, baseDir)
-	.then ({ fullUuid, isAUFS, username }) -> # get container id
+	.then ({ fullUuid, username }) ->
 		# the resolved 'containerId' value is needed for the rsync process over resin-proxy
 		infoContainerSpinner(resin.models.device.getApplicationInfo(uuid))
-		.tap ->
-			if not isAUFS # for AUFS devices, rsync has to be performed while the container is running
-				stopContainerSpinner(resin.models.device.stopApplication(uuid))
 		.then ({ containerId }) -> # sync container
 			syncContainer({ fullUuid, username, containerId, baseDir, destination })
 			.then ->
-				if isAUFS # for AUFS device, container restart is perfomed after the sync action
+				if skipRestart is false
+					# There is a `restartApplication()` sdk method that we can't use
+					# at the moment, because it always removes the original container,
+					# which results in `resin sync` changes getting lost.
 					stopContainerSpinner(resin.models.device.stopApplication(uuid))
-			.then ->
-				startContainerSpinner(resin.models.device.startApplication(uuid))
+					.then ->
+						startContainerSpinner(resin.models.device.startApplication(uuid))
 			.then -> # run 'after' action
 				if after?
 					shell.runCommand(after, baseDir)
