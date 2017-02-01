@@ -19,6 +19,7 @@ limitations under the License.
 ###
 
 Promise = require('bluebird')
+_ = require('lodash')
 chalk = require('chalk')
 semver = require('semver')
 resin = require('resin-sdk')
@@ -26,8 +27,9 @@ settings = require('resin-settings-client')
 shell = require('../shell')
 { SpinnerPromise } = require('resin-cli-visuals')
 { buildRsyncCommand } = require('../rsync')
-{	startContainerSpinner
-	stopContainerSpinner
+{	stopContainerSpinner
+	startContainerSpinner
+	infoContainerSpinner
 	startContainerAfterErrorSpinner
 } = require('../utils')
 
@@ -110,7 +112,8 @@ exports.ensureDeviceIsOnline = (uuid) ->
 # @param {String} [syncOptions.after] - command to execute after sync
 # @param {String[]} [syncOptions.ignore] - ignore paths
 # @param {Number} [syncOptions.port=22] - ssh port
-# @param {Boolean} [syncOptions.skipGitignore=lfase] - skip .gitignore when parsing exclude/include files
+# @param {Boolean} [syncOptions.skipGitignore=false] - skip .gitignore when parsing exclude/include files
+# @param {Boolean} [syncOptions.skipRestart=false] - do not restart container after sync
 # @param {Boolean} [syncOptions.progress=false] - display rsync progress
 # @param {Boolean} [syncOptions.verbose=false] - display verbose info
 #
@@ -123,25 +126,46 @@ exports.ensureDeviceIsOnline = (uuid) ->
 #   progress: false
 # });
 ###
-exports.sync = ({ uuid, baseDir, destination, before, after, ignore, port = 22, skipGitignore = false, progress = false, verbose = false }) ->
+exports.sync = ({ uuid, baseDir, destination, before, after, ignore, port = 22, skipGitignore = false, skipRestart = false, progress = false, verbose = false } = {}) ->
 
 	throw new Error("'destination' is a required sync option") if not destination?
 	throw new Error("'uuid' is a required sync option") if not uuid?
 
+	# Resolves with object with required device info or is rejected if API was not accessible. Resolved object:
+	#
+	#	{
+	#		fullUuid: <string, full resin.io device UUID>
+	#	}
+	#
 	getDeviceInfo = (uuid) ->
+		RequiredDeviceObjectFields = [ 'uuid', 'os_version' ]
+
+		# Returns a promise that is resolved with the API-fetched device object or rejected on error or missing requirement
+		ensureDeviceRequirements = (device) ->
+			# Ensure user is the owner of the device. This is also checked on the backend side.
+			resin.auth.getUserId()
+			.then (userId) ->
+				if userId isnt device.user.__id
+					throw new Error('Resin sync is permitted to the device owner only. The device owner is the user who provisioned it.')
+			.then -> # Ensure minimum required HostOS version for resin sync
+				ensureHostOSCompatibility(device.os_version, MIN_HOSTOS_RSYNC)
+			.then ->
+				missingKeys = _.difference(RequiredDeviceObjectFields, _.keys(device))
+				if missingKeys.length > 0
+					throw new Error("Fetched device info is missing required fields '#{missingKeys.join("', '")}'")
+
+				return device
+
 		console.info("Getting information for device: #{uuid}")
 
 		resin.models.device.isOnline(uuid).then (isOnline) ->
 			throw new Error('Device is not online') if not isOnline
 			resin.models.device.get(uuid)
-		.tap (device) ->
-			# Ensure user is the owner of the device. This is also checked on the backend side.
-			resin.auth.getUserId().then (userId) ->
-				if userId isnt device.user.__id
-					throw new Error('Resin sync is permitted to the device owner only. The device owner is the user who provisioned it.')
-		.tap (device) ->
-			ensureHostOSCompatibility(device.os_version, MIN_HOSTOS_RSYNC)
-		.get('uuid') # get full uuid
+		.then(ensureDeviceRequirements) # Fail early if 'resin sync'-specific requirements are not met
+		.then ({ uuid }) ->
+			return {
+				fullUuid: uuid
+			}
 
 	syncContainer = Promise.method ({ fullUuid, username, containerId, baseDir = process.cwd(), destination }) ->
 		if not containerId?
@@ -166,33 +190,38 @@ exports.sync = ({ uuid, baseDir, destination, before, after, ignore, port = 22, 
 			startMessage: "Syncing to #{destination} on #{uuid.substring(0, 7)}..."
 			stopMessage: "Synced #{destination} on #{uuid.substring(0, 7)}."
 
-	Promise.props
-		fullUuid: getDeviceInfo(uuid)
+	Promise.props(
+		fullUuid: getDeviceInfo(uuid).get('fullUuid')
 		username: resin.auth.whoami()
+	)
 	.tap -> # run 'before' action
 		if before?
 			shell.runCommand(before, baseDir)
-	.then ({ fullUuid, username }) -> # stop container
-		stopContainerSpinner(resin.models.device.stopApplication(uuid)).then (containerId) ->
-			# the resolved 'containerId' value is needed for the rsync process over resin-proxy
-			return { containerId, fullUuid, username }
-	.then ({ containerId, fullUuid, username }) -> # sync container
-		syncContainer({ fullUuid, username, containerId, baseDir, destination })
-		.then -> # start container
-			startContainerSpinner(resin.models.device.startApplication(uuid))
-		.then -> # run 'after' action
-			if after?
-				shell.runCommand(after, baseDir)
-		.then ->
-			console.log(chalk.green.bold('\nresin sync completed successfully!'))
-		.catch (err) ->
-			# Notify the user of the error and run 'startApplication()'
-			# once again to make sure that a new app container will be started
-			startContainerAfterErrorSpinner(resin.models.device.startApplication(uuid))
+	.then ({ fullUuid, username }) ->
+		# the resolved 'containerId' value is needed for the rsync process over resin-proxy
+		infoContainerSpinner(resin.models.device.getApplicationInfo(uuid))
+		.then ({ containerId }) -> # sync container
+			syncContainer({ fullUuid, username, containerId, baseDir, destination })
+			.then ->
+				if skipRestart is false
+					# There is a `restartApplication()` sdk method that we can't use
+					# at the moment, because it always removes the original container,
+					# which results in `resin sync` changes getting lost.
+					stopContainerSpinner(resin.models.device.stopApplication(uuid))
+					.then ->
+						startContainerSpinner(resin.models.device.startApplication(uuid))
+			.then -> # run 'after' action
+				if after?
+					shell.runCommand(after, baseDir)
+			.then ->
+				console.log(chalk.green.bold('\nresin sync completed successfully!'))
 			.catch (err) ->
-				console.log('Could not start application container', err)
-			.finally ->
-				throw err
+				# Notify the user of the error and run 'startApplication()'
+				# once again to make sure that a new app container will be started
+				startContainerAfterErrorSpinner(resin.models.device.startApplication(uuid))
+				.catch (err) ->
+					console.log('Could not start application container', err)
+				.throw(err)
 	.catch (err) ->
 		console.log(chalk.red.bold('resin sync failed.', err))
-		process.exit(1)
+		throw err
