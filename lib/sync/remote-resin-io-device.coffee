@@ -169,7 +169,7 @@ exports.sync = ({ uuid, baseDir, destination, before, after, ignore, port = 22, 
 
 	syncContainer = Promise.method ({ fullUuid, username, containerId, baseDir = process.cwd(), destination }) ->
 		if not containerId?
-			throw new Error('No stopped application container found')
+			throw new Error('No application container found')
 
 		syncOptions =
 			username: username
