@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+# 6.1.1
+
+* resin sync: fix container status typo on resin sync error
+
 # 6.1.0
 
 * Support resin sync on AUFS devices
