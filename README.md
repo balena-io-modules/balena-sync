@@ -15,31 +15,6 @@ The intention of this module is to provide a way to sync changes from a local so
 
 **THIS MODULE IS LOW LEVEL AND IS NOT MEANT TO BE USED BY END USERS DIRECTLY**.
 
-Installation
-------------
-
-Install `resin-sync` by running:
-
-```sh
-$ npm install --save resin-sync
-```
-
-Dependencies
-------------
-
-`resin sync` relies on the following dependencies
-being installed in the system:
-
-- `rsync`
-- `ssh`
-
-#### For Windows users:
-
-1. Install [MinGW](http://www.mingw.org).
-2. Install the `msys-rsync` and `msys-openssh` packages.
-3. Add MinGW to the `%PATH%` if this hasn't been done by the installer already. The location where the binaries are places is usually `C:\MinGW\msys\1.0\bin`, but it can vary if you selected a different location in the installer.
-4. Copy your SSH keys to `%homedrive%%homepath\.ssh`.
-
 API
 -------------
 

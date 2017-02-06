@@ -18,7 +18,9 @@ module.exports =
 	signature: 'push [deviceIp]'
 	description: 'Push your changes to a container on local resinOS device '
 	help: '''
-		WARNING: If you're running Windows, this command only supports `cmd.exe`.
+		Warning: 'rdt push' requires an openssh-compatible client and 'rsync' to
+		be correctly installed in your shell environment. For more information (including
+		Windows support) please check the README here: https://github.com/resin-os/resin-device-toolbox
 
 		Use this command to push your local changes to a container on a LAN-accessible resinOS device on the fly.
 
