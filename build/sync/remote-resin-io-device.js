@@ -186,7 +186,7 @@ exports.sync = function(arg) {
     var baseDir, command, containerId, destination, fullUuid, ref7, syncOptions, username;
     fullUuid = arg1.fullUuid, username = arg1.username, containerId = arg1.containerId, baseDir = (ref7 = arg1.baseDir) != null ? ref7 : process.cwd(), destination = arg1.destination;
     if (containerId == null) {
-      throw new Error('No stopped application container found');
+      throw new Error('No application container found');
     }
     syncOptions = {
       username: username,
