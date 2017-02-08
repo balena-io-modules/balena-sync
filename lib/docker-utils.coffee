@@ -53,7 +53,6 @@ defaultVolumes = {
 	'/lib/modules': {}
 	'/lib/firmware': {}
 	'/host/run/dbus': {}
-	'/host/run_dbus': {}
 }
 
 defaultBinds = (dataPath) ->
@@ -63,7 +62,6 @@ defaultBinds = (dataPath) ->
 		data
 		'/lib/modules:/lib/modules'
 		'/lib/firmware:/lib/firmware'
-		'/run/dbus:/host_run/dbus'
 		'/run/dbus:/host/run/dbus'
 	]
 
