@@ -3,7 +3,9 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
-* Add `'/run/dbus:/host_run/dbus'` as a default bind-mount
+# 6.1.3
+
+* rdt: add `'/run/dbus:/host_run/dbus'` as a default bind-mount
 
 # 6.1.2
 
