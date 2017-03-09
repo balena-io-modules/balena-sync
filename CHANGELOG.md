@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+# 6.2.0
+
+* Export docker utils
+
 # 6.1.4
 
 * rdt: revert add `'/run/dbus:/host_run/dbus'` as a default bind-mount
