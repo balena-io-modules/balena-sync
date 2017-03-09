@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+# 6.2.1
+
+* Use experimental `resin-discoverable-services` with support for multiple interfaces listening.
+* Filter out devices with unavailable docker socket.
+
 # 6.2.0
 
 * Export docker utils
