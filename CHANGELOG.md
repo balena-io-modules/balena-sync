@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+# 6.2.3
+
+* Get correct docker pid during local push/sync
+
 # 6.2.2
 
 * Revert experimental `resin-discoverable-services`
