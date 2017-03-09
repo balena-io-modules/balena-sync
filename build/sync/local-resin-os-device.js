@@ -90,7 +90,7 @@ exports.sync = function(arg) {
         verbose: verbose,
         source: baseDir,
         destination: shellwords.escape(rsyncDestination),
-        rsyncPath: "mkdir -p \"" + rsyncDestination + "\" && nsenter --target $(pidof docker) --mount rsync"
+        rsyncPath: "mkdir -p \"" + rsyncDestination + "\" && nsenter --target $(cat /var/run/docker.pid) --mount rsync"
       };
       command = buildRsyncCommand(syncOptions);
       return docker.checkForRunningContainer(appName).then(function(isContainerRunning) {
