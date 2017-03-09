@@ -1,5 +1,6 @@
 Promise = require('bluebird')
 _ = require('lodash')
+Docker = require('docker-toolbelt')
 form = require('resin-cli-form')
 { discoverLocalResinOsDevices } = require('./discover')
 { SpinnerPromise } = require('resin-cli-visuals')
@@ -53,6 +54,10 @@ exports.selectLocalResinOsDevice = (timeout = 4000) ->
 		promise: discoverLocalResinOsDevices(timeout)
 		startMessage: 'Discovering local resinOS devices..'
 		stopMessage: 'Reporting discovered devices'
+	.filter ({ address } = {}) ->
+		return false if not address
+		docker = new Docker(host: address, port: 2375)
+		docker.infoAsync().return(true).catchReturn(false)
 	.then (devices) ->
 		if _.isEmpty(devices)
 			throw new Error('Could not find any local resinOS devices')
