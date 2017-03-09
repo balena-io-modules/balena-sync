@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+# 6.2.2
+
+* Revert experimental `resin-discoverable-services`
+
 # 6.2.1
 
 * Use experimental `resin-discoverable-services` with support for multiple interfaces listening.
