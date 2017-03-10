@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+# 7.0.0
+
+* Use experimental `resin-discoverable-services` with support for multiple interfaces listening.
+
 # 6.2.3
 
 * Get correct docker pid during local push/sync
