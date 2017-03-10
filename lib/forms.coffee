@@ -4,6 +4,7 @@ Docker = require('docker-toolbelt')
 form = require('resin-cli-form')
 { discoverLocalResinOsDevices } = require('./discover')
 { SpinnerPromise } = require('resin-cli-visuals')
+{ dockerPort, dockerTimeout } = require('./config')
 
 # Presents interactive dialog to choose an application name if no preferred application name
 # is passed as a parameter.
@@ -48,7 +49,6 @@ exports.selectSyncDestination = (preferredDestination) ->
 	.then (destination) ->
 		destination ? '/usr/src/app'
 
-
 exports.selectLocalResinOsDevice = (timeout = 4000) ->
 	new SpinnerPromise
 		promise: discoverLocalResinOsDevices(timeout)
@@ -56,8 +56,12 @@ exports.selectLocalResinOsDevice = (timeout = 4000) ->
 		stopMessage: 'Reporting discovered devices'
 	.filter ({ address } = {}) ->
 		return false if not address
-		docker = new Docker(host: address, port: 2375)
-		docker.infoAsync().return(true).catchReturn(false)
+
+		Promise.try ->
+			docker = new Docker(host: address, port: dockerPort, timeout: dockerTimeout)
+			docker.pingAsync()
+		.return(true)
+		.catchReturn(false)
 	.then (devices) ->
 		if _.isEmpty(devices)
 			throw new Error('Could not find any local resinOS devices')
