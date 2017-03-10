@@ -9,6 +9,7 @@ Promise.promisifyAll(ssh2.Client)
 semver = require('semver')
 _ = require('lodash')
 { validateEnvVar } = require('./utils')
+{ dockerPort } = require('./config')
 
 # resolved with file contents, rejects on error
 readFileViaSSH = Promise.method (host, port, file) ->
@@ -135,10 +136,10 @@ prettyPrintDockerProgress = (dockerProgressStream, outStream = process.stdout) -
 			reject(error)
 
 class RdtDockerUtils
-	constructor: (dockerHostIp, dockerPort = 2375) ->
+	constructor: (dockerHostIp, port = dockerPort) ->
 		if not dockerHostIp?
 			throw new Error('Device Ip/Host is required to instantiate an RdtDockerUtils client')
-		@docker = new Docker(host: dockerHostIp, port: dockerPort)
+		@docker = new Docker(host: dockerHostIp, port: port)
 
 	# Resolve with true if image with 'name' exists. Resolve
 	# false otherwise and reject promise on unknown error
