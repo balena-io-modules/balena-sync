@@ -273,7 +273,8 @@ RdtDockerUtils = (function() {
           Image: name,
           Cmd: cmd,
           name: name,
-          Env: validateEnvVar(env)
+          Env: validateEnvVar(env),
+          Tty: true
         });
       };
     })(this));
@@ -285,7 +286,6 @@ RdtDockerUtils = (function() {
         return _this.docker.getContainer(name).startAsync({
           Volumes: defaultVolumes,
           Privileged: true,
-          Tty: true,
           Binds: defaultBinds(name),
           NetworkMode: 'host',
           RestartPolicy: {

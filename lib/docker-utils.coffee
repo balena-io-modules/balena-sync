@@ -204,13 +204,13 @@ class RdtDockerUtils
 				Cmd: cmd
 				name: name
 				Env: validateEnvVar(env)
+				Tty: true
 
 	startContainer: (name) ->
 		Promise.try =>
 			@docker.getContainer(name).startAsync
 				Volumes: defaultVolumes
 				Privileged: true
-				Tty: true
 				Binds: defaultBinds(name)
 				NetworkMode: 'host'
 				RestartPolicy:
