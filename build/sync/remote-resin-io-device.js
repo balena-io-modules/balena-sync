@@ -198,15 +198,15 @@ exports.sync = function(arg) {
       verbose: verbose,
       port: port,
       progress: progress,
-      extraSshOptions: username + "@ssh." + (settings.get('proxyUrl')) + " rsync " + uuid + " " + containerId
+      extraSshOptions: username + "@ssh." + (settings.get('proxyUrl')) + " rsync " + fullUuid + " " + containerId
     };
     command = buildRsyncCommand(syncOptions);
     return new SpinnerPromise({
       promise: shell.runCommand(command, {
         cwd: baseDir
       }),
-      startMessage: "Syncing to " + destination + " on " + (uuid.substring(0, 7)) + "...",
-      stopMessage: "Synced " + destination + " on " + (uuid.substring(0, 7)) + "."
+      startMessage: "Syncing to " + destination + " on " + (fullUuid.substring(0, 7)) + "...",
+      stopMessage: "Synced " + destination + " on " + (fullUuid.substring(0, 7)) + "."
     });
   });
   return Promise.props({
@@ -219,7 +219,7 @@ exports.sync = function(arg) {
   }).then(function(arg1) {
     var fullUuid, username;
     fullUuid = arg1.fullUuid, username = arg1.username;
-    return infoContainerSpinner(resin.models.device.getApplicationInfo(uuid)).then(function(arg2) {
+    return infoContainerSpinner(resin.models.device.getApplicationInfo(fullUuid)).then(function(arg2) {
       var containerId;
       containerId = arg2.containerId;
       return syncContainer({
@@ -230,8 +230,8 @@ exports.sync = function(arg) {
         destination: destination
       }).then(function() {
         if (skipRestart === false) {
-          return stopContainerSpinner(resin.models.device.stopApplication(uuid)).then(function() {
-            return startContainerSpinner(resin.models.device.startApplication(uuid));
+          return stopContainerSpinner(resin.models.device.stopApplication(fullUuid)).then(function() {
+            return startContainerSpinner(resin.models.device.startApplication(fullUuid));
           });
         }
       }).then(function() {
@@ -241,7 +241,7 @@ exports.sync = function(arg) {
       }).then(function() {
         return console.log(chalk.green.bold('\nresin sync completed successfully!'));
       })["catch"](function(err) {
-        return startContainerAfterErrorSpinner(resin.models.device.startApplication(uuid))["catch"](function(err) {
+        return startContainerAfterErrorSpinner(resin.models.device.startApplication(fullUuid))["catch"](function(err) {
           return console.log('Could not start application container', err);
         })["throw"](err);
       });

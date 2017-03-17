@@ -181,14 +181,14 @@ exports.sync = ({ uuid, baseDir, destination, before, after, ignore, port = 22, 
 			verbose: verbose
 			port: port
 			progress: progress
-			extraSshOptions: "#{username}@ssh.#{settings.get('proxyUrl')} rsync #{uuid} #{containerId}"
+			extraSshOptions: "#{username}@ssh.#{settings.get('proxyUrl')} rsync #{fullUuid} #{containerId}"
 
 		command = buildRsyncCommand(syncOptions)
 
 		new SpinnerPromise
 			promise: shell.runCommand(command, cwd: baseDir)
-			startMessage: "Syncing to #{destination} on #{uuid.substring(0, 7)}..."
-			stopMessage: "Synced #{destination} on #{uuid.substring(0, 7)}."
+			startMessage: "Syncing to #{destination} on #{fullUuid.substring(0, 7)}..."
+			stopMessage: "Synced #{destination} on #{fullUuid.substring(0, 7)}."
 
 	Promise.props(
 		fullUuid: getDeviceInfo(uuid).get('fullUuid')
@@ -199,7 +199,7 @@ exports.sync = ({ uuid, baseDir, destination, before, after, ignore, port = 22, 
 			shell.runCommand(before, baseDir)
 	.then ({ fullUuid, username }) ->
 		# the resolved 'containerId' value is needed for the rsync process over resin-proxy
-		infoContainerSpinner(resin.models.device.getApplicationInfo(uuid))
+		infoContainerSpinner(resin.models.device.getApplicationInfo(fullUuid))
 		.then ({ containerId }) -> # sync container
 			syncContainer({ fullUuid, username, containerId, baseDir, destination })
 			.then ->
@@ -207,9 +207,9 @@ exports.sync = ({ uuid, baseDir, destination, before, after, ignore, port = 22, 
 					# There is a `restartApplication()` sdk method that we can't use
 					# at the moment, because it always removes the original container,
 					# which results in `resin sync` changes getting lost.
-					stopContainerSpinner(resin.models.device.stopApplication(uuid))
+					stopContainerSpinner(resin.models.device.stopApplication(fullUuid))
 					.then ->
-						startContainerSpinner(resin.models.device.startApplication(uuid))
+						startContainerSpinner(resin.models.device.startApplication(fullUuid))
 			.then -> # run 'after' action
 				if after?
 					shell.runCommand(after, baseDir)
@@ -218,7 +218,7 @@ exports.sync = ({ uuid, baseDir, destination, before, after, ignore, port = 22, 
 			.catch (err) ->
 				# Notify the user of the error and run 'startApplication()'
 				# once again to make sure that a new app container will be started
-				startContainerAfterErrorSpinner(resin.models.device.startApplication(uuid))
+				startContainerAfterErrorSpinner(resin.models.device.startApplication(fullUuid))
 				.catch (err) ->
 					console.log('Could not start application container', err)
 				.throw(err)
