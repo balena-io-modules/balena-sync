@@ -20,7 +20,7 @@ var _, avahiResinSshTag, enumerateServices, findServices, ref, resin,
 
 _ = require('lodash');
 
-resin = require('resin-sdk');
+resin = require('resin-sdk-preconfigured');
 
 ref = require('resin-discoverable-services'), enumerateServices = ref.enumerateServices, findServices = ref.findServices;
 
