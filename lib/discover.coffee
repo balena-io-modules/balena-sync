@@ -15,7 +15,7 @@ limitations under the License.
 ###
 
 _ = require('lodash')
-resin = require('resin-sdk')
+resin = require('resin-sdk-preconfigured')
 { enumerateServices, findServices } = require('resin-discoverable-services')
 
 # Although we only check for 'resin-ssh', we know, implicitly, that resinOS
