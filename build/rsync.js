@@ -53,7 +53,7 @@ buildRshOption = function(options) {
     }
   });
   verbose = options.verbose ? '-vv ' : '';
-  sshCommand = "ssh " + verbose + "-p " + options.port + " -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ControlMaster=no";
+  sshCommand = "ssh " + verbose + "-p " + options.port + " -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null";
   if (options.extraSshOptions != null) {
     sshCommand += " " + options.extraSshOptions;
   }

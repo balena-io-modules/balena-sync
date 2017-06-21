@@ -46,8 +46,7 @@ buildRshOption = (options = {}) ->
 		-p #{options.port} \
 		-o LogLevel=ERROR \
 		-o StrictHostKeyChecking=no \
-		-o UserKnownHostsFile=/dev/null \
-		-o ControlMaster=no
+		-o UserKnownHostsFile=/dev/null
 	"""
 
 	sshCommand += " #{options.extraSshOptions}" if options.extraSshOptions?
