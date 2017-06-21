@@ -142,13 +142,7 @@ exports.sync = ({ uuid, baseDir, destination, before, after, ignore, port = 22, 
 
 		# Returns a promise that is resolved with the API-fetched device object or rejected on error or missing requirement
 		ensureDeviceRequirements = (device) ->
-			# Ensure user is the owner of the device. This is also checked on the backend side.
-			resin.auth.getUserId()
-			.then (userId) ->
-				if userId isnt device.user.__id
-					throw new Error('Resin sync is permitted to the device owner only. The device owner is the user who provisioned it.')
-			.then -> # Ensure minimum required HostOS version for resin sync
-				ensureHostOSCompatibility(device.os_version, MIN_HOSTOS_RSYNC)
+			ensureHostOSCompatibility(device.os_version, MIN_HOSTOS_RSYNC)
 			.then ->
 				missingKeys = _.difference(RequiredDeviceObjectFields, _.keys(device))
 				if missingKeys.length > 0

@@ -153,13 +153,7 @@ exports.sync = function(arg) {
     var RequiredDeviceObjectFields, ensureDeviceRequirements;
     RequiredDeviceObjectFields = ['uuid', 'os_version'];
     ensureDeviceRequirements = function(device) {
-      return resin.auth.getUserId().then(function(userId) {
-        if (userId !== device.user.__id) {
-          throw new Error('Resin sync is permitted to the device owner only. The device owner is the user who provisioned it.');
-        }
-      }).then(function() {
-        return ensureHostOSCompatibility(device.os_version, MIN_HOSTOS_RSYNC);
-      }).then(function() {
+      return ensureHostOSCompatibility(device.os_version, MIN_HOSTOS_RSYNC).then(function() {
         var missingKeys;
         missingKeys = _.difference(RequiredDeviceObjectFields, _.keys(device));
         if (missingKeys.length > 0) {
