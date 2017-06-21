@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+# 8.0.0
+
+* Do not explicitly disable ControlMaster SSH option
+* Permit resin sync to collaborators
+
 # 7.0.3
 
 * Upgrade resin-sdk
