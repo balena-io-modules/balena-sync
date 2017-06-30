@@ -86,7 +86,7 @@ exports.sync = ({ deviceIp, baseDir, appName, destination, before, after, progre
 					throw new Error("Container must be running before attempting 'sync' action")
 
 				new SpinnerPromise
-					promise: shell.runCommand(command, cwd: baseDir)
+					promise: shell.runCommand(command, baseDir)
 					startMessage: "Syncing to #{destination} on '#{appName}'..."
 					stopMessage: "Synced #{destination} on '#{appName}'."
 

@@ -196,9 +196,7 @@ exports.sync = function(arg) {
     };
     command = buildRsyncCommand(syncOptions);
     return new SpinnerPromise({
-      promise: shell.runCommand(command, {
-        cwd: baseDir
-      }),
+      promise: shell.runCommand(command, baseDir),
       startMessage: "Syncing to " + destination + " on " + (fullUuid.substring(0, 7)) + "...",
       stopMessage: "Synced " + destination + " on " + (fullUuid.substring(0, 7)) + "."
     });

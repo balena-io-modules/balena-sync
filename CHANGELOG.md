@@ -3,6 +3,8 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+* Fix "'cwd' must be a string" error in Node 8
+
 # 8.0.0
 
 * Do not explicitly disable ControlMaster SSH option

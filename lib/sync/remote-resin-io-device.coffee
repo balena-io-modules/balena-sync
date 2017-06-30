@@ -180,7 +180,7 @@ exports.sync = ({ uuid, baseDir, destination, before, after, ignore, port = 22, 
 		command = buildRsyncCommand(syncOptions)
 
 		new SpinnerPromise
-			promise: shell.runCommand(command, cwd: baseDir)
+			promise: shell.runCommand(command, baseDir)
 			startMessage: "Syncing to #{destination} on #{fullUuid.substring(0, 7)}..."
 			stopMessage: "Synced #{destination} on #{fullUuid.substring(0, 7)}."
 
