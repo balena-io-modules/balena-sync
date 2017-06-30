@@ -3,6 +3,8 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+# 8.0.1
+
 * Fix "'cwd' must be a string" error in Node 8
 
 # 8.0.0
