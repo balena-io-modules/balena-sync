@@ -21,7 +21,8 @@ gulp.task 'coffee', ->
 gulp.task 'test', ['lint'], ->
 	gulp.src(OPTIONS.files.tests, read: false)
 		.pipe(mocha({
-			bail: true
+			bail: true,
+			compilers: 'coffee:coffee-script/register'
 		}))
 
 gulp.task 'lint', ['coffee'], ->

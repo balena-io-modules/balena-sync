@@ -200,22 +200,24 @@ class RdtDockerUtils
 				cmd = [ '/bin/bash', '-c', '/start' ]
 
 			@docker.createContainerAsync
+				name: name
 				Image: name
 				Cmd: cmd
-				name: name
 				Env: validateEnvVar(env)
 				Tty: true
+				Volumes: defaultVolumes
+				HostConfig:
+					Privileged: true
+					Binds: defaultBinds(name)
+					NetworkMode: 'host'
+					RestartPolicy:
+						Name: 'always'
+						MaximumRetryCount: 0
 
 	startContainer: (name) ->
 		Promise.try =>
-			@docker.getContainer(name).startAsync
-				Volumes: defaultVolumes
-				Privileged: true
-				Binds: defaultBinds(name)
-				NetworkMode: 'host'
-				RestartPolicy:
-					Name: 'always'
-					MaximumRetryCount: 0
+			@docker.getContainer(name).startAsync()
+
 		.catch (err) ->
 			# Throw unless the error code is 304 (the container was already started)
 			statusCode = '' + err.statusCode
