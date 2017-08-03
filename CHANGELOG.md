@@ -6,10 +6,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 # 9.0.0
 
 * **Breaking!** Drop support for node < 6
-
-# 8.0.2
-
-* Compatibility with docker >= 1.12: container start no longer accepts the
+* Fixed compatibility with docker >= 1.12: container start no longer accepts the
 HostConfig options that should instead be passed in the container create request
 
 # 8.0.1
