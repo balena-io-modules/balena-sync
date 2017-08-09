@@ -5,6 +5,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 # Unreleased
 
+* Make Docker version comparison accept Docker's new non-semver versioning (e.g 17.03.0)
 * Add support for overlay2 in local push
 
 # 9.0.0
