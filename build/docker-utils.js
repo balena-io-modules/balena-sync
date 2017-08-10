@@ -422,6 +422,8 @@ RdtDockerUtils = (function() {
             return path.join(dkroot, 'btrfs/subvolumes', destId);
           case 'overlay':
             return containerInfo.GraphDriver.Data.RootDir;
+          case 'overlay2':
+            return containerInfo.GraphDriver.Data.MergedDir;
           case 'vfs':
             return path.join(dkroot, 'vfs/dir', destId);
           case 'aufs':

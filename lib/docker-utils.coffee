@@ -320,6 +320,8 @@ class RdtDockerUtils
 						path.join(dkroot, 'btrfs/subvolumes', destId)
 					when 'overlay'
 						containerInfo.GraphDriver.Data.RootDir
+					when 'overlay2'
+						containerInfo.GraphDriver.Data.MergedDir
 					when 'vfs'
 						path.join(dkroot, 'vfs/dir', destId)
 					when 'aufs'
