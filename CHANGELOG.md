@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+# Unreleased
+
+* Add support for overlay2 in local push
+
 # 9.0.0
 
 * **Breaking!** Drop support for node < 6
