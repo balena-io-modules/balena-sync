@@ -406,7 +406,7 @@ RdtDockerUtils = (function() {
       containerId = containerInfo.Id;
       return Promise["try"](function() {
         var destFile, readFile;
-        if (semver.lt(dockerVersion, '1.10.0')) {
+        if (semver.lt(dockerVersion, '1.10.0', true)) {
           return containerId;
         }
         destFile = path.join(dkroot, "image/" + dockerInfo.Driver + "/layerdb/mounts", containerId, 'mount-id');
