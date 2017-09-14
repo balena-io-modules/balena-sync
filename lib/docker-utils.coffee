@@ -167,12 +167,15 @@ class RdtDockerUtils
 					return false
 				throw new Error("Error while inspecting container #{name}: #{err}")
 
-	buildImage: ({ baseDir, name, outStream }) ->
+	getAllImages: =>
+		@docker.listImagesAsync()
+
+	buildImage: ({ baseDir, name, outStream, cacheFrom }) ->
 		Promise.try =>
 			outStream ?= process.stdout
 			tarStream = tar.pack(baseDir)
 
-			@docker.buildImageAsync(tarStream, t: "#{name}")
+			@docker.buildImageAsync(tarStream, { t: "#{name}", cachefrom: cacheFrom })
 		.then (dockerProgressOutput) ->
 			prettyPrintDockerProgress(dockerProgressOutput, outStream)
 

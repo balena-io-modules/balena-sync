@@ -159,23 +159,30 @@ module.exports =
 
 			console.log(chalk.yellow.bold('* Building..'))
 
-			console.log "- Stopping and Removing any previous '#{appName}' container"
-			docker.stopContainer(appName)
-			.then ->
-				docker.removeContainer(appName)
-			.then ->
-				# Get existing image id and remove it after building new one to preserve build cache
+			console.log "- Stopping and removing any previous '#{appName}' container"
+
+			Promise.all [
+				docker.stopContainer(appName)
+				.then ->
+					docker.removeContainer(appName)
+			,
+				# Get existing image id, to remove it after building new one to preserve build cache
 				docker.inspectImage(appName)
 				.catch (err) ->
 					statusCode = '' + err.statusCode
 					return null if statusCode is '404'
 					throw err
-			.then (oldImageInfo) ->
-				console.log "- Building new '#{appName}' image"
+			,
+				# Get all image ids, to add them as extra possible cache sources
+				docker.getAllImages()
+				.map((image) -> image.Id)
+			]
+			.spread (__, oldImageInfo, existingImageIds) ->
 				docker.buildImage
 					baseDir: baseDir
 					name: appName
 					outStream: process.stdout
+					cacheFrom: existingImageIds
 				.then ->
 					# Clean up previous image only if new build resulted in different image hash
 					docker.inspectImage(appName)
