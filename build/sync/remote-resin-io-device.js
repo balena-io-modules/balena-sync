@@ -19,7 +19,7 @@ limitations under the License.
 /**
  * @module resinSync
  */
-var MIN_HOSTOS_RSYNC, Promise, SpinnerPromise, _, buildRsyncCommand, chalk, ensureHostOSCompatibility, infoContainerSpinner, ref, resin, semver, semverRegExp, settings, shell, startContainerAfterErrorSpinner, startContainerSpinner, stopContainerSpinner;
+var MIN_HOSTOS_RSYNC, Promise, SpinnerPromise, _, buildRsyncCommand, chalk, ensureHostOSCompatibility, infoContainerSpinner, rSemver, ref, resin, settings, shell, startContainerAfterErrorSpinner, startContainerSpinner, stopContainerSpinner;
 
 Promise = require('bluebird');
 
@@ -27,7 +27,7 @@ _ = require('lodash');
 
 chalk = require('chalk');
 
-semver = require('semver');
+rSemver = require('resin-semver');
 
 resin = require('resin-sdk-preconfigured');
 
@@ -42,8 +42,6 @@ buildRsyncCommand = require('../rsync').buildRsyncCommand;
 ref = require('../utils'), stopContainerSpinner = ref.stopContainerSpinner, startContainerSpinner = ref.startContainerSpinner, infoContainerSpinner = ref.infoContainerSpinner, startContainerAfterErrorSpinner = ref.startContainerAfterErrorSpinner;
 
 MIN_HOSTOS_RSYNC = '1.1.4';
-
-semverRegExp = /[0-9]+\.[0-9]+\.[0-9]+(?:(-|\+)[^\s]+)?/;
 
 
 /**
@@ -69,12 +67,10 @@ semverRegExp = /[0-9]+\.[0-9]+\.[0-9]+(?:(-|\+)[^\s]+)?/;
  */
 
 ensureHostOSCompatibility = Promise.method(function(osRelease, minVersion) {
-  var ref1, version;
-  version = osRelease != null ? (ref1 = osRelease.match(semverRegExp)) != null ? ref1[0] : void 0 : void 0;
-  if (version == null) {
+  if (rSemver.valid(osRelease) == null) {
     throw new Error("Could not parse semantic version from HostOS release info: " + osRelease);
   }
-  if (semver.lt(version, minVersion)) {
+  if (rSemver.lt(osRelease, minVersion)) {
     throw new Error("Incompatible HostOS version: " + osRelease + " - must be >= " + minVersion);
   }
 });

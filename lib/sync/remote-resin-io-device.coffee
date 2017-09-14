@@ -21,7 +21,7 @@ limitations under the License.
 Promise = require('bluebird')
 _ = require('lodash')
 chalk = require('chalk')
-semver = require('semver')
+rSemver = require('resin-semver')
 resin = require('resin-sdk-preconfigured')
 settings = require('resin-settings-client')
 shell = require('../shell')
@@ -34,10 +34,6 @@ shell = require('../shell')
 } = require('../utils')
 
 MIN_HOSTOS_RSYNC = '1.1.4'
-
-# Extract semver from device.os_version, since its format
-# can be in a form similar to 'Resin OS 1.1.0 (fido)'
-semverRegExp = /[0-9]+\.[0-9]+\.[0-9]+(?:(-|\+)[^\s]+)?/
 
 ###*
 # @summary Ensure HostOS compatibility
@@ -61,11 +57,10 @@ semverRegExp = /[0-9]+\.[0-9]+\.[0-9]+(?:(-|\+)[^\s]+)?/
 #		console.log('Is incompatible')
 ###
 ensureHostOSCompatibility = Promise.method (osRelease, minVersion) ->
-	version = osRelease?.match(semverRegExp)?[0]
-	if not version?
+	if not rSemver.valid(osRelease)?
 		throw new Error("Could not parse semantic version from HostOS release info: #{osRelease}")
 
-	if semver.lt(version, minVersion)
+	if rSemver.lt(osRelease, minVersion)
 		throw new Error("Incompatible HostOS version: #{osRelease} - must be >= #{minVersion}")
 
 # Resolves with uuid, throws on error or if device is offline

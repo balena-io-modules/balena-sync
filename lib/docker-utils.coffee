@@ -6,7 +6,7 @@ JSONStream = require 'JSONStream'
 tar = require('tar-fs')
 ssh2 = require('ssh2')
 Promise.promisifyAll(ssh2.Client)
-semver = require('semver')
+rSemver = require('resin-semver')
 _ = require('lodash')
 { validateEnvVar } = require('./utils')
 { dockerPort } = require('./config')
@@ -305,8 +305,11 @@ class RdtDockerUtils
 			containerId = containerInfo.Id
 
 			Promise.try ->
-				if semver.lt(dockerVersion, '1.10.0', true)
+				if rSemver.valid(dockerVersion) && rSemver.lt(dockerVersion, '1.10.0')
 					return containerId
+
+				# Else: either it's a release after 1.10.0, or its one of the fun new non-semver versions,
+				# which we incidentally know all appeared after 1.10.0
 
 				destFile = path.join(dkroot, "image/#{dockerInfo.Driver}/layerdb/mounts", containerId, 'mount-id')
 
