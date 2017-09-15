@@ -126,24 +126,26 @@ module.exports = {
       }
       docker = new RdtDockerUtils(deviceIp);
       console.log(chalk.yellow.bold('* Building..'));
-      console.log("- Stopping and Removing any previous '" + appName + "' container");
-      return docker.stopContainer(appName).then(function() {
-        return docker.removeContainer(appName);
-      }).then(function() {
-        return docker.inspectImage(appName)["catch"](function(err) {
+      console.log("- Stopping and removing any previous '" + appName + "' container");
+      return Promise.all([
+        docker.stopContainer(appName).then(function() {
+          return docker.removeContainer(appName);
+        }), docker.inspectImage(appName)["catch"](function(err) {
           var statusCode;
           statusCode = '' + err.statusCode;
           if (statusCode === '404') {
             return null;
           }
           throw err;
-        });
-      }).then(function(oldImageInfo) {
-        console.log("- Building new '" + appName + "' image");
+        }), docker.getAllImages().map(function(image) {
+          return image.Id;
+        })
+      ]).spread(function(__, oldImageInfo, existingImageIds) {
         return docker.buildImage({
           baseDir: baseDir,
           name: appName,
-          outStream: process.stdout
+          outStream: process.stdout,
+          cacheFrom: existingImageIds
         }).then(function() {
           return docker.inspectImage(appName);
         }).then(function(newImageInfo) {
