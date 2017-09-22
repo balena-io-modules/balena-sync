@@ -57,7 +57,7 @@ defaultVolumes = {
 }
 
 defaultBinds = (dataPath) ->
-	data = path.join('/mnt/data/resin-data', dataPath) + ':/data'
+	data = "/mnt/data/resin-data/#{dataPath}:/data"
 
 	return [
 		data
