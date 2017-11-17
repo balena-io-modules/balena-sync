@@ -6,36 +6,6 @@ form = require('resin-cli-form')
 { SpinnerPromise } = require('resin-cli-visuals')
 { dockerPort, dockerTimeout } = require('./config')
 
-# Presents interactive dialog to choose an application name if no preferred application name
-# is passed as a parameter.
-#
-# Resolves with selected application name if it is valid, throws otherwise
-exports.selectAppName = (preferredAppName) ->
-	# Helper function that Resolves with passed 'appName' if it's valid or throws otherwise
-	validateAppName = Promise.method (appName) ->
-		validCharsRegExp = new RegExp('^[a-z0-9-]+$')
-
-		if _.isEmpty(appName)
-			throw new Error('Application name should not be empty.')
-
-		hasValidChars = validCharsRegExp.test(appName)
-
-		if not hasValidChars or _.startsWith(appName, '-') or _.endsWith(appName, '-')
-			throw new Error('Application name may only contain lowercase characters, digits and one or more dashes. It may not start or end with a dash.')
-
-		return appName
-
-	form.run [
-		message: 'Select a name for the application'
-		name: 'appname'
-		type: 'input'
-	],
-		override:
-			appname: preferredAppName
-	.get('appname')
-	.call('trim')
-	.then(validateAppName)
-
 # Select a sync destination folder
 exports.selectSyncDestination = (preferredDestination) ->
 	form.run [

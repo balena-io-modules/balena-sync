@@ -87,7 +87,7 @@ module.exports = {
     }
   ],
   action: function(params, options, done) {
-    var Promise, RdtDockerUtils, _, build, chalk, checkTriggers, configYml, createBuildTriggerHashes, fileExists, parseOptions, path, ref, ref1, ref2, runtimeOptions, selectAppName, selectLocalResinOsDevice, selectSyncDestination, sync, yamlConfig;
+    var Promise, RdtDockerUtils, _, build, chalk, checkTriggers, configYml, createBuildTriggerHashes, fileExists, parseOptions, path, ref, ref1, ref2, runtimeOptions, selectLocalResinOsDevice, selectSyncDestination, sync, yamlConfig;
     path = require('path');
     Promise = require('bluebird');
     _ = require('lodash');
@@ -95,7 +95,7 @@ module.exports = {
     yamlConfig = require('../yaml-config');
     parseOptions = require('./parse-options');
     RdtDockerUtils = require('../docker-utils');
-    ref = require('../forms'), selectAppName = ref.selectAppName, selectSyncDestination = ref.selectSyncDestination, selectLocalResinOsDevice = ref.selectLocalResinOsDevice;
+    ref = require('../forms'), selectSyncDestination = ref.selectSyncDestination, selectLocalResinOsDevice = ref.selectLocalResinOsDevice;
     fileExists = require('../utils').fileExists;
     sync = require('../sync')('local-resin-os-device').sync;
     ref1 = require('../build-trigger'), createBuildTriggerHashes = ref1.createBuildTriggerHashes, checkTriggers = ref1.checkTriggers;
@@ -172,13 +172,8 @@ module.exports = {
       var ref3;
       return (ref3 = runtimeOptions.deviceIp) != null ? ref3 : selectLocalResinOsDevice();
     }).then(function(deviceIp) {
-      return Promise.props({
-        deviceIp: deviceIp,
-        appName: selectAppName(runtimeOptions.appName)
-      });
-    }).then(function(arg) {
-      var appName, configYmlBuildTriggers, deviceIp, docker;
-      deviceIp = arg.deviceIp, appName = arg.appName;
+      var appName, configYmlBuildTriggers, docker, ref3;
+      appName = (ref3 = runtimeOptions.appName) != null ? ref3 : 'local-app';
       runtimeOptions.deviceIp = deviceIp;
       runtimeOptions.appName = appName;
       configYml['local_resinos']['app-name'] = appName;
