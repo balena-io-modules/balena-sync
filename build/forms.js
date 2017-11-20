@@ -15,33 +15,6 @@ SpinnerPromise = require('resin-cli-visuals').SpinnerPromise;
 
 ref = require('./config'), dockerPort = ref.dockerPort, dockerTimeout = ref.dockerTimeout;
 
-exports.selectAppName = function(preferredAppName) {
-  var validateAppName;
-  validateAppName = Promise.method(function(appName) {
-    var hasValidChars, validCharsRegExp;
-    validCharsRegExp = new RegExp('^[a-z0-9-]+$');
-    if (_.isEmpty(appName)) {
-      throw new Error('Application name should not be empty.');
-    }
-    hasValidChars = validCharsRegExp.test(appName);
-    if (!hasValidChars || _.startsWith(appName, '-') || _.endsWith(appName, '-')) {
-      throw new Error('Application name may only contain lowercase characters, digits and one or more dashes. It may not start or end with a dash.');
-    }
-    return appName;
-  });
-  return form.run([
-    {
-      message: 'Select a name for the application',
-      name: 'appname',
-      type: 'input'
-    }
-  ], {
-    override: {
-      appname: preferredAppName
-    }
-  }).get('appname').call('trim').then(validateAppName);
-};
-
 exports.selectSyncDestination = function(preferredDestination) {
   return form.run([
     {

@@ -131,7 +131,7 @@ module.exports =
 		yamlConfig = require('../yaml-config')
 		parseOptions = require('./parse-options')
 		RdtDockerUtils = require('../docker-utils')
-		{ selectAppName, selectSyncDestination, selectLocalResinOsDevice } = require('../forms')
+		{ selectSyncDestination, selectLocalResinOsDevice } = require('../forms')
 		{ fileExists } = require('../utils')
 		{ sync } = require('../sync')('local-resin-os-device')
 		{ createBuildTriggerHashes, checkTriggers } = require('../build-trigger')
@@ -207,10 +207,7 @@ module.exports =
 			# Get device Ip and app name, giving precedence to the cli param
 			runtimeOptions.deviceIp ? selectLocalResinOsDevice()
 		.then (deviceIp) ->
-			Promise.props
-				deviceIp: deviceIp
-				appName: selectAppName(runtimeOptions.appName)
-		.then ({ deviceIp, appName }) ->
+			appName = runtimeOptions.appName ? 'local-app'
 
 			# Update runtime options and soon-to-be-saved config file object based on user choices
 			runtimeOptions.deviceIp = deviceIp
