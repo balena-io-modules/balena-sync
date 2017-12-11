@@ -77,9 +77,14 @@ exports.sync = function(arg) {
       return shell.runCommand(before, baseDir);
     }
   }).then(function() {
-    return docker.containerRootDir(appName, deviceIp, DEVICE_SSH_PORT).then(function(containerRootDirLocation) {
-      var command, rsyncDestination, syncOptions;
+    return Promise.join(docker.containerRootDir(appName, deviceIp, DEVICE_SSH_PORT), docker.isBalena(), function(containerRootDirLocation, isBalena) {
+      var command, pidFile, rsyncDestination, syncOptions;
       rsyncDestination = path.join(containerRootDirLocation, destination);
+      if (isBalena) {
+        pidFile = '/var/run/balena.pid';
+      } else {
+        pidFile = '/var/run/docker.pid';
+      }
       syncOptions = {
         username: 'root',
         host: deviceIp,
@@ -90,7 +95,7 @@ exports.sync = function(arg) {
         verbose: verbose,
         source: baseDir,
         destination: shellwords.escape(rsyncDestination),
-        rsyncPath: "mkdir -p \"" + rsyncDestination + "\" && nsenter --target $(cat /var/run/docker.pid) --mount rsync"
+        rsyncPath: "mkdir -p \"" + rsyncDestination + "\" && nsenter --target $(cat " + pidFile + ") --mount rsync"
       };
       command = buildRsyncCommand(syncOptions);
       return docker.checkForRunningContainer(appName).then(function(isContainerRunning) {

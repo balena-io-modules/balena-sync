@@ -61,35 +61,42 @@ exports.sync = ({ deviceIp, baseDir, appName, destination, before, after, progre
 		if before?
 			shell.runCommand(before, baseDir)
 	.then -> # sync container
-		docker.containerRootDir(appName, deviceIp, DEVICE_SSH_PORT)
-		.then (containerRootDirLocation) ->
+		Promise.join(
+			docker.containerRootDir(appName, deviceIp, DEVICE_SSH_PORT)
+			docker.isBalena()
+			(containerRootDirLocation, isBalena) ->
 
-			rsyncDestination = path.join(containerRootDirLocation, destination)
+				rsyncDestination = path.join(containerRootDirLocation, destination)
 
-			syncOptions =
-				username: 'root'
-				host: deviceIp
-				port: DEVICE_SSH_PORT
-				progress: progress
-				ignore: ignore
-				skipGitignore: skipGitignore
-				verbose: verbose
-				source: baseDir
-				destination: shellwords.escape(rsyncDestination)
-				rsyncPath: "mkdir -p \"#{rsyncDestination}\" && nsenter --target $(cat /var/run/docker.pid) --mount rsync"
+				if isBalena
+					pidFile = '/var/run/balena.pid'
+				else
+					pidFile = '/var/run/docker.pid'
 
-			command = buildRsyncCommand(syncOptions)
+				syncOptions =
+					username: 'root'
+					host: deviceIp
+					port: DEVICE_SSH_PORT
+					progress: progress
+					ignore: ignore
+					skipGitignore: skipGitignore
+					verbose: verbose
+					source: baseDir
+					destination: shellwords.escape(rsyncDestination)
+					rsyncPath: "mkdir -p \"#{rsyncDestination}\" && nsenter --target $(cat #{pidFile}) --mount rsync"
 
-			docker.checkForRunningContainer(appName)
-			.then (isContainerRunning) ->
-				if not isContainerRunning
-					throw new Error("Container must be running before attempting 'sync' action")
+				command = buildRsyncCommand(syncOptions)
 
-				new SpinnerPromise
-					promise: shell.runCommand(command, baseDir)
-					startMessage: "Syncing to #{destination} on '#{appName}'..."
-					stopMessage: "Synced #{destination} on '#{appName}'."
+				docker.checkForRunningContainer(appName)
+				.then (isContainerRunning) ->
+					if not isContainerRunning
+						throw new Error("Container must be running before attempting 'sync' action")
 
+					new SpinnerPromise
+						promise: shell.runCommand(command, baseDir)
+						startMessage: "Syncing to #{destination} on '#{appName}'..."
+						stopMessage: "Synced #{destination} on '#{appName}'."
+		)
 		.then -> # restart container
 			stopContainerSpinner(docker.stopContainer(appName))
 		.then ->
