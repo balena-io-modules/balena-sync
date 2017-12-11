@@ -335,4 +335,9 @@ class RdtDockerUtils
 					else
 						throw new Error("Unsupported driver: #{dockerInfo.Driver}/")
 
+	isBalena: =>
+		@docker.versionAsync().get('Engine')
+		.then (engine) ->
+			return engine == 'balena'
+
 module.exports = RdtDockerUtils

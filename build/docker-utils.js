@@ -176,6 +176,7 @@ RdtDockerUtils = (function() {
     if (port == null) {
       port = dockerPort;
     }
+    this.isBalena = bind(this.isBalena, this);
     this.getAllImages = bind(this.getAllImages, this);
     if (dockerHostIp == null) {
       throw new Error('Device Ip/Host is required to instantiate an RdtDockerUtils client');
@@ -439,6 +440,12 @@ RdtDockerUtils = (function() {
             throw new Error("Unsupported driver: " + dockerInfo.Driver + "/");
         }
       });
+    });
+  };
+
+  RdtDockerUtils.prototype.isBalena = function() {
+    return this.docker.versionAsync().get('Engine').then(function(engine) {
+      return engine === 'balena';
     });
   };
 
