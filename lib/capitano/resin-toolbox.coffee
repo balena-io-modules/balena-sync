@@ -201,7 +201,16 @@ module.exports =
 		{ runtimeOptions, configYml } = parseOptions(options, params)
 
 		if not fileExists(path.join(runtimeOptions.baseDir, 'Dockerfile'))
-			throw new Error("No Dockerfile was found in the project directory: #{runtimeOptions.baseDir}")
+			if fileExists(path.join(runtimeOptions.baseDir, 'Dockerfile.template'))
+				throw new Error('Dockerfile.template files are not yet supported by local push.
+
+					\n\nAs a workaround, you can rename your template to just \'Dockerfile\', and replace %TEMPLATE%
+					strings with a fixed value. For example \'%RESIN_MACHINE_NAME%\' might become
+					\'raspberrypi3\'. See https://docs.resin.io/deployment/docker-templates/ for details.
+
+					\n\nSubscribe to https://github.com/resin-io/resin-cli/issues/604 for updates.')
+			else
+				throw new Error("No Dockerfile found in the project directory: #{runtimeOptions.baseDir}")
 
 		Promise.try ->
 			# Get device Ip and app name, giving precedence to the cli param
