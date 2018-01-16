@@ -204,9 +204,10 @@ module.exports =
 			if fileExists(path.join(runtimeOptions.baseDir, 'Dockerfile.template'))
 				throw new Error('Dockerfile.template files are not yet supported by local push.
 
-					\n\nAs a workaround, you can rename your template to just \'Dockerfile\', and replace %TEMPLATE%
-					strings with a fixed value. For example \'%RESIN_MACHINE_NAME%\' might become
-					\'raspberrypi3\'. See https://docs.resin.io/deployment/docker-templates/ for details.
+					\n\nAs a workaround, you can rename your \'Dockerfile.template\' to \'Dockerfile\',
+					and replace all %%TEMPLATE%% strings with the appropriate values, as documented in
+					https://docs.resin.io/deployment/docker-templates/. For example \'%%RESIN_MACHINE_NAME%%\'
+					might become \'raspberrypi3\'.
 
 					\n\nSubscribe to https://github.com/resin-io/resin-cli/issues/604 for updates.')
 			else
