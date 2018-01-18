@@ -166,7 +166,11 @@ module.exports = {
     };
     ref2 = parseOptions(options, params), runtimeOptions = ref2.runtimeOptions, configYml = ref2.configYml;
     if (!fileExists(path.join(runtimeOptions.baseDir, 'Dockerfile'))) {
-      throw new Error("No Dockerfile was found in the project directory: " + runtimeOptions.baseDir);
+      if (fileExists(path.join(runtimeOptions.baseDir, 'Dockerfile.template'))) {
+        throw new Error('Dockerfile.template files are not yet supported by local push. \n\nAs a workaround, you can rename your \'Dockerfile.template\' to \'Dockerfile\', and replace all %%TEMPLATE%% strings with the appropriate values, as documented in https://docs.resin.io/deployment/docker-templates/. For example \'%%RESIN_MACHINE_NAME%%\' might become \'raspberrypi3\'. \n\nSubscribe to https://github.com/resin-io/resin-cli/issues/604 for updates.');
+      } else {
+        throw new Error("No Dockerfile found in the project directory: " + runtimeOptions.baseDir);
+      }
     }
     return Promise["try"](function() {
       var ref3;
