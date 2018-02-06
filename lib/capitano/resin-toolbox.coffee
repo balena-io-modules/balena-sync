@@ -178,6 +178,7 @@ module.exports =
 				.map((image) -> image.Id)
 			]
 			.spread (__, oldImageInfo, existingImageIds) ->
+				console.log "- Uploading build context & starting build..."
 				docker.buildImage
 					baseDir: baseDir
 					name: appName

@@ -141,6 +141,7 @@ module.exports = {
           return image.Id;
         })
       ]).spread(function(__, oldImageInfo, existingImageIds) {
+        console.log("- Uploading build context & starting build...");
         return docker.buildImage({
           baseDir: baseDir,
           name: appName,
