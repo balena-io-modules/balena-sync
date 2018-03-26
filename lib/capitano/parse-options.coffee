@@ -22,7 +22,10 @@ module.exports = (cliOptions = {}, cliParams = {}) ->
 
 	# The project base directory is either the current working directory or the directory passed by
 	# the user with the '--source/-s' option
-	projectBaseDir = cliOptions['source'] ? process.cwd()
+	projectBaseDir = if cliOptions['source']
+		path.resolve(cliOptions['source'])
+	else
+		process.cwd()
 
 	if not cliOptions['source']? and not fileExists(path.join(process.cwd(), yamlConfig.CONFIG_FILE))
 		throw new Error("No --source option passed and no \'#{yamlConfig.CONFIG_FILE}\' file found in current directory.")
