@@ -1,5 +1,5 @@
 ###*
-# Helper methods for build-trigger `rdt push` feature
+# Helper methods for build-trigger `resin local push` feature
 # @module build-trigger
 ###
 
@@ -84,7 +84,7 @@ module.exports.createBuildTriggerHashes = Promise.method ({ files = [], baseDir 
 				return false
 			return true
 		.map (filename) ->
-			# We prefer to save relative file paths in rdt yaml config so that the paths will still be valid
+			# We prefer to save relative file paths in the yaml config so that the paths will still be valid
 			# if the yaml config (i.e. `resin-sync.yml`) is checked into a git repo and then cloned to another
 			# workstation
 			path.relative(baseDir, filename)

@@ -18,16 +18,16 @@ module.exports =
 	signature: 'push [deviceIp]'
 	description: 'Push your changes to a container on local resinOS device '
 	help: '''
-		Warning: 'rdt push' requires an openssh-compatible client and 'rsync' to
+		Warning: 'resin local push' requires an openssh-compatible client and 'rsync' to
 		be correctly installed in your shell environment. For more information (including
-		Windows support) please check the README here: https://github.com/resin-os/resin-device-toolbox
+		Windows support) please check the README here: https://github.com/resin-io/resin-cli
 
 		Use this command to push your local changes to a container on a LAN-accessible resinOS device on the fly.
 
 		If `Dockerfile` or any file in the 'build-triggers' list is changed, a new container will be built and run on your device.
 		If not, changes will simply be synced with `rsync` into the application container.
 
-		After every 'rdt push' the updated settings will be saved in
+		After every 'resin local push' the updated settings will be saved in
 		'<source>/.resin-sync.yml' and will be used in later invocations. You can
 		also change any option by editing '.resin-sync.yml' directly.
 
@@ -49,14 +49,14 @@ module.exports =
 
 		Examples:
 
-			$ rdt push
-			$ rdt push --app-name test-server --build-triggers package.json,requirements.txt
-			$ rdt push --force-build
-			$ rdt push --force-build --skip-logs
-			$ rdt push --ignore lib/
-			$ rdt push --verbose false
-			$ rdt push 192.168.2.10 --source . --destination /usr/src/app
-			$ rdt push 192.168.2.10 -s /home/user/myResinProject -d /usr/src/app --before 'echo Hello' --after 'echo Done'
+			$ resin local push
+			$ resin local push --app-name test-server --build-triggers package.json,requirements.txt
+			$ resin local push --force-build
+			$ resin local push --force-build --skip-logs
+			$ resin local push --ignore lib/
+			$ resin local push --verbose false
+			$ resin local push 192.168.2.10 --source . --destination /usr/src/app
+			$ resin local push 192.168.2.10 -s /home/user/myResinProject -d /usr/src/app --before 'echo Hello' --after 'echo Done'
 	'''
 	primary: true
 	options: [
@@ -130,14 +130,14 @@ module.exports =
 		chalk = require('chalk')
 		yamlConfig = require('../yaml-config')
 		parseOptions = require('./parse-options')
-		RdtDockerUtils = require('../docker-utils')
+		DockerUtils = require('../docker-utils')
 		{ selectSyncDestination, selectLocalResinOsDevice } = require('../forms')
 		{ fileExists } = require('../utils')
 		{ sync } = require('../sync')('local-resin-os-device')
 		{ createBuildTriggerHashes, checkTriggers } = require('../build-trigger')
 
 		###*
-		# @summary Start image-building 'rdt push' process
+		# @summary Start image-building 'resin local push' process
 		# @function build
 		#
 		# @param {Object} options - options
@@ -155,7 +155,7 @@ module.exports =
 			throw new Error("Missing application name for 'rtd push'") if not appName?
 			throw new Error("Missing device ip/host for 'rtd push'") if not deviceIp?
 
-			docker = new RdtDockerUtils(deviceIp)
+			docker = new DockerUtils(deviceIp)
 
 			console.log(chalk.yellow.bold('* Building..'))
 
@@ -225,7 +225,7 @@ module.exports =
 			runtimeOptions.appName = appName
 			configYml['local_resinos']['app-name'] = appName
 
-			docker = new RdtDockerUtils(deviceIp)
+			docker = new DockerUtils(deviceIp)
 
 			# The project should be rebuilt if any of the following is true:
 			#		- The saved build trigger list in yamlConfig is empty or the cli 'build-trigger' option was set
@@ -294,9 +294,9 @@ module.exports =
 							'ignore'
 						]
 			.then ->
-				console.log(chalk.green.bold('\nrdt push completed successfully!'))
+				console.log(chalk.green.bold('\nPush completed successfully!'))
 			.catch (err) ->
-				console.log(chalk.red.bold('rdt push failed.', err, err.stack))
+				console.log(chalk.red.bold('Push failed.', err, err.stack))
 				process.exit(1)
 			.then ->
 				if runtimeOptions.skipLogs is true

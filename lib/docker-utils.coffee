@@ -135,10 +135,10 @@ prettyPrintDockerProgress = (dockerProgressStream, outStream = process.stdout) -
 		.on 'error', (error) ->
 			reject(error)
 
-class RdtDockerUtils
+class DockerUtils
 	constructor: (dockerHostIp, port = dockerPort) ->
 		if not dockerHostIp?
-			throw new Error('Device Ip/Host is required to instantiate an RdtDockerUtils client')
+			throw new Error('Device Ip/Host is required to instantiate an DockerUtils client')
 		@docker = new Docker(host: dockerHostIp, port: port)
 
 	# Resolve with true if image with 'name' exists. Resolve
@@ -340,4 +340,4 @@ class RdtDockerUtils
 		.then (engine) ->
 			return engine == 'balena'
 
-module.exports = RdtDockerUtils
+module.exports = DockerUtils

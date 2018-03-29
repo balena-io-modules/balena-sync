@@ -18,7 +18,7 @@ path = require('path')
 Promise = require('bluebird')
 shellwords = require('shellwords')
 shell = require('../shell')
-RdtDockerUtils = require('../docker-utils')
+DockerUtils = require('../docker-utils')
 { SpinnerPromise } = require('resin-cli-visuals')
 { buildRsyncCommand } = require('../rsync')
 {	startContainerSpinner
@@ -55,7 +55,7 @@ exports.sync = ({ deviceIp, baseDir, appName, destination, before, after, progre
 	throw new Error("'deviceIp' is a required sync option") if not deviceIp?
 	throw new Error("'app-name' is a required sync option") if not appName?
 
-	docker = new RdtDockerUtils(deviceIp)
+	docker = new DockerUtils(deviceIp)
 
 	Promise.try ->
 		if before?

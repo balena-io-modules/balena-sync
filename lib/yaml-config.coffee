@@ -15,7 +15,7 @@ limitations under the License.
 ###
 
 ###*
-# Helper methods to manipulate the rdt push / resin sync configuration file (currently .resin-sync.yml)
+# Helper methods to manipulate the resin push/sync configuration file (currently .resin-sync.yml)
 # @module build-trigger
 ###
 #
