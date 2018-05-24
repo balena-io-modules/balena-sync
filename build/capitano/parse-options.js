@@ -13,7 +13,7 @@ defaultSyncIgnorePaths = ['.git', 'node_modules/'];
 
 
 /**
- * @summary Parse rdt/resin sync options from the cli and config file and give precedece to the cli.
+ * @summary Parse resin sync options from the cli and config file and give precedence to the cli.
  * @function
  *
  * @param {Object} cliOptions - options
