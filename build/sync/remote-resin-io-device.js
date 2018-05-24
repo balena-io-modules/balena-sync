@@ -29,7 +29,7 @@ chalk = require('chalk');
 
 rSemver = require('resin-semver');
 
-resin = require('resin-sdk-preconfigured');
+resin = require('resin-sdk').fromSharedOptions();
 
 settings = require('resin-settings-client');
 

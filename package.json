@@ -45,7 +45,7 @@
     "resin-cli-form": "^1.4.1",
     "resin-cli-visuals": "^1.2.8",
     "resin-discoverable-services": "git+https://github.com/resin-io-modules/resin-discoverable-services#find-on-all-interfaces",
-    "resin-sdk-preconfigured": "^6.4.0",
+    "resin-sdk": "9.0.0-beta24",
     "resin-semver": "^1.2.0",
     "resin-settings-client": "^3.5.0",
     "revalidator": "^0.3.1",

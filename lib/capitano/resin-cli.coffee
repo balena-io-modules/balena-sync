@@ -128,7 +128,7 @@ module.exports =
 					default: onlineDevices[0].uuid
 					choices: _.map onlineDevices, (device) ->
 						return {
-							name: "#{device.name or 'Untitled'} (#{device.uuid.slice(0, 7)})"
+							name: "#{device.device_name or 'Untitled'} (#{device.uuid.slice(0, 7)})"
 							value: device.uuid
 						}
 
