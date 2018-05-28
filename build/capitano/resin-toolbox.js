@@ -18,7 +18,7 @@ limitations under the License.
 module.exports = {
   signature: 'push [deviceIp]',
   description: 'Push your changes to a container on local resinOS device ',
-  help: 'Warning: \'rdt push\' requires an openssh-compatible client and \'rsync\' to\nbe correctly installed in your shell environment. For more information (including\nWindows support) please check the README here: https://github.com/resin-os/resin-device-toolbox\n\nUse this command to push your local changes to a container on a LAN-accessible resinOS device on the fly.\n\nIf `Dockerfile` or any file in the \'build-triggers\' list is changed, a new container will be built and run on your device.\nIf not, changes will simply be synced with `rsync` into the application container.\n\nAfter every \'rdt push\' the updated settings will be saved in\n\'<source>/.resin-sync.yml\' and will be used in later invocations. You can\nalso change any option by editing \'.resin-sync.yml\' directly.\n\nHere is an example \'.resin-sync.yml\' :\n\n	$ cat $PWD/.resin-sync.yml\n	destination: \'/usr/src/app\'\n	before: \'echo Hello\'\n	after: \'echo Done\'\n	ignore:\n		- .git\n		- node_modules/\n\nCommand line options have precedence over the ones saved in \'.resin-sync.yml\'.\n\nIf \'.gitignore\' is found in the source directory then all explicitly listed files will be\nexcluded when using rsync to update the container. You can choose to change this default behavior with the\n\'--skip-gitignore\' option.\n\nExamples:\n\n	$ rdt push\n	$ rdt push --app-name test-server --build-triggers package.json,requirements.txt\n	$ rdt push --force-build\n	$ rdt push --force-build --skip-logs\n	$ rdt push --ignore lib/\n	$ rdt push --verbose false\n	$ rdt push 192.168.2.10 --source . --destination /usr/src/app\n	$ rdt push 192.168.2.10 -s /home/user/myResinProject -d /usr/src/app --before \'echo Hello\' --after \'echo Done\'',
+  help: 'Warning: \'resin local push\' requires an openssh-compatible client and \'rsync\' to\nbe correctly installed in your shell environment. For more information (including\nWindows support) please check the README here: https://github.com/resin-io/resin-cli\n\nUse this command to push your local changes to a container on a LAN-accessible resinOS device on the fly.\n\nIf `Dockerfile` or any file in the \'build-triggers\' list is changed, a new container will be built and run on your device.\nIf not, changes will simply be synced with `rsync` into the application container.\n\nAfter every \'resin local push\' the updated settings will be saved in\n\'<source>/.resin-sync.yml\' and will be used in later invocations. You can\nalso change any option by editing \'.resin-sync.yml\' directly.\n\nHere is an example \'.resin-sync.yml\' :\n\n	$ cat $PWD/.resin-sync.yml\n	destination: \'/usr/src/app\'\n	before: \'echo Hello\'\n	after: \'echo Done\'\n	ignore:\n		- .git\n		- node_modules/\n\nCommand line options have precedence over the ones saved in \'.resin-sync.yml\'.\n\nIf \'.gitignore\' is found in the source directory then all explicitly listed files will be\nexcluded when using rsync to update the container. You can choose to change this default behavior with the\n\'--skip-gitignore\' option.\n\nExamples:\n\n	$ resin local push\n	$ resin local push --app-name test-server --build-triggers package.json,requirements.txt\n	$ resin local push --force-build\n	$ resin local push --force-build --skip-logs\n	$ resin local push --ignore lib/\n	$ resin local push --verbose false\n	$ resin local push 192.168.2.10 --source . --destination /usr/src/app\n	$ resin local push 192.168.2.10 -s /home/user/myResinProject -d /usr/src/app --before \'echo Hello\' --after \'echo Done\'',
   primary: true,
   options: [
     {
@@ -87,21 +87,21 @@ module.exports = {
     }
   ],
   action: function(params, options, done) {
-    var Promise, RdtDockerUtils, _, build, chalk, checkTriggers, configYml, createBuildTriggerHashes, fileExists, parseOptions, path, ref, ref1, ref2, runtimeOptions, selectLocalResinOsDevice, selectSyncDestination, sync, yamlConfig;
+    var DockerUtils, Promise, _, build, chalk, checkTriggers, configYml, createBuildTriggerHashes, fileExists, parseOptions, path, ref, ref1, ref2, runtimeOptions, selectLocalResinOsDevice, selectSyncDestination, sync, yamlConfig;
     path = require('path');
     Promise = require('bluebird');
     _ = require('lodash');
     chalk = require('chalk');
     yamlConfig = require('../yaml-config');
     parseOptions = require('./parse-options');
-    RdtDockerUtils = require('../docker-utils');
+    DockerUtils = require('../docker-utils');
     ref = require('../forms'), selectSyncDestination = ref.selectSyncDestination, selectLocalResinOsDevice = ref.selectLocalResinOsDevice;
     fileExists = require('../utils').fileExists;
     sync = require('../sync')('local-resin-os-device').sync;
     ref1 = require('../build-trigger'), createBuildTriggerHashes = ref1.createBuildTriggerHashes, checkTriggers = ref1.checkTriggers;
 
     /**
-    		 * @summary Start image-building 'rdt push' process
+    		 * @summary Start image-building 'resin local push' process
     		 * @function build
     		 *
     		 * @param {Object} options - options
@@ -124,7 +124,7 @@ module.exports = {
       if (deviceIp == null) {
         throw new Error("Missing device ip/host for 'rtd push'");
       }
-      docker = new RdtDockerUtils(deviceIp);
+      docker = new DockerUtils(deviceIp);
       console.log(chalk.yellow.bold('* Building..'));
       console.log("- Stopping and removing any previous '" + appName + "' container");
       return Promise.all([
@@ -182,7 +182,7 @@ module.exports = {
       runtimeOptions.deviceIp = deviceIp;
       runtimeOptions.appName = appName;
       configYml['local_resinos']['app-name'] = appName;
-      docker = new RdtDockerUtils(deviceIp);
+      docker = new DockerUtils(deviceIp);
       configYmlBuildTriggers = configYml['local_resinos']['build-triggers'];
       return Promise.reduce([
         _.isEmpty(configYmlBuildTriggers) || !_.isEmpty(options['build-triggers']), runtimeOptions.forceBuild, checkTriggers(configYmlBuildTriggers), docker.checkForExistingImage(appName).then(function(exists) {
@@ -216,9 +216,9 @@ module.exports = {
           });
         }
       }).then(function() {
-        return console.log(chalk.green.bold('\nrdt push completed successfully!'));
+        return console.log(chalk.green.bold('\nPush completed successfully!'));
       })["catch"](function(err) {
-        console.log(chalk.red.bold('rdt push failed.', err, err.stack));
+        console.log(chalk.red.bold('Push failed.', err, err.stack));
         return process.exit(1);
       }).then(function() {
         if (runtimeOptions.skipLogs === true) {

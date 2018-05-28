@@ -93,7 +93,7 @@ module.exports = {
           "default": onlineDevices[0].uuid,
           choices: _.map(onlineDevices, function(device) {
             return {
-              name: (device.name || 'Untitled') + " (" + (device.uuid.slice(0, 7)) + ")",
+              name: (device.device_name || 'Untitled') + " (" + (device.uuid.slice(0, 7)) + ")",
               value: device.uuid
             };
           })

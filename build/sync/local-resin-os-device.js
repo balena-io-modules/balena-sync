@@ -15,7 +15,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
  */
-var DEVICE_SSH_PORT, Promise, RdtDockerUtils, SpinnerPromise, buildRsyncCommand, path, ref, shell, shellwords, startContainerAfterErrorSpinner, startContainerSpinner, stopContainerSpinner;
+var DEVICE_SSH_PORT, DockerUtils, Promise, SpinnerPromise, buildRsyncCommand, path, ref, shell, shellwords, startContainerAfterErrorSpinner, startContainerSpinner, stopContainerSpinner;
 
 path = require('path');
 
@@ -25,7 +25,7 @@ shellwords = require('shellwords');
 
 shell = require('../shell');
 
-RdtDockerUtils = require('../docker-utils');
+DockerUtils = require('../docker-utils');
 
 SpinnerPromise = require('resin-cli-visuals').SpinnerPromise;
 
@@ -71,7 +71,7 @@ exports.sync = function(arg) {
   if (appName == null) {
     throw new Error("'app-name' is a required sync option");
   }
-  docker = new RdtDockerUtils(deviceIp);
+  docker = new DockerUtils(deviceIp);
   return Promise["try"](function() {
     if (before != null) {
       return shell.runCommand(before, baseDir);

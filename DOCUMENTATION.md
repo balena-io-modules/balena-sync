@@ -2,18 +2,20 @@
 
 <dl>
 <dt><a href="#module_build-trigger">build-trigger</a></dt>
-<dd><p>Helper methods for build-trigger <code>rdt push</code> feature</p>
-</dd>
-<dt><a href="#module_build-trigger">build-trigger</a></dt>
-<dd><p>Helper methods to manipulate the rdt push / resin sync configuration file (currently .resin-sync.yml)</p>
+<dd><p>Helper methods for build-trigger <code>resin local push</code> feature</p>
 </dd>
 <dt><a href="#module_resinSync">resinSync</a></dt>
 <dd></dd>
+<dt><a href="#module_build-trigger">build-trigger</a></dt>
+<dd><p>Helper methods to manipulate the resin push/sync configuration file (currently .resin-sync.yml)</p>
+</dd>
 </dl>
 
 ## Functions
 
 <dl>
+<dt><a href="#build">build(options)</a> ⇒</dt>
+<dd></dd>
 <dt><a href="#createContainer">createContainer(name, [options])</a> ⇒</dt>
 <dd></dd>
 <dt><a href="#buildRsyncCommand">buildRsyncCommand(options)</a> ⇒ <code>String</code></dt>
@@ -23,6 +25,8 @@
 <dt><a href="#runCommand">runCommand(command, cwd)</a> ⇒ <code>Promise</code></dt>
 <dd><p>stdin is inherited from the parent process.</p>
 </dd>
+<dt><a href="#sync">sync(options)</a> ⇒</dt>
+<dd></dd>
 <dt><a href="#validateObject">validateObject(object, rules)</a></dt>
 <dd></dd>
 <dt><a href="#gitignoreToRsyncPatterns">gitignoreToRsyncPatterns(gitignoreFile)</a> ⇒</dt>
@@ -32,143 +36,12 @@
 <dd></dd>
 <dt><a href="#validateEnvVar">validateEnvVar([env])</a> ⇒ <code>Array</code></dt>
 <dd></dd>
-<dt><a href="#build">build(options)</a> ⇒</dt>
-<dd></dd>
-<dt><a href="#sync">sync(options)</a> ⇒</dt>
-<dd></dd>
 </dl>
 
 <a name="module_build-trigger"></a>
 
 ## build-trigger
-Helper methods for build-trigger `rdt push` feature
-
-
-* [build-trigger](#module_build-trigger)
-    * _static_
-        * [.createBuildTriggerHashes(options)](#module_build-trigger.createBuildTriggerHashes) ⇒ <code>Promise</code>
-        * [.load([baseDir], [configFile])](#module_build-trigger.load) ⇒ <code>Object</code>
-        * [.save(yamlObj, [baseDir], [configFile])](#module_build-trigger.save)
-    * _inner_
-        * [~getFileHash(file, [algo])](#module_build-trigger..getFileHash) ⇒ <code>Promise</code>
-        * [~checkTriggers(buildTriggers, [baseDir])](#module_build-trigger..checkTriggers) ⇒ <code>Promise</code>
-
-<a name="module_build-trigger.createBuildTriggerHashes"></a>
-
-### build-trigger.createBuildTriggerHashes(options) ⇒ <code>Promise</code>
-**Kind**: static method of [<code>build-trigger</code>](#module_build-trigger)  
-**Summary**: Creates an array of objects with the hashes of the passed files  
-**Throws**:
-
-- Exception on error or if 'skipMissing' is false and a file in the 'files' array does not exis
-
-
-| Param | Type | Default | Description |
-| --- | --- | --- | --- |
-| options | <code>Object</code> |  | options |
-| [options.files] | <code>Array.&lt;String&gt;</code> | <code>[]</code> | array of file paths to calculate hashes |
-| [options.baseDir] | <code>String</code> | <code>process.cwd()</code> | Base directory for relative file paths |
-| [options.skipMissing] | <code>Boolean</code> | <code>true</code> | Skip non-existent files from the 'files' array |
-
-**Example**  
-```js
-createBuildTriggerHashes({ files: [ 'package.json', 'Dockerfile' ] }).then (hashes) ->
-// resolves with 'hashes' array:
-[
-		{ 'package.json': <sha256> }
-		{ 'Dockerfile': <sha256> }
-	]
-```
-<a name="module_build-trigger.load"></a>
-
-### build-trigger.load([baseDir], [configFile]) ⇒ <code>Object</code>
-If no configuration file is found, return an empty object.
-
-**Kind**: static method of [<code>build-trigger</code>](#module_build-trigger)  
-**Summary**: Load configuration file  
-**Returns**: <code>Object</code> - YAML configuration as object  
-**Throws**:
-
-- Exception on error
-
-**Access**: protected  
-
-| Param | Type | Default |
-| --- | --- | --- |
-| [baseDir] | <code>String</code> | <code>process.cwd()</code> | 
-| [configFile] | <code>String</code> | <code>CONFIG_FILE</code> | 
-
-**Example**  
-```js
-options = config.load('.')
-```
-<a name="module_build-trigger.save"></a>
-
-### build-trigger.save(yamlObj, [baseDir], [configFile])
-**Kind**: static method of [<code>build-trigger</code>](#module_build-trigger)  
-**Summary**: Serializes object as yaml object and saves it to file  
-**Throws**:
-
-- Exception on error
-
-**Access**: protected  
-
-| Param | Type | Default | Description |
-| --- | --- | --- | --- |
-| yamlObj | <code>String</code> |  | YAML object to save |
-| [baseDir] | <code>String</code> | <code>process.cwd()</code> |  |
-| [configFile] | <code>String</code> | <code>CONFIG_FILE</code> |  |
-
-**Example**  
-```js
-config.save(yamlObj)
-```
-<a name="module_build-trigger..getFileHash"></a>
-
-### build-trigger~getFileHash(file, [algo]) ⇒ <code>Promise</code>
-**Kind**: inner method of [<code>build-trigger</code>](#module_build-trigger)  
-**Summary**: Return file hash - based on https://nodejs.org/api/crypto.html  
-**Throws**:
-
-- Exception on error
-
-
-| Param | Type | Default | Description |
-| --- | --- | --- | --- |
-| file | <code>String</code> |  | file path |
-| [algo] | <code>String</code> | <code>&#x27;sha256&#x27;</code> | Hash algorithm |
-
-**Example**  
-```js
-getFileHash('package.json').then (hash) ->
-		console.log('hash')
-```
-<a name="module_build-trigger..checkTriggers"></a>
-
-### build-trigger~checkTriggers(buildTriggers, [baseDir]) ⇒ <code>Promise</code>
-**Kind**: inner method of [<code>build-trigger</code>](#module_build-trigger)  
-**Summary**: Checks if any of the files in the build trigger list has changed or is missing  
-**Returns**: <code>Promise</code> - - Resolves with true if any file hash has changed or any of the files was missing,
-false otherwise  
-**Throws**:
-
-- Exception on error
-
-
-| Param | Type | Default | Description |
-| --- | --- | --- | --- |
-| buildTriggers | <code>Object</code> |  | Array of { filePath: hash } objects |
-| [baseDir] | <code>String</code> | <code>process.cwd()</code> | Base directory for relative file paths in 'buildTriggers' |
-
-**Example**  
-```js
-checkTriggers('package.json': 1234, 'Dockerfile': 5678).then (triggered) ->
-		console.log(triggered)
-```
-<a name="module_build-trigger"></a>
-
-## build-trigger
-Helper methods to manipulate the rdt push / resin sync configuration file (currently .resin-sync.yml)
+Helper methods for build-trigger `resin local push` feature
 
 
 * [build-trigger](#module_build-trigger)
@@ -349,6 +222,155 @@ sync({
   progress: false
 });
 ```
+<a name="module_build-trigger"></a>
+
+## build-trigger
+Helper methods to manipulate the resin push/sync configuration file (currently .resin-sync.yml)
+
+
+* [build-trigger](#module_build-trigger)
+    * _static_
+        * [.createBuildTriggerHashes(options)](#module_build-trigger.createBuildTriggerHashes) ⇒ <code>Promise</code>
+        * [.load([baseDir], [configFile])](#module_build-trigger.load) ⇒ <code>Object</code>
+        * [.save(yamlObj, [baseDir], [configFile])](#module_build-trigger.save)
+    * _inner_
+        * [~getFileHash(file, [algo])](#module_build-trigger..getFileHash) ⇒ <code>Promise</code>
+        * [~checkTriggers(buildTriggers, [baseDir])](#module_build-trigger..checkTriggers) ⇒ <code>Promise</code>
+
+<a name="module_build-trigger.createBuildTriggerHashes"></a>
+
+### build-trigger.createBuildTriggerHashes(options) ⇒ <code>Promise</code>
+**Kind**: static method of [<code>build-trigger</code>](#module_build-trigger)  
+**Summary**: Creates an array of objects with the hashes of the passed files  
+**Throws**:
+
+- Exception on error or if 'skipMissing' is false and a file in the 'files' array does not exis
+
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| options | <code>Object</code> |  | options |
+| [options.files] | <code>Array.&lt;String&gt;</code> | <code>[]</code> | array of file paths to calculate hashes |
+| [options.baseDir] | <code>String</code> | <code>process.cwd()</code> | Base directory for relative file paths |
+| [options.skipMissing] | <code>Boolean</code> | <code>true</code> | Skip non-existent files from the 'files' array |
+
+**Example**  
+```js
+createBuildTriggerHashes({ files: [ 'package.json', 'Dockerfile' ] }).then (hashes) ->
+// resolves with 'hashes' array:
+[
+		{ 'package.json': <sha256> }
+		{ 'Dockerfile': <sha256> }
+	]
+```
+<a name="module_build-trigger.load"></a>
+
+### build-trigger.load([baseDir], [configFile]) ⇒ <code>Object</code>
+If no configuration file is found, return an empty object.
+
+**Kind**: static method of [<code>build-trigger</code>](#module_build-trigger)  
+**Summary**: Load configuration file  
+**Returns**: <code>Object</code> - YAML configuration as object  
+**Throws**:
+
+- Exception on error
+
+**Access**: protected  
+
+| Param | Type | Default |
+| --- | --- | --- |
+| [baseDir] | <code>String</code> | <code>process.cwd()</code> | 
+| [configFile] | <code>String</code> | <code>CONFIG_FILE</code> | 
+
+**Example**  
+```js
+options = config.load('.')
+```
+<a name="module_build-trigger.save"></a>
+
+### build-trigger.save(yamlObj, [baseDir], [configFile])
+**Kind**: static method of [<code>build-trigger</code>](#module_build-trigger)  
+**Summary**: Serializes object as yaml object and saves it to file  
+**Throws**:
+
+- Exception on error
+
+**Access**: protected  
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| yamlObj | <code>String</code> |  | YAML object to save |
+| [baseDir] | <code>String</code> | <code>process.cwd()</code> |  |
+| [configFile] | <code>String</code> | <code>CONFIG_FILE</code> |  |
+
+**Example**  
+```js
+config.save(yamlObj)
+```
+<a name="module_build-trigger..getFileHash"></a>
+
+### build-trigger~getFileHash(file, [algo]) ⇒ <code>Promise</code>
+**Kind**: inner method of [<code>build-trigger</code>](#module_build-trigger)  
+**Summary**: Return file hash - based on https://nodejs.org/api/crypto.html  
+**Throws**:
+
+- Exception on error
+
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| file | <code>String</code> |  | file path |
+| [algo] | <code>String</code> | <code>&#x27;sha256&#x27;</code> | Hash algorithm |
+
+**Example**  
+```js
+getFileHash('package.json').then (hash) ->
+		console.log('hash')
+```
+<a name="module_build-trigger..checkTriggers"></a>
+
+### build-trigger~checkTriggers(buildTriggers, [baseDir]) ⇒ <code>Promise</code>
+**Kind**: inner method of [<code>build-trigger</code>](#module_build-trigger)  
+**Summary**: Checks if any of the files in the build trigger list has changed or is missing  
+**Returns**: <code>Promise</code> - - Resolves with true if any file hash has changed or any of the files was missing,
+false otherwise  
+**Throws**:
+
+- Exception on error
+
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| buildTriggers | <code>Object</code> |  | Array of { filePath: hash } objects |
+| [baseDir] | <code>String</code> | <code>process.cwd()</code> | Base directory for relative file paths in 'buildTriggers' |
+
+**Example**  
+```js
+checkTriggers('package.json': 1234, 'Dockerfile': 5678).then (triggered) ->
+		console.log(triggered)
+```
+<a name="build"></a>
+
+## build(options) ⇒
+**Kind**: global function  
+**Summary**: Start image-building 'resin local push' process  
+**Returns**: - Exits process with 0 on success or 1 otherwise  
+**Throws**:
+
+- Exception on error
+
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| options | <code>Object</code> |  | options |
+| options.appName | <code>String</code> |  | Application image (i.e. image & container name) |
+| options.deviceIp | <code>String</code> |  | Device ip or host |
+| [options.baseDir] | <code>String</code> | <code>process.cwd()</code> | Project base directory that also containers Dockerfile |
+
+**Example**  
+```js
+build(appName: 'test', deviceIp: '192.168.1.1')
+```
 <a name="createContainer"></a>
 
 ## createContainer(name, [options]) ⇒
@@ -428,6 +450,34 @@ stdin is inherited from the parent process.
 ```js
 shell.runCommand('echo hello').then ->
 	console.log('Done!')
+```
+<a name="sync"></a>
+
+## sync(options) ⇒
+**Kind**: global function  
+**Summary**: Run rsync on a local resinOS device  
+**Throws**:
+
+- Exception on error
+
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| options | <code>Object</code> |  | options |
+| options.deviceIp | <code>String</code> |  | Destination device ip/host |
+| options.baseDir | <code>String</code> |  | Project base dir |
+| options.appName | <code>String</code> |  | Application container name |
+| options.destination | <code>String</code> |  | Sync destination folder in container |
+| [options.before] | <code>String</code> |  | Action to execute locally before sync |
+| [options.after] | <code>String</code> |  | Action to execute locally after sync |
+| [options.progress] | <code>String</code> | <code>false</code> | Show progress |
+| [options.verbose] | <code>String</code> | <code>false</code> | Show progress |
+| [options.skipGitignore] | <code>String</code> | <code>false</code> | Skip .gitignore parsing |
+| [options.ignore] | <code>String</code> |  | rsync ignore list |
+
+**Example**  
+```js
+sync()
 ```
 <a name="validateObject"></a>
 
@@ -522,53 +572,3 @@ IEEE Std 1003.1-2008, 2016 Edition, Ch. 8, p. 1
 | --- | --- | --- | --- |
 | [env] | <code>String</code> \| <code>Array</code> | <code>[]</code> | 'ENV_NAME=value' string |
 
-<a name="build"></a>
-
-## build(options) ⇒
-**Kind**: global function  
-**Summary**: Start image-building 'rdt push' process  
-**Returns**: - Exits process with 0 on success or 1 otherwise  
-**Throws**:
-
-- Exception on error
-
-
-| Param | Type | Default | Description |
-| --- | --- | --- | --- |
-| options | <code>Object</code> |  | options |
-| options.appName | <code>String</code> |  | Application image (i.e. image & container name) |
-| options.deviceIp | <code>String</code> |  | Device ip or host |
-| [options.baseDir] | <code>String</code> | <code>process.cwd()</code> | Project base directory that also containers Dockerfile |
-
-**Example**  
-```js
-build(appName: 'test', deviceIp: '192.168.1.1')
-```
-<a name="sync"></a>
-
-## sync(options) ⇒
-**Kind**: global function  
-**Summary**: Run rsync on a local resinOS device  
-**Throws**:
-
-- Exception on error
-
-
-| Param | Type | Default | Description |
-| --- | --- | --- | --- |
-| options | <code>Object</code> |  | options |
-| options.deviceIp | <code>String</code> |  | Destination device ip/host |
-| options.baseDir | <code>String</code> |  | Project base dir |
-| options.appName | <code>String</code> |  | Application container name |
-| options.destination | <code>String</code> |  | Sync destination folder in container |
-| [options.before] | <code>String</code> |  | Action to execute locally before sync |
-| [options.after] | <code>String</code> |  | Action to execute locally after sync |
-| [options.progress] | <code>String</code> | <code>false</code> | Show progress |
-| [options.verbose] | <code>String</code> | <code>false</code> | Show progress |
-| [options.skipGitignore] | <code>String</code> | <code>false</code> | Skip .gitignore parsing |
-| [options.ignore] | <code>String</code> |  | rsync ignore list |
-
-**Example**  
-```js
-sync()
-```

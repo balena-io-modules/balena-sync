@@ -22,7 +22,7 @@ Promise = require('bluebird')
 _ = require('lodash')
 chalk = require('chalk')
 rSemver = require('resin-semver')
-resin = require('resin-sdk-preconfigured')
+resin = require('resin-sdk').fromSharedOptions()
 settings = require('resin-settings-client')
 shell = require('../shell')
 { SpinnerPromise } = require('resin-cli-visuals')
@@ -45,7 +45,7 @@ MIN_HOSTOS_RSYNC = '1.1.4'
 # HostOS version. Fullfills promise if device is compatible or
 # rejects it otherwise. Version checks are based on semver.
 #
-# @param {String} osRelease - HostOS version as returned from the API (device.os_release field)
+# @param {String} osVersion - HostOS version as returned from the API (device.os_version field)
 # @param {String} minVersion - Minimum accepted HostOS version
 # @returns {Promise}
 #
@@ -56,12 +56,12 @@ MIN_HOSTOS_RSYNC = '1.1.4'
 # .catch ->
 #		console.log('Is incompatible')
 ###
-ensureHostOSCompatibility = Promise.method (osRelease, minVersion) ->
-	if not rSemver.valid(osRelease)?
-		throw new Error("Could not parse semantic version from HostOS release info: #{osRelease}")
+ensureHostOSCompatibility = Promise.method (osVersion, minVersion) ->
+	if not rSemver.valid(osVersion)?
+		throw new Error("Could not parse semantic version from HostOS release info: #{osVersion}")
 
-	if rSemver.lt(osRelease, minVersion)
-		throw new Error("Incompatible HostOS version: #{osRelease} - must be >= #{minVersion}")
+	if rSemver.lt(osVersion, minVersion)
+		throw new Error("Incompatible HostOS version: #{osVersion} - must be >= #{minVersion}")
 
 # Resolves with uuid, throws on error or if device is offline
 exports.ensureDeviceIsOnline = (uuid) ->
