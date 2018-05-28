@@ -54,7 +54,7 @@ MIN_HOSTOS_RSYNC = '1.1.4';
  * HostOS version. Fullfills promise if device is compatible or
  * rejects it otherwise. Version checks are based on semver.
  *
- * @param {String} osRelease - HostOS version as returned from the API (device.os_release field)
+ * @param {String} osVersion - HostOS version as returned from the API (device.os_version field)
  * @param {String} minVersion - Minimum accepted HostOS version
  * @returns {Promise}
  *
@@ -66,12 +66,12 @@ MIN_HOSTOS_RSYNC = '1.1.4';
  *		console.log('Is incompatible')
  */
 
-ensureHostOSCompatibility = Promise.method(function(osRelease, minVersion) {
-  if (rSemver.valid(osRelease) == null) {
-    throw new Error("Could not parse semantic version from HostOS release info: " + osRelease);
+ensureHostOSCompatibility = Promise.method(function(osVersion, minVersion) {
+  if (rSemver.valid(osVersion) == null) {
+    throw new Error("Could not parse semantic version from HostOS release info: " + osVersion);
   }
-  if (rSemver.lt(osRelease, minVersion)) {
-    throw new Error("Incompatible HostOS version: " + osRelease + " - must be >= " + minVersion);
+  if (rSemver.lt(osVersion, minVersion)) {
+    throw new Error("Incompatible HostOS version: " + osVersion + " - must be >= " + minVersion);
   }
 });
 
