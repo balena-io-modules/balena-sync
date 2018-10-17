@@ -9,8 +9,7 @@ describe 'Config:', ->
 
 		it 'should be an absolute path', ->
 			configPath = config.getPath('/tmp')
-			isAbsolute = configPath is path.resolve(configPath)
-			m.chai.expect(isAbsolute).to.be.true
+			m.chai.expect(path.isAbsolute(configPath)).to.be.true
 
 		it 'should point to a yaml file', ->
 			configPath = config.getPath('/tmp')
