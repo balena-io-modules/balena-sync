@@ -208,7 +208,7 @@ module.exports =
 					\n\nAs a workaround, you can rename your \'Dockerfile.template\' to \'Dockerfile\',
 					and replace all %%TEMPLATE%% strings with the appropriate values, as documented in
 					https://docs.resin.io/learn/develop/dockerfile/#dockerfile-templates. For example \'%%RESIN_MACHINE_NAME%%\'
-					would become \'raspberrypi3\' on a Raspberry Pie 3 device.
+					would become \'raspberrypi3\' on a Raspberry Pi 3 device.
 
 					\n\nSubscribe to https://github.com/resin-io/resin-cli/issues/604 for updates.')
 			else
