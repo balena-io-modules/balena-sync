@@ -1,5 +1,5 @@
 ###
-Copyright 2016 Resin.io
+Copyright 2016 Balena
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,4 +20,4 @@ module.exports =
 	config: require('./yaml-config')
 	discover: require('./discover')
 	forms: require('./forms')
-	ResinLocalDockerUtils: require('./docker-utils')
+	BalenaLocalDockerUtils: require('./docker-utils')

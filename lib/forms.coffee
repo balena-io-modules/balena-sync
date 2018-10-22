@@ -2,7 +2,7 @@ Promise = require('bluebird')
 _ = require('lodash')
 Docker = require('docker-toolbelt')
 form = require('resin-cli-form')
-{ discoverLocalResinOsDevices } = require('./discover')
+{ discoverLocalBalenaOsDevices } = require('./discover')
 { SpinnerPromise } = require('resin-cli-visuals')
 { dockerPort, dockerTimeout } = require('./config')
 
@@ -19,10 +19,10 @@ exports.selectSyncDestination = (preferredDestination) ->
 	.then (destination) ->
 		destination ? '/usr/src/app'
 
-exports.selectLocalResinOsDevice = (timeout = 4000) ->
+exports.selectLocalBalenaOsDevice = (timeout = 4000) ->
 	new SpinnerPromise
-		promise: discoverLocalResinOsDevices(timeout)
-		startMessage: 'Discovering local resinOS devices..'
+		promise: discoverLocalBalenaOsDevices(timeout)
+		startMessage: 'Discovering local balenaOS devices..'
 		stopMessage: 'Reporting discovered devices'
 	.filter ({ address } = {}) ->
 		return false if not address
@@ -34,7 +34,7 @@ exports.selectLocalResinOsDevice = (timeout = 4000) ->
 		.catchReturn(false)
 	.then (devices) ->
 		if _.isEmpty(devices)
-			throw new Error('Could not find any local resinOS devices')
+			throw new Error('Could not find any local balenaOS devices')
 
 		return form.ask
 			message: 'select a device'

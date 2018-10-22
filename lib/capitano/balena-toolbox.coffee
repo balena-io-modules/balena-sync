@@ -1,5 +1,5 @@
 ###
-Copyright 2016 Resin.io
+Copyright 2016 Balena
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,24 +16,24 @@ limitations under the License.
 
 module.exports =
 	signature: 'push [deviceIp]'
-	description: 'Push your changes to a container on local resinOS device '
+	description: 'Push your changes to a container on local balenaOS device '
 	help: '''
-		Warning: 'resin local push' requires an openssh-compatible client and 'rsync' to
+		Warning: 'balena local push' requires an openssh-compatible client and 'rsync' to
 		be correctly installed in your shell environment. For more information (including
-		Windows support) please check the README here: https://github.com/resin-io/resin-cli
+		Windows support) please check the README here: https://github.com/balena-io/balena-cli
 
-		Use this command to push your local changes to a container on a LAN-accessible resinOS device on the fly.
+		Use this command to push your local changes to a container on a LAN-accessible balenaOS device on the fly.
 
 		If `Dockerfile` or any file in the 'build-triggers' list is changed, a new container will be built and run on your device.
 		If not, changes will simply be synced with `rsync` into the application container.
 
-		After every 'resin local push' the updated settings will be saved in
-		'<source>/.resin-sync.yml' and will be used in later invocations. You can
-		also change any option by editing '.resin-sync.yml' directly.
+		After every 'balena local push' the updated settings will be saved in
+		'<source>/.balena-sync.yml' and will be used in later invocations. You can
+		also change any option by editing '.balena-sync.yml' directly.
 
-		Here is an example '.resin-sync.yml' :
+		Here is an example '.balena-sync.yml' :
 
-			$ cat $PWD/.resin-sync.yml
+			$ cat $PWD/.balena-sync.yml
 			destination: '/usr/src/app'
 			before: 'echo Hello'
 			after: 'echo Done'
@@ -41,7 +41,7 @@ module.exports =
 				- .git
 				- node_modules/
 
-		Command line options have precedence over the ones saved in '.resin-sync.yml'.
+		Command line options have precedence over the ones saved in '.balena-sync.yml'.
 
 		If '.gitignore' is found in the source directory then all explicitly listed files will be
 		excluded when using rsync to update the container. You can choose to change this default behavior with the
@@ -49,14 +49,14 @@ module.exports =
 
 		Examples:
 
-			$ resin local push
-			$ resin local push --app-name test-server --build-triggers package.json,requirements.txt
-			$ resin local push --force-build
-			$ resin local push --force-build --skip-logs
-			$ resin local push --ignore lib/
-			$ resin local push --verbose false
-			$ resin local push 192.168.2.10 --source . --destination /usr/src/app
-			$ resin local push 192.168.2.10 -s /home/user/myResinProject -d /usr/src/app --before 'echo Hello' --after 'echo Done'
+			$ balena local push
+			$ balena local push --app-name test-server --build-triggers package.json,requirements.txt
+			$ balena local push --force-build
+			$ balena local push --force-build --skip-logs
+			$ balena local push --ignore lib/
+			$ balena local push --verbose false
+			$ balena local push 192.168.2.10 --source . --destination /usr/src/app
+			$ balena local push 192.168.2.10 -s /home/user/myBalenaProject -d /usr/src/app --before 'echo Hello' --after 'echo Done'
 	'''
 	primary: true
 	options: [
@@ -131,13 +131,13 @@ module.exports =
 		yamlConfig = require('../yaml-config')
 		parseOptions = require('./parse-options')
 		DockerUtils = require('../docker-utils')
-		{ selectSyncDestination, selectLocalResinOsDevice } = require('../forms')
+		{ selectSyncDestination, selectLocalBalenaOsDevice } = require('../forms')
 		{ fileExists } = require('../utils')
-		{ sync } = require('../sync')('local-resin-os-device')
+		{ sync } = require('../sync')('local-balena-os-device')
 		{ createBuildTriggerHashes, checkTriggers } = require('../build-trigger')
 
 		###*
-		# @summary Start image-building 'resin local push' process
+		# @summary Start image-building 'balena local push' process
 		# @function build
 		#
 		# @param {Object} options - options
@@ -152,8 +152,8 @@ module.exports =
 		# build(appName: 'test', deviceIp: '192.168.1.1')
 		###
 		build = ({ appName, deviceIp, env = [], baseDir = process.cwd() } = {}) ->
-			throw new Error("Missing application name for 'rtd push'") if not appName?
-			throw new Error("Missing device ip/host for 'rtd push'") if not deviceIp?
+			throw new Error("Missing application name for 'balena push'") if not appName?
+			throw new Error("Missing device ip/host for 'balena push'") if not deviceIp?
 
 			docker = new DockerUtils(deviceIp)
 
@@ -178,7 +178,7 @@ module.exports =
 				.map((image) -> image.Id)
 			]
 			.spread (__, oldImageInfo, existingImageIds) ->
-				console.log "- Uploading build context & starting build..."
+				console.log '- Uploading build context & starting build...'
 				docker.buildImage
 					baseDir: baseDir
 					name: appName
@@ -207,23 +207,23 @@ module.exports =
 
 					\n\nAs a workaround, you can rename your \'Dockerfile.template\' to \'Dockerfile\',
 					and replace all %%TEMPLATE%% strings with the appropriate values, as documented in
-					https://docs.resin.io/learn/develop/dockerfile/#dockerfile-templates. For example \'%%RESIN_MACHINE_NAME%%\'
+					https://balena.io/docs/learn/develop/dockerfile/#dockerfile-templates. For example \'%%RESIN_MACHINE_NAME%%\'
 					would become \'raspberrypi3\' on a Raspberry Pi 3 device.
 
-					\n\nSubscribe to https://github.com/resin-io/resin-cli/issues/604 for updates.')
+					\n\nSubscribe to https://github.com/balena-io/balena-cli/issues/604 for updates.')
 			else
 				throw new Error("No Dockerfile found in the project directory: #{runtimeOptions.baseDir}")
 
 		Promise.try ->
 			# Get device Ip and app name, giving precedence to the cli param
-			runtimeOptions.deviceIp ? selectLocalResinOsDevice()
+			runtimeOptions.deviceIp ? selectLocalBalenaOsDevice()
 		.then (deviceIp) ->
 			appName = runtimeOptions.appName ? 'local-app'
 
 			# Update runtime options and soon-to-be-saved config file object based on user choices
 			runtimeOptions.deviceIp = deviceIp
 			runtimeOptions.appName = appName
-			configYml['local_resinos']['app-name'] = appName
+			configYml['local_balenaos']['app-name'] = appName
 
 			docker = new DockerUtils(deviceIp)
 
@@ -232,7 +232,7 @@ module.exports =
 			#		- The 'force-build' cli option was set
 			#		- Any of the saved build trigger files is modified
 			#		- The application image does not exist or the container is not running
-			configYmlBuildTriggers = configYml['local_resinos']['build-triggers']
+			configYmlBuildTriggers = configYml['local_balenaos']['build-triggers']
 			Promise.reduce([
 				_.isEmpty(configYmlBuildTriggers) or not _.isEmpty(options['build-triggers'])
 				runtimeOptions.forceBuild
@@ -251,8 +251,8 @@ module.exports =
 					.then (buildTriggerHashes) ->
 
 						# Options to save in yamlConfig
-						configYml['local_resinos']['build-triggers'] = buildTriggerHashes
-						configYml['local_resinos']['environment'] = runtimeOptions.env
+						configYml['local_balenaos']['build-triggers'] = buildTriggerHashes
+						configYml['local_balenaos']['environment'] = runtimeOptions.env
 
 						# Save config file before starting build
 						yamlConfig.save(

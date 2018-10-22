@@ -1,5 +1,5 @@
 ###
-Copyright 2016 Resin.io
+Copyright 2016 Balena
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -15,13 +15,13 @@ limitations under the License.
 ###
 
 syncTargets = [
-	'remote-resin-io-device'
-	'local-resin-os-device'
+	'remote-balena-io-device'
+	'local-balena-os-device'
 ]
 
 module.exports = (target) ->
 
 	if not target? or target not in syncTargets
-		throw new Error("Invalid resin-sync target '#{target}'. Supported targets are: #{syncTargets}")
+		throw new Error("Invalid balena-sync target '#{target}'. Supported targets are: #{syncTargets}")
 
 	return require("./#{target}")

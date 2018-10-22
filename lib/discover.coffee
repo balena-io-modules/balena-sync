@@ -1,5 +1,5 @@
 ###
-Copyright 2016 Resin.io
+Copyright 2016 Balena
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -15,20 +15,20 @@ limitations under the License.
 ###
 
 _ = require('lodash')
-resin = require('resin-sdk').fromSharedOptions()
+balena = require('balena-sdk').fromSharedOptions()
 { enumerateServices, findServices } = require('resin-discoverable-services')
 
-# Although we only check for 'resin-ssh', we know, implicitly, that resinOS
+# Although we only check for 'balena-ssh', we know, implicitly, that balenaOS
 # devices come with 'rsync' installed that can be used over SSH.
-avahiResinSshTag = 'resin-ssh'
+avahiBalenaSshTag = 'resin-ssh'
 
-exports.discoverLocalResinOsDevices = (timeout = 4000) ->
+exports.discoverLocalBalenaOsDevices = (timeout = 4000) ->
 	enumerateServices()
 	.then (availableServices) ->
-		return (s.service for s in availableServices when avahiResinSshTag in s.tags)
+		return (s.service for s in availableServices when avahiBalenaSshTag in s.tags)
 	.then (services) ->
 		if not services? or services.length is 0
-			throw new Error("Could not find any available '#{avahiResinSshTag}' services")
+			throw new Error("Could not find any available '#{avahiBalenaSshTag}' services")
 
 		findServices(services, timeout)
 	.then (services) ->
@@ -40,8 +40,8 @@ exports.discoverLocalResinOsDevices = (timeout = 4000) ->
 
 			return { address, host, port }
 
-# Resolves with array of remote online Resin.io devices, throws on error
-exports.getRemoteResinioOnlineDevices = ->
-	resin.models.device.getAll()
+# Resolves with array of remote online balena devices, throws on error
+exports.getRemoteBalenaOnlineDevices = ->
+	balena.models.device.getAll()
 	.filter (device) ->
 		device.is_online

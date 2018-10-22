@@ -13,11 +13,11 @@ notifications:
   email: false
 deploy:
   provider: npm
-  email: accounts@resin.io
+  email: accounts@balena.io
   api_key:
     secure: Pl4uytQenehl/O9fDAolpNv6aY8U8okq/S4N6qFt9KjxnodCm2t4CR/dMXZbgZuOQna52e5ZZ40ZMMhR8JhAr4BhcUAr+kdEWBi6CeIKUj8tDhZ6TdYLssUv9d/i8U5jKpvlDfHtkwtsIqsXx1TrQEEc8IM+YThFPeJ6oZ2DENl3RLkewQFSizfRgO5llIWZ2gZKNFNS1+B063gGBFPmF6jzKiez4pRjM9EjcsfCDkhWQ6rPnZbkagE26toz/BjV3IuGmjErIC7tzeDDnKoxnoOPTwvdteSL6sagdUbC8ZEN+EI61e/p+EoBi3RFfS8g2O7tLMEXzcbBksGrUJnalOUmgnSBpeSXBzjV59ihjweo56oTh/yfCwrQpVfDB9VDPGsVW4ZC3LiRqH7ZdEa3qnm/5FOOO7z9VnPamzIfjPF0UV5aMhRobZz2zjRoBl9aJLYt+DmAE50BOX+iywoWUo3ex2LPRISmq3GQbvLcqgJaxwVwJNCpbVSK9YZB9yk1sPqL0AGo6c8cEJYq+1bldFTju51suC9HiWwzwuZU4MR7oa+w/nQf63nH3Hz7Hv79I+ZvHpOLu10fLxKYbgGklXOk/BsVQmgURu9LhITNkehFBuqwEL66XHldmIVnlx+fz9VvhuSgZWEjcAYkiUTW1BjQw3/9UU7ZYtKmVR/Dj4E=
   skip_cleanup: true
   on:
     tags: true
     condition: "$CAN_DEPLOY = 'true' && $TRAVIS_TAG =~ ^v?[[:digit:]]+\\.[[:digit:]]+\\.[[:digit:]]+"
-    repo: resin-io-modules/resin-sync
+    repo: balena-io-modules/balena-sync

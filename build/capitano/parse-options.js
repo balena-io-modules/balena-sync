@@ -13,14 +13,14 @@ defaultSyncIgnorePaths = ['.git', 'node_modules/'];
 
 
 /**
- * @summary Parse resin sync options from the cli and config file and give precedence to the cli.
+ * @summary Parse balena sync options from the cli and config file and give precedence to the cli.
  * @function
  *
  * @param {Object} cliOptions - options
  * @param {String} cliParams - parameters
  *
  * @returns {Object} parsedOptions
- * @returns {Object} parsedOptions.configYml - the loaded config file (i.e. 'resin-sync.yml')
+ * @returns {Object} parsedOptions.configYml - the loaded config file (i.e. 'balena-sync.yml')
  * @returns {Object} parsedOptions.options - the parsed options
  * @throws Exception on error
  *
@@ -39,13 +39,13 @@ module.exports = function(cliOptions, cliParams) {
     throw new Error("No --source option passed and no \'" + yamlConfig.CONFIG_FILE + "\' file found in current directory.");
   }
   configYml = yamlConfig.load(projectBaseDir);
-  if (configYml['local_resinos'] == null) {
-    configYml['local_resinos'] = {};
+  if (configYml['local_balenaos'] == null) {
+    configYml['local_balenaos'] = {};
   }
   if (cliOptions['build-triggers'] != null) {
     cliOptions['build-triggers'] = cliOptions['build-triggers'].split(',');
   }
-  savedBuildTriggers = (ref1 = configYml['local_resinos']['build-triggers']) != null ? ref1 : [];
+  savedBuildTriggers = (ref1 = configYml['local_balenaos']['build-triggers']) != null ? ref1 : [];
   savedBuildTriggerFiles = _.flatten((function() {
     var i, len, results;
     results = [];
@@ -74,7 +74,7 @@ module.exports = function(cliOptions, cliParams) {
     runtimeOptions: {
       baseDir: projectBaseDir,
       deviceIp: cliParams['deviceIp'],
-      appName: (ref4 = cliOptions['app-name']) != null ? ref4 : configYml['local_resinos']['app-name'],
+      appName: (ref4 = cliOptions['app-name']) != null ? ref4 : configYml['local_balenaos']['app-name'],
       destination: (ref5 = cliOptions['destination']) != null ? ref5 : configYml['destination'],
       before: (ref6 = cliOptions['before']) != null ? ref6 : configYml['before'],
       after: (ref7 = cliOptions['after']) != null ? ref7 : configYml['after'],
@@ -89,7 +89,7 @@ module.exports = function(cliOptions, cliParams) {
       savedBuildTriggerFiles: savedBuildTriggerFiles,
       uuid: cliParams['uuid'],
       port: (ref15 = cliOptions['port']) != null ? ref15 : configYml['port'],
-      env: validateEnvVar((ref16 = cliOptions['env']) != null ? ref16 : configYml['local_resinos']['environment'])
+      env: validateEnvVar((ref16 = cliOptions['env']) != null ? ref16 : configYml['local_balenaos']['environment'])
     }
   };
 };
