@@ -1,5 +1,5 @@
 ###
-Copyright 2016 Resin.io
+Copyright 2016 Balena
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -15,15 +15,15 @@ limitations under the License.
 ###
 
 ###*
-# @module resinSync
+# @module balenaSync
 ###
 
 Promise = require('bluebird')
 _ = require('lodash')
 chalk = require('chalk')
 rSemver = require('resin-semver')
-resin = require('resin-sdk').fromSharedOptions()
-settings = require('resin-settings-client')
+balena = require('balena-sdk').fromSharedOptions()
+settings = require('balena-settings-client')
 shell = require('../shell')
 { SpinnerPromise } = require('resin-cli-visuals')
 { buildRsyncCommand } = require('../rsync')
@@ -65,7 +65,7 @@ ensureHostOSCompatibility = Promise.method (osVersion, minVersion) ->
 
 # Resolves with uuid, throws on error or if device is offline
 exports.ensureDeviceIsOnline = (uuid) ->
-	resin.models.device.get(uuid)
+	balena.models.device.get(uuid)
 	.then (device) ->
 		if not device.is_online
 			throw new Error("Device is offline: #{uuid}")
@@ -84,10 +84,10 @@ exports.ensureDeviceIsOnline = (uuid) ->
 # - `rsync`
 # - `ssh`
 #
-# You can save all the options mentioned below in a `resin-sync.yml`
+# You can save all the options mentioned below in a `balena-sync.yml`
 # file, by using the same option names as keys. For example:
 #
-# 	$ cat $PWD/resin-sync.yml
+# 	$ cat $PWD/balena-sync.yml
 # 	destination: '/usr/src/app/'
 # 	before: 'echo Hello'
 # 	after: 'echo Done'
@@ -129,7 +129,7 @@ exports.sync = ({ uuid, baseDir, destination, before, after, ignore, port = 22, 
 	# Resolves with object with required device info or is rejected if API was not accessible. Resolved object:
 	#
 	#	{
-	#		fullUuid: <string, full resin.io device UUID>
+	#		fullUuid: <string, full balena device UUID>
 	#	}
 	#
 	getDeviceInfo = (uuid) ->
@@ -147,10 +147,10 @@ exports.sync = ({ uuid, baseDir, destination, before, after, ignore, port = 22, 
 
 		console.info("Getting information for device: #{uuid}")
 
-		resin.models.device.isOnline(uuid).then (isOnline) ->
+		balena.models.device.isOnline(uuid).then (isOnline) ->
 			throw new Error('Device is not online') if not isOnline
-			resin.models.device.get(uuid)
-		.then(ensureDeviceRequirements) # Fail early if 'resin sync'-specific requirements are not met
+			balena.models.device.get(uuid)
+		.then(ensureDeviceRequirements) # Fail early if 'balena sync'-specific requirements are not met
 		.then ({ uuid }) ->
 			return {
 				fullUuid: uuid
@@ -181,36 +181,36 @@ exports.sync = ({ uuid, baseDir, destination, before, after, ignore, port = 22, 
 
 	Promise.props(
 		fullUuid: getDeviceInfo(uuid).get('fullUuid')
-		username: resin.auth.whoami()
+		username: balena.auth.whoami()
 	)
 	.tap -> # run 'before' action
 		if before?
 			shell.runCommand(before, baseDir)
 	.then ({ fullUuid, username }) ->
-		# the resolved 'containerId' value is needed for the rsync process over resin-proxy
-		infoContainerSpinner(resin.models.device.getApplicationInfo(fullUuid))
+		# the resolved 'containerId' value is needed for the rsync process over balena-proxy
+		infoContainerSpinner(balena.models.device.getApplicationInfo(fullUuid))
 		.then ({ containerId }) -> # sync container
 			syncContainer({ fullUuid, username, containerId, baseDir, destination })
 			.then ->
 				if skipRestart is false
 					# There is a `restartApplication()` sdk method that we can't use
 					# at the moment, because it always removes the original container,
-					# which results in `resin sync` changes getting lost.
-					stopContainerSpinner(resin.models.device.stopApplication(fullUuid))
+					# which results in `balena sync` changes getting lost.
+					stopContainerSpinner(balena.models.device.stopApplication(fullUuid))
 					.then ->
-						startContainerSpinner(resin.models.device.startApplication(fullUuid))
+						startContainerSpinner(balena.models.device.startApplication(fullUuid))
 			.then -> # run 'after' action
 				if after?
 					shell.runCommand(after, baseDir)
 			.then ->
-				console.log(chalk.green.bold('\nresin sync completed successfully!'))
+				console.log(chalk.green.bold('\nbalena sync completed successfully!'))
 			.catch (err) ->
 				# Notify the user of the error and run 'startApplication()'
 				# once again to make sure that a new app container will be started
-				startContainerAfterErrorSpinner(resin.models.device.startApplication(fullUuid))
+				startContainerAfterErrorSpinner(balena.models.device.startApplication(fullUuid))
 				.catch (err) ->
 					console.log('Could not start application container', err)
 				.throw(err)
 	.catch (err) ->
-		console.log(chalk.red.bold('resin sync failed.', err))
+		console.log(chalk.red.bold('balena sync failed.', err))
 		throw err

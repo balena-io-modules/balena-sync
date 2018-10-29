@@ -1,5 +1,5 @@
 ###
-Copyright 2016 Resin.io
+Copyright 2016 Balena
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,19 +18,19 @@ module.exports =
 	signature: 'sync [uuid]'
 	description: '(beta) sync your changes to a device'
 	help: '''
-		Warning: 'resin sync' requires an openssh-compatible client and 'rsync' to
+		Warning: 'balena sync' requires an openssh-compatible client and 'rsync' to
 		be correctly installed in your shell environment. For more information (including
-		Windows support) please check the README here: https://github.com/resin-io/resin-cli
+		Windows support) please check the README here: https://github.com/balena-io/balena-cli
 
 		Use this command to sync your local changes to a certain device on the fly.
 
-		After every 'resin sync' the updated settings will be saved in
-		'<source>/.resin-sync.yml' and will be used in later invocations. You can
-		also change any option by editing '.resin-sync.yml' directly.
+		After every 'balena sync' the updated settings will be saved in
+		'<source>/.balena-sync.yml' and will be used in later invocations. You can
+		also change any option by editing '.balena-sync.yml' directly.
 
-		Here is an example '.resin-sync.yml' :
+		Here is an example '.balena-sync.yml' :
 
-			$ cat $PWD/.resin-sync.yml
+			$ cat $PWD/.balena-sync.yml
 			uuid: 7cf02a6
 			destination: '/usr/src/app'
 			before: 'echo Hello'
@@ -39,7 +39,7 @@ module.exports =
 				- .git
 				- node_modules/
 
-		Command line options have precedence over the ones saved in '.resin-sync.yml'.
+		Command line options have precedence over the ones saved in '.balena-sync.yml'.
 
 		If '.gitignore' is found in the source directory then all explicitly listed files will be
 		excluded from the syncing process. You can choose to change this default behavior with the
@@ -47,11 +47,11 @@ module.exports =
 
 		Examples:
 
-			$ resin sync 7cf02a6 --source . --destination /usr/src/app
-			$ resin sync 7cf02a6 -s /home/user/myResinProject -d /usr/src/app --before 'echo Hello' --after 'echo Done'
-			$ resin sync --ignore lib/
-			$ resin sync --verbose false
-			$ resin sync
+			$ balena sync 7cf02a6 --source . --destination /usr/src/app
+			$ balena sync 7cf02a6 -s /home/user/myBalenaProject -d /usr/src/app --before 'echo Hello' --after 'echo Done'
+			$ balena sync --ignore lib/
+			$ balena sync --verbose false
+			$ balena sync
 	'''
 	permission: 'user'
 	primary: true
@@ -111,13 +111,13 @@ module.exports =
 		form = require('resin-cli-form')
 		yamlConfig = require('../yaml-config')
 		parseOptions = require('./parse-options')
-		{ getRemoteResinioOnlineDevices } = require('../discover')
+		{ getRemoteBalenaOnlineDevices } = require('../discover')
 		{ selectSyncDestination } = require('../forms')
-		{ sync, ensureDeviceIsOnline } = require('../sync')('remote-resin-io-device')
+		{ sync, ensureDeviceIsOnline } = require('../sync')('remote-balena-io-device')
 
 		# Resolves with uuid of selected online device, throws on error
 		selectOnlineDevice = ->
-			getRemoteResinioOnlineDevices()
+			getRemoteBalenaOnlineDevices()
 			.then (onlineDevices) ->
 				if _.isEmpty(onlineDevices)
 					throw new Error('You don\'t have any devices online')
@@ -141,7 +141,7 @@ module.exports =
 
 
 			if configYml.uuid?
-				# If the saved uuid in .resin-sync.yml refers to a device that does not exist
+				# If the saved uuid in .balena-sync.yml refers to a device that does not exist
 				# or is offline then present device selection dialog instead of failing with an error
 				return ensureDeviceIsOnline(configYml.uuid).catch ->
 					console.log "Device #{configYml.uuid} not found or is offline."

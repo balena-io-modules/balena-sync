@@ -1,5 +1,5 @@
 ###
-Copyright 2016 Resin.io
+Copyright 2016 Balena
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -15,13 +15,13 @@ limitations under the License.
 ###
 
 capitanoCommands = [
-	'resin-cli'
-	'resin-toolbox'
+	'balena-cli'
+	'balena-toolbox'
 ]
 
 module.exports = (command) ->
 
 	if not command? or command not in capitanoCommands
-		throw new Error("Invalid resin-sync capitano command '#{command}'. Available commands are: #{capitanoCommands}")
+		throw new Error("Invalid balena-sync capitano command '#{command}'. Available commands are: #{capitanoCommands}")
 
 	return require("./#{command}")

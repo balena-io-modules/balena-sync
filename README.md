@@ -1,12 +1,12 @@
-resin-sync
+balena-sync
 ==========
 
 > Update your application from a local source directory to a device on-the-fly.
 
-[![npm version](https://badge.fury.io/js/resin-sync.svg)](http://badge.fury.io/js/resin-sync)
-[![dependencies](https://david-dm.org/resin-io-modules/resin-sync.svg)](https://david-dm.org/resin-io-modules/resin-sync.svg)
-[![Build Status](https://travis-ci.org/resin-io-modules/resin-sync.svg?branch=master)](https://travis-ci.org/resin-io-modules/resin-sync)
-[![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/resin-io-modules/chat)
+[![npm version](https://badge.fury.io/js/balena-sync.svg)](http://badge.fury.io/js/balena-sync)
+[![dependencies](https://david-dm.org/balena-io-modules/balena-sync.svg)](https://david-dm.org/balena-io-modules/balena-sync.svg)
+[![Build Status](https://travis-ci.org/balena-io-modules/balena-sync.svg?branch=master)](https://travis-ci.org/balena-io-modules/balena-sync)
+[![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/balena-io-modules/chat)
 
 Role
 ----
@@ -22,17 +22,17 @@ This module exports two methods:
 
 #### capitano(cliTool)
 
-This returns [`capitano`](https://github.com/resin-io/capitano) command that
+This returns [`capitano`](https://github.com/balena-io/capitano) command that
 can be registered by a cli tool. It is a convenience method that allows
-adding/modifying `resin sync` capitano commands/options without requiring changes in
-both the cli tool and the `resin-sync` module. The list of supported cli
-tools currently only includes 'resin-cli'
+adding/modifying `balena sync` capitano commands/options without requiring changes in
+both the cli tool and the `balena-sync` module. The list of supported cli
+tools currently only includes 'balena-cli'
 
-Example usage in `resin-cli`:
+Example usage in `balena-cli`:
 
 ```coffeescript
-resinCliSyncCmd = require('resin-sync').capitano('resin-cli')
-capitano.command(resinCliSyncCmd)
+balenaCliSyncCmd = require('balena-sync').capitano('balena-cli')
+capitano.command(balenaCliSyncCmd)
 ```
 
 #### sync(target)
@@ -43,18 +43,18 @@ process needs to adapt to the particular destination environment.
 
 The list of currently support targets is
 
-* `remote-resin-io-device`
-* `local-resin-os-device`
+* `remote-balena-io-device`
+* `local-balena-os-device`
 
-and more will be added incrementally (e.g. `remote-resin-os-device`,
-`virtual-resin-os-device` etc.)
+and more will be added incrementally (e.g. `remote-balena-os-device`,
+`virtual-balena-os-device` etc.)
 
 The `sync()` method can be used directly by modules that don't use capitano.
 
 Support
 -------
 
-If you're having any problem, please [raise an issue](https://github.com/resin-io-modules/resin-sync/issues/new) on GitHub and the Resin.io team will be happy to help.
+If you're having any problem, please [raise an issue](https://github.com/balena-io-modules/balena-sync/issues/new) on GitHub and the balena team will be happy to help.
 
 Tests
 -----
@@ -68,8 +68,8 @@ $ gulp test
 Contribute
 ----------
 
-- Issue Tracker: [github.com/resin-io-modules/resin-sync/issues](https://github.com/resin-io-modules/resin-sync/issues)
-- Source Code: [github.com/resin-io-modules/resin-sync](https://github.com/resin-io-modules/resin-sync)
+- Issue Tracker: [github.com/balena-io-modules/balena-sync/issues](https://github.com/balena-io-modules/balena-sync/issues)
+- Source Code: [github.com/balena-io-modules/balena-sync](https://github.com/balena-io-modules/balena-sync)
 
 Before submitting a PR, please make sure that you include tests, and that [coffeelint](http://www.coffeelint.org/) runs without any warning:
 

@@ -1,5 +1,5 @@
 ###
-Copyright 2016 Resin.io
+Copyright 2016 Balena
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -73,7 +73,7 @@ buildRshOption = (options = {}) ->
 #
 # @example
 # command = rsync.buildRsyncCommand
-#		host: 'ssh.resindevice.io'
+#		host: 'ssh.balena-devices.com'
 #		username: 'test'
 #		source: '/home/user/app',
 #		destination: '/usr/src/app'

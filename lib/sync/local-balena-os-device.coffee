@@ -1,5 +1,5 @@
 ###
-Copyright 2016 Resin.io
+Copyright 2016 Balena
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ DockerUtils = require('../docker-utils')
 DEVICE_SSH_PORT = 22222
 
 ###*
-# @summary Run rsync on a local resinOS device
+# @summary Run rsync on a local balenaOS device
 # @function sync
 #
 # @param {Object} options - options

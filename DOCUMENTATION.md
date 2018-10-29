@@ -2,12 +2,12 @@
 
 <dl>
 <dt><a href="#module_build-trigger">build-trigger</a></dt>
-<dd><p>Helper methods for build-trigger <code>resin local push</code> feature</p>
+<dd><p>Helper methods for build-trigger <code>balena local push</code> feature</p>
 </dd>
-<dt><a href="#module_resinSync">resinSync</a></dt>
+<dt><a href="#module_balenaSync">balenaSync</a></dt>
 <dd></dd>
 <dt><a href="#module_build-trigger">build-trigger</a></dt>
-<dd><p>Helper methods to manipulate the resin push/sync configuration file (currently .resin-sync.yml)</p>
+<dd><p>Helper methods to manipulate the balena push/sync configuration file (currently .balena-sync.yml)</p>
 </dd>
 </dl>
 
@@ -41,7 +41,7 @@
 <a name="module_build-trigger"></a>
 
 ## build-trigger
-Helper methods for build-trigger `resin local push` feature
+Helper methods for build-trigger `balena local push` feature
 
 
 * [build-trigger](#module_build-trigger)
@@ -165,12 +165,12 @@ false otherwise
 checkTriggers('package.json': 1234, 'Dockerfile': 5678).then (triggered) ->
 		console.log(triggered)
 ```
-<a name="module_resinSync"></a>
+<a name="module_balenaSync"></a>
 
-## resinSync
-<a name="module_resinSync.sync"></a>
+## balenaSync
+<a name="module_balenaSync.sync"></a>
 
-### resinSync.sync([syncOptions])
+### balenaSync.sync([syncOptions])
 This module provides a way to sync changes from a local source
 directory to a device. It relies on the following dependencies
 being installed in the system:
@@ -178,10 +178,10 @@ being installed in the system:
 - `rsync`
 - `ssh`
 
-You can save all the options mentioned below in a `resin-sync.yml`
+You can save all the options mentioned below in a `balena-sync.yml`
 file, by using the same option names as keys. For example:
 
-	$ cat $PWD/resin-sync.yml
+	$ cat $PWD/balena-sync.yml
 	destination: '/usr/src/app/'
 	before: 'echo Hello'
 	after: 'echo Done'
@@ -193,7 +193,7 @@ file, by using the same option names as keys. For example:
 Notice that explicitly passed command options override the ones
 set in the configuration file.
 
-**Kind**: static method of [<code>resinSync</code>](#module_resinSync)  
+**Kind**: static method of [<code>balenaSync</code>](#module_balenaSync)  
 **Summary**: Sync your changes with a device  
 **Access**: public  
 
@@ -225,7 +225,7 @@ sync({
 <a name="module_build-trigger"></a>
 
 ## build-trigger
-Helper methods to manipulate the resin push/sync configuration file (currently .resin-sync.yml)
+Helper methods to manipulate the balena push/sync configuration file (currently .balena-sync.yml)
 
 
 * [build-trigger](#module_build-trigger)
@@ -353,7 +353,7 @@ checkTriggers('package.json': 1234, 'Dockerfile': 5678).then (triggered) ->
 
 ## build(options) ⇒
 **Kind**: global function  
-**Summary**: Start image-building 'resin local push' process  
+**Summary**: Start image-building 'balena local push' process  
 **Returns**: - Exits process with 0 on success or 1 otherwise  
 **Throws**:
 
@@ -411,7 +411,7 @@ build(appName: 'test', deviceIp: '192.168.1.1')
 **Example**  
 ```js
 command = rsync.buildRsyncCommand
-		host: 'ssh.resindevice.io'
+		host: 'ssh.balena-devices.com'
 		username: 'test'
 		source: '/home/user/app',
 		destination: '/usr/src/app'
@@ -455,7 +455,7 @@ shell.runCommand('echo hello').then ->
 
 ## sync(options) ⇒
 **Kind**: global function  
-**Summary**: Run rsync on a local resinOS device  
+**Summary**: Run rsync on a local balenaOS device  
 **Throws**:
 
 - Exception on error

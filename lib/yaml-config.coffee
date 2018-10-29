@@ -1,5 +1,5 @@
 ###
-Copyright 2016 Resin.io
+Copyright 2016 Balena
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@ limitations under the License.
 ###
 
 ###*
-# Helper methods to manipulate the resin push/sync configuration file (currently .resin-sync.yml)
+# Helper methods to manipulate the balena push/sync configuration file (currently .balena-sync.yml)
 # @module build-trigger
 ###
 #
@@ -25,7 +25,8 @@ path = require('path')
 jsYaml = require('js-yaml')
 { fileExists } = require('./utils')
 
-exports.CONFIG_FILE = CONFIG_FILE = '.resin-sync.yml'
+exports.CONFIG_FILE = CONFIG_FILE = '.balena-sync.yml'
+exports.LEGACY_CONFIG_FILE = LEGACY_CONFIG_FILE = '.resin-sync.yml'
 
 ###*
 # @summary Get config path
@@ -65,6 +66,9 @@ exports.load = (baseDir = process.cwd(), configFile = CONFIG_FILE) ->
 
 	# fileExists() will throw on any error other than 'ENOENT' (file not found)
 	if not fileExists(configPath)
+		if configFile == CONFIG_FILE
+			# Ensure config loading falls back to the legacy config file
+			return exports.load(baseDir, LEGACY_CONFIG_FILE)
 		return {}
 
 	config = fs.readFileSync(configPath, encoding: 'utf8')
@@ -72,6 +76,10 @@ exports.load = (baseDir = process.cwd(), configFile = CONFIG_FILE) ->
 
 	if not _.isPlainObject(result)
 		throw new Error("Invalid configuration file: #{configPath}")
+
+	if config['local_resinos']
+		config['local_balenaos'] = config['local_resinos']
+		delete config['local_resinos']
 
 	return result
 #
