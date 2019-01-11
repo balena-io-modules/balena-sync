@@ -15,15 +15,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
  */
+var lazy;
+
 module.exports = {
   capitano: function(cliTool) {
     return require('./capitano')(cliTool);
   },
   sync: function(target) {
     return require('./sync')(target);
-  },
-  config: require('./yaml-config'),
-  discover: require('./discover'),
-  forms: require('./forms'),
-  BalenaLocalDockerUtils: require('./docker-utils')
+  }
 };
+
+lazy = function(module) {
+  return {
+    enumerable: true,
+    get: function() {
+      return require(module);
+    }
+  };
+};
+
+Object.defineProperties(module.exports, {
+  config: lazy('./yaml-config'),
+  discover: lazy('./discover'),
+  forms: lazy('./forms'),
+  BalenaLocalDockerUtils: lazy('./docker-utils')
+});

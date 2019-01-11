@@ -119,10 +119,10 @@ module.exports = {
       var appName, baseDir, deviceIp, docker, env, ref2, ref3, ref4;
       ref2 = arg != null ? arg : {}, appName = ref2.appName, deviceIp = ref2.deviceIp, env = (ref3 = ref2.env) != null ? ref3 : [], baseDir = (ref4 = ref2.baseDir) != null ? ref4 : process.cwd();
       if (appName == null) {
-        throw new Error("Missing application name for 'rtd push'");
+        throw new Error("Missing application name for 'balena push'");
       }
       if (deviceIp == null) {
-        throw new Error("Missing device ip/host for 'rtd push'");
+        throw new Error("Missing device ip/host for 'balena push'");
       }
       docker = new DockerUtils(deviceIp);
       console.log(chalk.yellow.bold('* Building..'));
@@ -141,7 +141,7 @@ module.exports = {
           return image.Id;
         })
       ]).spread(function(__, oldImageInfo, existingImageIds) {
-        console.log("- Uploading build context & starting build...");
+        console.log('- Uploading build context & starting build...');
         return docker.buildImage({
           baseDir: baseDir,
           name: appName,

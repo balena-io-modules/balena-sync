@@ -17,7 +17,16 @@ limitations under the License.
 module.exports =
 	capitano: (cliTool) -> require('./capitano')(cliTool)
 	sync: (target) -> require('./sync')(target)
-	config: require('./yaml-config')
-	discover: require('./discover')
-	forms: require('./forms')
-	BalenaLocalDockerUtils: require('./docker-utils')
+
+lazy = (module) ->
+	return {
+		enumerable: true,
+		get: -> require(module)
+	}
+
+Object.defineProperties(module.exports, {
+	config: lazy('./yaml-config')
+	discover: lazy('./discover')
+	forms: lazy('./forms')
+	BalenaLocalDockerUtils: lazy('./docker-utils')
+})
