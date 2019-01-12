@@ -44,7 +44,7 @@
     "docker-toolbelt": "^1.2.1",
     "js-yaml": "^3.4.2",
     "lodash": "^4.13.1",
-    "resin-cli-form": "^1.4.1",
+    "resin-cli-form": "^2.0.0",
     "resin-cli-visuals": "^1.2.8",
     "resin-discoverable-services": "git+https://github.com/resin-io-modules/resin-discoverable-services#find-on-all-interfaces",
     "resin-semver": "^1.4.0",
