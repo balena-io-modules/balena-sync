@@ -20,7 +20,7 @@ module.exports = {
   description: '(beta) sync your changes to a device',
   help: 'Warning: \'balena sync\' requires an openssh-compatible client and \'rsync\' to\nbe correctly installed in your shell environment. For more information (including\nWindows support) please check the README here: https://github.com/balena-io/balena-cli\n\nUse this command to sync your local changes to a certain device on the fly.\n\nAfter every \'balena sync\' the updated settings will be saved in\n\'<source>/.balena-sync.yml\' and will be used in later invocations. You can\nalso change any option by editing \'.balena-sync.yml\' directly.\n\nHere is an example \'.balena-sync.yml\' :\n\n	$ cat $PWD/.balena-sync.yml\n	uuid: 7cf02a6\n	destination: \'/usr/src/app\'\n	before: \'echo Hello\'\n	after: \'echo Done\'\n	ignore:\n		- .git\n		- node_modules/\n\nCommand line options have precedence over the ones saved in \'.balena-sync.yml\'.\n\nIf \'.gitignore\' is found in the source directory then all explicitly listed files will be\nexcluded from the syncing process. You can choose to change this default behavior with the\n\'--skip-gitignore\' option.\n\nExamples:\n\n	$ balena sync 7cf02a6 --source . --destination /usr/src/app\n	$ balena sync 7cf02a6 -s /home/user/myBalenaProject -d /usr/src/app --before \'echo Hello\' --after \'echo Done\'\n	$ balena sync --ignore lib/\n	$ balena sync --verbose false\n	$ balena sync',
   permission: 'user',
-  primary: true,
+  primary: false,
   options: [
     {
       signature: 'source',

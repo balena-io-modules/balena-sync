@@ -54,7 +54,7 @@ module.exports =
 			$ balena sync
 	'''
 	permission: 'user'
-	primary: true
+	primary: false
 	options: [
 			signature: 'source'
 			parameter: 'path'
