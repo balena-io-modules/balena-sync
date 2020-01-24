@@ -18,25 +18,25 @@ gulp.task 'coffee', ->
 		.pipe(coffee(bare: true, header: true)).on('error', gutil.log)
 		.pipe(gulp.dest('build/'))
 
-gulp.task 'test', ['lint'], ->
-	gulp.src(OPTIONS.files.tests, read: false)
-		.pipe(mocha({
-			bail: true,
-			compilers: 'coffee:coffee-script/register'
-		}))
-
-gulp.task 'lint', ['coffee'], ->
+gulp.task 'lint', gulp.series 'coffee', ->
 	gulp.src(OPTIONS.files.coffee)
 		.pipe(coffeelint({
 			optFile: OPTIONS.config.coffeelint
 		}))
 		.pipe(coffeelint.reporter())
 
-gulp.task 'build', [
+gulp.task 'test', gulp.series 'lint', ->
+	gulp.src(OPTIONS.files.tests, read: false)
+		.pipe(mocha({
+			bail: true,
+			compilers: 'coffee:coffee-script/register'
+		}))
+
+gulp.task 'build', gulp.series [
 	'lint'
 	'test'
 	'coffee'
 ]
 
-gulp.task 'watch', [ 'build' ], ->
+gulp.task 'watch', gulp.series 'build', ->
 	gulp.watch(OPTIONS.files.coffee, [ 'build' ])
