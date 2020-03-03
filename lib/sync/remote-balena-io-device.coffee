@@ -21,7 +21,7 @@ limitations under the License.
 Promise = require('bluebird')
 _ = require('lodash')
 chalk = require('chalk')
-rSemver = require('resin-semver')
+rSemver = require('balena-semver')
 balena = require('balena-sdk').fromSharedOptions()
 settings = require('balena-settings-client')
 shell = require('../shell')

@@ -6,7 +6,7 @@ JSONStream = require 'JSONStream'
 tar = require('tar-fs')
 ssh2 = require('ssh2')
 Promise.promisifyAll(ssh2.Client)
-rSemver = require('resin-semver')
+rSemver = require('balena-semver')
 _ = require('lodash')
 { validateEnvVar } = require('./utils')
 { dockerPort } = require('./config')
