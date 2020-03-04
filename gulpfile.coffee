@@ -29,7 +29,7 @@ gulp.task 'test', gulp.series 'lint', ->
 	gulp.src(OPTIONS.files.tests, read: false)
 		.pipe(mocha({
 			bail: true,
-			compilers: 'coffee:coffee-script/register'
+			compilers: 'coffee:coffeescript/register'
 		}))
 
 gulp.task 'build', gulp.series [
