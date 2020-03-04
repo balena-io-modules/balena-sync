@@ -29,7 +29,7 @@ exports.selectLocalBalenaOsDevice = (timeout = 4000) ->
 
 		Promise.try ->
 			docker = new Docker(host: address, port: dockerPort, timeout: dockerTimeout)
-			docker.pingAsync()
+			docker.ping()
 		.return(true)
 		.catchReturn(false)
 	.then (devices) ->

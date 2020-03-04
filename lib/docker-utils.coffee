@@ -145,7 +145,7 @@ class DockerUtils
 	# false otherwise and reject promise on unknown error
 	checkForExistingImage: (name) ->
 		Promise.try =>
-			@docker.getImage(name).inspectAsync()
+			@docker.getImage(name).inspect()
 			.then (imageInfo) ->
 				return true
 			.catch (err) ->
@@ -158,7 +158,7 @@ class DockerUtils
 	# false otherwise and reject promise on unknown error
 	checkForRunningContainer: (name) ->
 		Promise.try =>
-			@docker.getContainer(name).inspectAsync()
+			@docker.getContainer(name).inspect()
 			.then (containerInfo) ->
 				return containerInfo?.State?.Running ? false
 			.catch (err) ->
@@ -168,14 +168,14 @@ class DockerUtils
 				throw new Error("Error while inspecting container #{name}: #{err}")
 
 	getAllImages: =>
-		@docker.listImagesAsync()
+		@docker.listImages()
 
 	buildImage: ({ baseDir, name, outStream, cacheFrom }) ->
 		Promise.try =>
 			outStream ?= process.stdout
 			tarStream = tar.pack(baseDir)
 
-			@docker.buildImageAsync(tarStream, { t: "#{name}", cachefrom: cacheFrom })
+			@docker.buildImage(tarStream, { t: "#{name}", cachefrom: cacheFrom })
 		.then (dockerProgressOutput) ->
 			prettyPrintDockerProgress(dockerProgressOutput, outStream)
 
@@ -195,14 +195,14 @@ class DockerUtils
 			if not _.isArray(env)
 				throw new Error('createContainer(): expecting an array of environment variables')
 
-			@docker.getImage(name).inspectAsync()
+			@docker.getImage(name).inspect()
 		.then (imageInfo) =>
 			if imageInfo?.Config?.Cmd
 				cmd = imageInfo.Config.Cmd
 			else
 				cmd = [ '/bin/bash', '-c', '/start' ]
 
-			@docker.createContainerAsync
+			@docker.createContainer
 				name: name
 				Image: name
 				Cmd: cmd
@@ -219,7 +219,7 @@ class DockerUtils
 
 	startContainer: (name) ->
 		Promise.try =>
-			@docker.getContainer(name).startAsync()
+			@docker.getContainer(name).start()
 
 		.catch (err) ->
 			# Throw unless the error code is 304 (the container was already started)
@@ -229,7 +229,7 @@ class DockerUtils
 
 	stopContainer: (name) ->
 		Promise.try =>
-			@docker.getContainer(name).stopAsync(t: 10)
+			@docker.getContainer(name).stop(t: 10)
 		.catch (err) ->
 			# Container stop should be considered successful if we receive any
 			# of these error codes:
@@ -242,7 +242,7 @@ class DockerUtils
 
 	removeContainer: (name) ->
 		Promise.try =>
-			@docker.getContainer(name).removeAsync(v: true)
+			@docker.getContainer(name).remove(v: true)
 		.catch (err) ->
 			# Throw unless the error code is 404 (the container was not found)
 			statusCode = '' + err.statusCode
@@ -251,7 +251,7 @@ class DockerUtils
 
 	removeImage: (name) ->
 		Promise.try =>
-			@docker.getImage(name).removeAsync(force: true)
+			@docker.getImage(name).remove(force: true)
 		.catch (err) ->
 			# Image removal should be considered successful if we receive any
 			# of these error codes:
@@ -263,16 +263,16 @@ class DockerUtils
 
 	inspectImage: (name) ->
 		Promise.try =>
-			@docker.getImage(name).inspectAsync()
+			@docker.getImage(name).inspect()
 
 	# Pipe stderr and stdout of container 'name' to stream
 	pipeContainerStream: (name, outStream = process.stdout) ->
 		Promise.try =>
 			container = @docker.getContainer(name)
-			container.inspectAsync().then (containerInfo) ->
+			container.inspect().then (containerInfo) ->
 				return containerInfo?.State?.Running
 			.then (isRunning) ->
-				container.attachAsync
+				container.attach
 					logs: not isRunning
 					stream: isRunning
 					stdout: true
@@ -295,9 +295,9 @@ class DockerUtils
 	#
 	containerRootDir: (container, host, port) ->
 		Promise.all [
-			@docker.infoAsync()
-			@docker.versionAsync().get('Version')
-			@docker.getContainer(container).inspectAsync()
+			@docker.info()
+			@docker.version().get('Version')
+			@docker.getContainer(container).inspect()
 		]
 		.spread (dockerInfo, dockerVersion, containerInfo) ->
 			dkroot = dockerInfo.DockerRootDir
@@ -336,7 +336,7 @@ class DockerUtils
 						throw new Error("Unsupported driver: #{dockerInfo.Driver}/")
 
 	isBalena: =>
-		@docker.versionAsync().get('Engine')
+		@docker.version().get('Engine')
 		.then (engine) ->
 			return engine == 'balena'
 

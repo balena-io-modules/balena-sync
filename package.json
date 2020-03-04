@@ -42,7 +42,7 @@
     "balena-settings-client": "^4.0.4",
     "bluebird": "^3.7.2",
     "chalk": "^3.0.0",
-    "docker-toolbelt": "^2.0.0",
+    "docker-toolbelt": "^3.3.7",
     "js-yaml": "^3.13.1",
     "lodash": "^4.17.15",
     "resin-cli-form": "^2.0.1",
