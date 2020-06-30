@@ -42,6 +42,4 @@ exports.discoverLocalBalenaOsDevices = (timeout = 4000) ->
 
 # Resolves with array of remote online balena devices, throws on error
 exports.getRemoteBalenaOnlineDevices = ->
-	balena.models.device.getAll()
-	.filter (device) ->
-		device.is_online
+	balena.models.device.getAll({ $filter: { is_online: true } })
