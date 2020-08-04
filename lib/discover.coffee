@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ###
 
+Promise = require('bluebird')
 _ = require('lodash')
 balena = require('balena-sdk').fromSharedOptions()
 { enumerateServices, findServices } = require('resin-discoverable-services')
@@ -42,4 +43,4 @@ exports.discoverLocalBalenaOsDevices = (timeout = 4000) ->
 
 # Resolves with array of remote online balena devices, throws on error
 exports.getRemoteBalenaOnlineDevices = ->
-	balena.models.device.getAll({ $filter: { is_online: true } })
+	Promise.resolve(balena.models.device.getAll({ $filter: { is_online: true } }))

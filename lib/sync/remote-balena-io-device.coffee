@@ -65,7 +65,7 @@ ensureHostOSCompatibility = Promise.method (osVersion, minVersion) ->
 
 # Resolves with uuid, throws on error or if device is offline
 exports.ensureDeviceIsOnline = (uuid) ->
-	balena.models.device.get(uuid)
+	Promise.resolve(balena.models.device.get(uuid))
 	.then (device) ->
 		if not device.is_online
 			throw new Error("Device is offline: #{uuid}")
@@ -147,7 +147,7 @@ exports.sync = ({ uuid, baseDir, destination, before, after, ignore, port = 22, 
 
 		console.info("Getting information for device: #{uuid}")
 
-		balena.models.device.get(uuid).tap (device) ->
+		Promise.resolve(balena.models.device.get(uuid)).tap (device) ->
 			throw new Error('Device is not online') if not device.is_online
 		.then(ensureDeviceRequirements) # Fail early if 'balena sync'-specific requirements are not met
 		.then ({ uuid }) ->
