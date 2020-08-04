@@ -1,6 +1,6 @@
 {
   "name": "balena-sync",
-  "version": "11.0.1",
+  "version": "11.0.2",
   "description": "Watch a local project directory and sync it on the fly",
   "main": "build/index.js",
   "homepage": "https://github.com/balena-io-modules/balena-sync",
