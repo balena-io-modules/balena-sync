@@ -1,0 +1,978 @@
+- commits:
+  - author: Paulo Castro
+    body: ""
+    footers:
+      change-type: patch
+      signed-off-by: Paulo Castro <paulo@balena.io>
+    hash: 879457e46f55be4467d1420883c528712ebbb698
+    subject: Update resin-semver to support balenaOS version strings
+  date: "2018-10-24T17:55:05Z"
+  version: 9.3.8
+- commits:
+  - author: Scott Lowe
+    body: ""
+    footers:
+      change-type: patch
+    hash: 327b841191a2c45301a494f97d96705bb1dc910f
+    subject: Clarify Dockerfile.template warning message
+  - author: Scott Lowe
+    body: ""
+    hash: 4dc921ef2547085f2326861271b9d669b0149310
+    subject: Fix absolute path test for windows
+  - author: Scott Lowe
+    body: ""
+    hash: 52a7bb1bfb82319eb7db1298135fca0b4a1eac64
+    subject: Fix typo
+  date: "2018-10-18T18:24:49Z"
+  version: 9.3.7
+- commits:
+  - author: Lucian Buzzo
+    body: 'Connects to #152'
+    footers:
+      change-type: patch
+      signed-off-by: Lucian Buzzo <lucian.buzzo@gmail.com>
+    hash: 5adbf385be80e61a454bb599ca21cdd9c20cf23d
+    subject: 'dependencies: Update resin-semver version to support Balena OS'
+  date: "2018-09-19T07:56:16Z"
+  version: 9.3.6
+- commits:
+  - author: Tim Perry
+    body: ""
+    footers:
+      change-type: patch
+    hash: b654db9d48c075462bf9cc1afb5b4a7ab24849fc
+    subject: Update SDK to add support for API keys
+  - author: Tim Perry
+    body: ""
+    hash: 7266e8c8041ab57d6612ba3468b7c79aa953e6bd
+    subject: Build output updates (missed from a previous PR)
+  - author: Tim Perry
+    body: ""
+    hash: efb774bad87c2c6e008b0ac6f8f5d1b1784797ea
+    subject: Update OS version check docs refer to correct recent model fields
+  date: "2018-05-28T10:58:50Z"
+  version: 9.3.5
+- commits:
+  - author: Tim Perry
+    body: ""
+    footers:
+      change-type: patch
+    hash: 7374a390830a054f9b30b7c544c705abdef6c286
+    subject: Remove every last mention of rdt
+  date: "2018-04-03T11:48:23Z"
+  version: 9.3.4
+- commits:
+  - author: Tim Perry
+    body: |-
+      Not 100% clear why this works... Seems like odd behaviour in pkg.
+      When we tar the directory, if we use '.', we see a 'snapshot' dir
+      there, which we can't actually read. Pkg creates a snapshot dir
+      that the app is run out of, though it shouldn't really be appearing
+      here. Regardless - using absolute paths all the time works identically
+      and solves the issue.
+    footers:
+      change-type: patch
+    hash: 94f37a331433aced15eb1b0fe2bd02667951463e
+    subject: Fix https://github.com/resin-io/resin-cli/issues/824 by ensuring local
+      push source is absolute
+  date: "2018-03-26T09:07:40Z"
+  version: 9.3.3
+- commits:
+  - author: Tim Perry
+    body: |-
+      Without this, stopping & removing containers seemed to take a very long
+      time, as it included all the time to upload the build context & start
+      the build itself. This is now more explicit, which should help people
+      realise that delays might be due to a large build context locally, and
+      generally make it clearer what's going on.
+    footers:
+      change-type: patch
+    hash: b95f5990453c05c617f49e9619fe022ef7de4cd3
+    subject: Log when local build really starts, to better explain the build process
+  date: "2018-02-06T15:51:51Z"
+  version: 9.3.2
+- commits:
+  - author: Tim Perry
+    body: ""
+    footers:
+      change-type: patch
+    hash: 38b6d9b896e271c40fac862cddb182a73ce8f4ee
+    subject: Provide a helpful warning when local pushing a template file.
+  - author: Tim Perry
+    body: ""
+    hash: 7cebce69190335f8adbe36153e8c4f2d34dec8da
+    subject: Use %% not % in Dockerfile.template example, and tweak message.
+  date: "2018-01-18T12:25:52Z"
+  version: 9.3.1
+- commits:
+  - author: Pablo Carranza Velez
+    body: ""
+    footers:
+      change-type: minor
+      signed-off-by: Pablo Carranza Velez <pablo@resin.io>
+    hash: 4a892d78dcb47acc589a3fe39e8d5e760b78476e
+    subject: Add support for Balena by detecting the engine in local sync and using
+      the correct pid file
+  date: "2017-12-11T10:17:25Z"
+  version: 9.3.0
+- commits:
+  - author: Tim Perry
+    body: ""
+    footers:
+      change-type: patch
+    hash: 4dcce337417ae9e01684db2efca55f60417935b6
+    subject: Use 'local-app' as a default local push app name, rather than prompting
+      for one
+  date: "2017-11-20T13:04:10Z"
+  version: 9.2.4
+- commits:
+  - author: Tim Perry
+    body: ""
+    footers:
+      change-type: patch
+    hash: 81d828b0f6e400f8f17bc94c2d3b903211327106
+    subject: Fix resin local push on Windows
+  date: "2017-09-22T16:56:47Z"
+  version: 9.2.3
+- commits:
+  - author: Tim Perry
+    body: ""
+    footers:
+      change-type: patch
+    hash: 9e50843ef90fe2fb2aee0712d85226fabfe608e3
+    subject: Autodeploy tagged changes to npm
+  date: "2017-09-22T09:44:30Z"
+  version: 9.2.2
+- commits:
+  - author: Lucian Buzzo
+    body: 'Connects to #136'
+    footers:
+      change-type: patch
+    hash: b3cbd259fc4514f615950adeb71fabc6b2682d91
+    subject: Use resin-semver for safe standardized handling of OS versions
+  date: "2017-09-20T07:42:11Z"
+  version: 9.2.1
+- commits:
+  - author: Tim Perry
+    body: ""
+    footers:
+      change-type: minor
+    hash: 3546ab322bf097d80d77838aefc3c492ed011574
+    subject: Use all existing images on the device for caching during push builds
+  - author: Lucian Buzzo
+    body: ""
+    hash: 7b245e87bc1c9eadb839280770796e05633bc667
+    subject: Add VersionBot compatible changelog
+  date: "2017-09-15T12:24:53Z"
+  version: 9.2.0
+- commits:
+  - author: Tim Perry
+    body: ""
+    hash: bb28646ebd26e50595870c3dd3ec02a67f9393b4
+    subject: Add support for overlay2 in local push
+  - author: Tim Perry
+    body: ""
+    footers:
+      change-type: patch
+    hash: f7e2b3921958b633ffdcb5090e631d003fef49c7
+    subject: Make Docker version comparison accept Docker's new non-semver versioning
+  date: "2017-08-10T19:10:49Z"
+  version: 9.1.0
+- commits:
+  - author: Eugene Mirotin
+    body: |-
+      Additional changes:
+      * updated dev dependencies to work with node >= 8
+      * cleaned up the scripts
+    hash: 60510a0d8ff51da1368e82610731e36035c274e9
+    subject: Compat with docker >= 1.12
+  - author: Eugene Mirotin
+    body: ""
+    hash: 81b6c605ec8803090dc6d0238e56f204bb430061
+    subject: update some resin dependencies
+  - author: Eugene Mirotin
+    body: ""
+    hash: 03920df3ac45fe8f83b23e6a07f483c996503deb
+    subject: only test in latest and LTS node versions
+  date: "2017-08-03T14:57:47Z"
+  version: 9.0.0
+- commits:
+  - author: Tim Perry
+    body: ""
+    footers:
+      change-type: patch
+      connects-to: https://github.com/resin-io/resin-cli/issues/543
+    hash: e5b38b2f9fb5ad1d4e8b6d300b53571cb49272ea
+    subject: Fix "'cwd' must be a string" error in Node 8
+  date: "2017-06-30T11:52:56Z"
+  version: 8.0.1
+- commits:
+  - author: Kostas Lekkas
+    body: |-
+      fixes #128
+      change-type: minor
+    hash: 8d02e0c3ad85ba1b7942cd98392439712d97b5f5
+    subject: Do not explicitly disable ControlMaster SSH option
+  - author: Kostas Lekkas
+    body: ""
+    footers:
+      change-type: major
+    hash: f3f65e42b0d84f3521bcd7adf4c262bffdfec1d4
+    subject: Permit resin sync to collaborators
+  date: "2017-06-21T17:14:39Z"
+  version: 8.0.0
+- commits:
+  - author: Tim Perry
+    body: ""
+    hash: 8db8dcae602374bb0ef3507cb5291720bc67e14b
+    subject: Upgrade resin-sdk
+  - author: Tim Perry
+    body: ""
+    hash: 2ebcd9cd16a136214d81edee068b343ae741ceb6
+    subject: Add changelog
+  date: "2017-04-07T09:17:24Z"
+  version: 7.0.3
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: b102942dc46deff6a32970e476c50e42a67d6350
+    subject: 'resin sync: fix short uuid bug'
+  date: "2017-03-17T17:21:04Z"
+  version: 7.0.2
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: 068664f2a50f88fddf6f484de9616513d34221a2
+    subject: Fix logs when enabling initsystem
+  - author: Kostas Lekkas
+    body: ""
+    hash: 9d678dd5ebddd28643d512d321af3361b94390b3
+    subject: Bail out early if docker port is unreachable
+  - author: Kostas Lekkas
+    body: ""
+    hash: a4746c27f2d785298fc0888d1e4a903e355d392d
+    subject: Generate JS
+  date: "2017-03-10T18:38:04Z"
+  version: 7.0.1
+- commits:
+  - author: Heds Simons
+    body: Should ensure that every valid IPv4 interface is used to scan for resinOS
+      devices.
+    hash: c1a2a64e20816bb5d5f6f7846508db3c7ad2e453
+    subject: Use experimental `resin-discoverable-services` with support for multiple
+      interfaces listening.
+  date: "2017-03-10T13:41:45Z"
+  version: 7.0.0
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: fa5fba220a843c93d9dadf5fe57846e69c424388
+    subject: 'resin local push: get correct docker pid'
+  date: "2017-03-09T23:36:51Z"
+  version: 6.2.3
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: 51b85379d6a340abfad9716651ca79f3b66d750d
+    subject: Revert "Use experimental `resin-discoverable-services` with support for
+      multiple interfaces listening."
+  date: "2017-03-09T20:35:52Z"
+  version: 6.2.2
+- commits:
+  - author: Heds Simons
+    body: Should ensure that every valid IPv4 interface is used to scan for resinOS
+      devices.
+    hash: 491850d855d0c256f650fc997c6c3feefc1935a0
+    subject: Use experimental `resin-discoverable-services` with support for multiple
+      interfaces listening.
+  - author: Kostas Lekkas
+    body: ""
+    hash: 04c5e96b459f39947ef9e90c3eb93932b21585d8
+    subject: Filter out devices with unavailable docker socket
+  date: "2017-03-09T20:17:54Z"
+  version: 6.2.1
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: ee4f5c1c2a60a8e409de95b2b5ac43afbe4641ef
+    subject: Export resin local docker utils
+  date: "2017-03-09T17:13:03Z"
+  version: 6.2.0
+- commits:
+  - author: Kostas Lekkas
+    body: |-
+      This reverts commit a8623bc9e076b779f4ddbf278a00d6bf9fd10922, reversing
+      changes made to 61ac12e9c6c01c74ed4e2bfdef3ef3cdcfba967e.
+    hash: bc5c7957d16548168554c7fcfa2cd65849a0bb62
+    subject: 'Revert "Merge pull request #107 from resin-io-modules/host-dbus-mount"'
+  date: "2017-02-21T10:55:50Z"
+  version: 6.1.4
+- commits:
+  - author: Shaun Mulligan
+    body: ""
+    hash: bdc5e3818bb958cc27ac192faaa48f93c9bf9325
+    subject: 'rdt: add ''/run/dbus:/host_run/dbus'' to the default bind-mounts list'
+  date: "2017-02-08T11:17:23Z"
+  version: 6.1.3
+- commits:
+  - author: Kostas Lekkas
+    body: |-
+      * Removed obsolete README sections
+      * Fixed `rdt push` message to remove 'cmd.exe' references
+    footers:
+      change-type: patch
+    hash: 8aba76b2bee9c8dfb8ccc5290da45c664b414351
+    subject: 'rdt: doc fixes'
+  date: "2017-02-06T14:10:44Z"
+  version: 6.1.2
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    footers:
+      change-type: patch
+    hash: df955f29674ef8aff090293cdeaf46a98515a610
+    subject: 'resin sync: fix container status typo on resin sync error'
+  date: "2017-02-06T13:46:38Z"
+  version: 6.1.1
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    footers:
+      change-type: minor
+    hash: 7c9e93253fa66b548f240a32db7429acc95e4b2e
+    subject: 'resin sync: add AUFS support'
+  - author: Kostas Lekkas
+    body: ""
+    hash: f74938b509eba8b7418dcdbd1cfb28bb5f674543
+    subject: 'resin sync: restart container after sync and add flag to disable restart'
+  - author: Kostas Lekkas
+    body: ""
+    hash: 7acdb2690fbe3cb4ad0ecfca2cabadf635595a91
+    subject: Generate JS and mark generated js files to limit github diff
+  date: "2017-02-01T13:26:50Z"
+  version: 6.1.0
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: 8a1f9938ba4679b847816552a80ffdb589e4f63f
+    subject: Export 'discover' utils
+  date: "2016-10-31T19:07:05Z"
+  version: 6.0.1
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: 6ed2c0560e00613c39a94d2747424cd0262f5469
+    subject: 'rdt push: support --env environment variable setting for created containers'
+  - author: Kostas Lekkas
+    body: ""
+    hash: 19fefb9bd69087ab68678dc2725f99ed86757e02
+    subject: 'rdt push: persist passed environment variables in config file'
+  - author: Kostas Lekkas
+    body: |-
+      * Simplified build trigger logic and added tests
+      * Added more sane .resin-sync.yml load/save logic
+      * Rename config.coffee to yaml-config.coffee, since config.coffee
+      usually holds application-wide configuration settings
+      * Refactor docker-utils as a RdtDockerUtils class object
+      * Improve cli option and parameter handling
+      * DRY out resin-cli sync to use shared modules
+      * [Breaking change] create separate module for interactive forms and
+      export it
+    hash: 4962c8b11e50da31db4111bf1ff0cc3f3d5c679d
+    subject: 'Chore: refactor to improve project maintainability'
+  date: "2016-10-25T20:12:16Z"
+  version: 6.0.0
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: 655b3e5e082c8e832073874b7d843d6c5e91af1a
+    subject: 'rdt: stream logs when a container is running, only print log history
+      otherwise'
+  date: "2016-10-20T11:07:21Z"
+  version: 5.3.3
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: f84b7300c26891a136d3eba8882de29f4e175f8d
+    subject: 'rdt: push: improve build log output'
+  - author: Kostas Lekkas
+    body: ""
+    hash: 6ba7b1701d994ae7c087e51490ac3d99f5c5658a
+    subject: 'rdt: remove event-stream dependency'
+  - author: Kostas Lekkas
+    body: |-
+      Also remove getContainerStartOptions() (which incorrectly returned a
+      promise instead of a value synchronously) and use container start options
+      directly - no need to DRY out yet
+    hash: 11df64faf311038e4a1c8d1bb323a4209023adf4
+    subject: Fix container configuration
+  - author: Kostas Lekkas
+    body: ""
+    hash: 527fc4e9d8df28322e587516fdf073785ef36cf3
+    subject: Use 'SpinnerPromise' from resin-cli-visuals module
+  - author: Kostas Lekkas
+    body: ""
+    hash: dbbdc17c311ca74e2171bb997e603fc3a2b7d634
+    subject: Rename ResinOS -> resinOS
+  - author: Kostas Lekkas
+    body: ""
+    hash: a6a43179b291cf409ab248dbdb6738b1a22a1ec9
+    subject: 'refactor: improve avahi service enumeration method'
+  date: "2016-10-19T15:47:52Z"
+  version: 5.3.2
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: 121e457d1e360aa1b9756d43ed90f90199bcc2dd
+    subject: 'rdt: fix host networking'
+  date: "2016-10-11T14:59:15Z"
+  version: 5.3.1
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: 4c78babcc105f250f507072b93d983650df6f680
+    subject: 'rdt: add log streaming option flag and info message when enabled'
+  - author: Kostas Lekkas
+    body: ""
+    hash: 70c0d48cc67b9e76edf024f8179f3eedc5bf3386
+    subject: Generate JS
+  - author: Kostas Lekkas
+    body: ""
+    hash: 89a59752ccc97df195edd4aee48b5d668bbfef52
+    subject: 'rdt: validate app name'
+  - author: Kostas Lekkas
+    body: ""
+    hash: b4626aec001d3f984edbb3087c6193d9b158919a
+    subject: 'rdt: use "rdt" CLI name in help and other messages'
+  date: "2016-10-11T11:46:29Z"
+  version: 5.3.0
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: a1d050c6fd6969fd49ffc33a86fb737e9821ae2c
+    subject: 'rdt: fix log streaming after sync'
+  date: "2016-10-10T22:10:04Z"
+  version: 5.2.1
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: 3d8063d2b15351301537caab786c265f8c977ab7
+    subject: 'rdt: implement and use pipeContainerStream() in sync and build actions'
+  - author: Kostas Lekkas
+    body: ""
+    hash: 2d1cf4f4ccc05de4612a79b6305117380beefbe2
+    subject: Generate JS
+  - author: Kostas Lekkas
+    body: ""
+    hash: 8497ef159be97d1113e98e0e90f5d01d588a8c3d
+    subject: 'rdt: fix bind mount typo and remove connman default volume'
+  - author: Kostas Lekkas
+    body: ""
+    hash: e5c516ae17b9e2465916c3bf0a9bb70e547a38b1
+    subject: 'rdt: fix image cleanup'
+  - author: Kostas Lekkas
+    body: ""
+    hash: 52a1412a599a345d92fd93b63bf66041c7ce277f
+    subject: 'rdt: rename --force to --force-build'
+  - author: Kostas Lekkas
+    body: ""
+    hash: 293a99dbca48d71c4f0409ca54d82c29580764a4
+    subject: 'rdt: implement inspectImage()'
+  - author: Kostas Lekkas
+    body: ""
+    hash: 12cb601bd27536193b31d587ae6b57257710a704
+    subject: 'rdt: preserve docker cache by removing previous image after build'
+  - author: Kostas Lekkas
+    body: ""
+    hash: 15e6a1e532dd2450df50e8afa419ac8d7c940b7a
+    subject: Generate JS
+  - author: Kostas Lekkas
+    body: ""
+    hash: 17dfb5b66de05feb38c8443a0454afa1475a2934
+    subject: 'rdt: remove connman bind mount'
+  - author: Kostas Lekkas
+    body: 'Connects to #68'
+    hash: 10fc62b0459973507d5218feac1fac0294747bdb
+    subject: 'rdt: piggyback old image removal fix'
+  - author: Kostas Lekkas
+    body: ""
+    hash: fc850c5bd01531a73d7a0059e44e26a4a6b6aebb
+    subject: 'rdt: getContainerRootDir(): add aufs mountpoint'
+  - author: Kostas Lekkas
+    body: ""
+    hash: b0f39376f109623f8c1c991ce8eaecd3431fc138
+    subject: 'sync: buildRsyncCommand(): support rsync-path command option'
+  - author: Kostas Lekkas
+    body: ""
+    hash: 6be481303f73f83e1603317e5c15545a2618cbf0
+    subject: 'rdt: local resinos sync: rsync using nsenter'
+  - author: Kostas Lekkas
+    body: ""
+    hash: 76e1d23cefb6519969cfe76103ef3d475709d0e0
+    subject: 'sync: remove custom "remote-cmd" option and use "rsync-path" instead'
+  - author: Kostas Lekkas
+    body: ""
+    hash: fdfe4067bf43e089557f3563617d110dcee59b95
+    subject: 'rdt: change checkForExistingContainer() -> checkForRunningContainer()
+      and require running container for sync'
+  - author: Kostas Lekkas
+    body: ""
+    hash: e4e241c744f5ffdb9896ecc1f548d6f43893778f
+    subject: Generate JS
+  date: "2016-10-10T21:09:23Z"
+  version: 5.2.0
+- commits:
+  - author: Kostas Lekkas
+    body: Also, minor refactoring
+    hash: 6fc748d5172698936f98f73ddcc440bb1cab1ebc
+    subject: 'rdt: fix containerRemove() and containerStop()'
+  - author: Kostas Lekkas
+    body: ""
+    hash: d0dbc0bb57e8f6aa441c724bae0116aea1ffa3fa
+    subject: 'rdt push: fix container removal process'
+  - author: Kostas Lekkas
+    body: ""
+    hash: 3c8f41cf859180d211c8b37ee8ff467e31d3e670
+    subject: Generate JS
+  date: "2016-10-08T16:46:48Z"
+  version: 5.1.1
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: 4c4e0d9eff39e7240c23ab214517d171ed3ffca8
+    subject: Remove /etc/resolv.conf bind
+  - author: Kostas Lekkas
+    body: ""
+    hash: 8eec74d691da42a79c927aac42c7b51544fb256e
+    subject: Support avahi device discovery for rdt push
+  - author: Kostas Lekkas
+    body: ""
+    hash: 37bd5cea7bb0edd1e6745ab05c6e954a7b676f56
+    subject: Generate JS
+  date: "2016-10-08T10:07:21Z"
+  version: 5.1.0
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: 21048813c1aeb376de89ad18001a52ea507c6217
+    subject: 'rtb: implement sync functionality'
+  - author: Kostas Lekkas
+    body: ""
+    hash: 5ed954b9aff88afb182db334c96d43f9723c4ac7
+    subject: Fix rsync remote shell command for local resinos sync
+  - author: Kostas Lekkas
+    body: ""
+    hash: 9cd0e8eeeb59a1ee194a2c239e97e9ee6099a41f
+    subject: Implement rtb build image and create/start container portions
+  - author: Kostas Lekkas
+    body: ""
+    hash: 6b51877c12aef427b956f1bfc9c89bd317a5f1eb
+    subject: Implement build vs sync logic
+  - author: Kostas Lekkas
+    body: ""
+    hash: fa0c40d83367fc29a954b7ebf01403f8f5251f14
+    subject: Implement removeContainer()
+  - author: Kostas Lekkas
+    body: ""
+    hash: af78faf64d2a52088f0644683980c2f61e8f1c80
+    subject: Refactor
+  - author: Kostas Lekkas
+    body: ""
+    hash: d3f69a9b6ce484d3e885e5bab77154b2c90eb069
+    subject: Improve deploy/sync workflow
+  - author: Kostas Lekkas
+    body: ""
+    hash: c3534d43a83840c245905acaedc53c4a87d4d1f0
+    subject: Rename all "deploy" references to "push"
+  - author: Kostas Lekkas
+    body: ""
+    hash: 5710476b79f63c7589815e0bf71d3bdd79fe96f0
+    subject: Generate JS
+  - author: Kostas Lekkas
+    body: ""
+    hash: 9227c8a382fa033ae080d9a3e44c6e56b1a9b06b
+    subject: Export sync 'config' submodule
+  - author: Kostas Lekkas
+    body: ""
+    hash: 1ea47d04a9524b495b4778fa7bf713768f2c61cc
+    subject: Rename 'resin-toolbox' to 'rtb' and 'sync' to 'deploy'
+  - author: Kostas Lekkas
+    body: ""
+    hash: 556ad29296beff4116155f946cb7801285b8e43d
+    subject: Generate JS
+  date: "2016-10-07T14:20:12Z"
+  version: 5.0.0
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: 5acb2144bde7abe4afae697c5a11523981ba1300
+    subject: Add autodiscovery stub
+  - author: Kostas Lekkas
+    body: ""
+    hash: 15f2adc396b495b7a0e38a0679632853ab6ab359
+    subject: Add local resin os device sync stub and `resin-toolbox` capitano command
+  - author: Kostas Lekkas
+    body: ""
+    hash: 4d0f7c407ee985381a0397dedcc08a2efecc2bc5
+    subject: Export spinnerPromise() to utils
+  - author: Kostas Lekkas
+    body: ""
+    hash: 123aa2a12aa629851948deb4858ff8707e1167ad
+    subject: rsync.getCommand() -> rsync.buildRsyncCommand()
+  - author: Kostas Lekkas
+    body: ""
+    hash: a9e87fa86583f816499f7f1422cbf2568e111c8b
+    subject: 'Refactor: make rsync.buildRsyncCommand() more abstract'
+  - author: Kostas Lekkas
+    body: ""
+    hash: 5796ab32f343eada1b1fe793e8791330e3389705
+    subject: Remove unneeded "username" in rsync destination
+  - author: Kostas Lekkas
+    body: ""
+    hash: 0533d53b8571b97bc97e2b4b1cc3c542f4581dce
+    subject: 'resin-cli sync: add discovery logic in capitano command'
+  - author: Kostas Lekkas
+    body: ""
+    hash: ea185db26878a5c5858d960be03beb53d174633f
+    subject: Simplify shell.getCommand() method signature
+  - author: Kostas Lekkas
+    body: ""
+    hash: 1d344921fee9425ba988ef9a548bf75d095f3f73
+    subject: Abstract away start/stop container and before/after actions
+  - author: Kostas Lekkas
+    body: 'Connects to #44'
+    hash: a021e1a4a2c053cc822ad76209f0ba6f17f83e58
+    subject: 'sync/remote-resin-io-device: Refactoring'
+  - author: Kostas Lekkas
+    body: ""
+    hash: 0077f96d206af8b7dc127e716e05d8f01d96381e
+    subject: Create generic .resin-sync yml option parsing and remove resin-sync.yml
+      -> .resin-sync.yml usability sugar
+  - author: Kostas Lekkas
+    body: ""
+    hash: da934d6bf5cb510bc45ef01cbea8709e0beac50a
+    subject: 'Refactor: Add remote resin.io device discovery logic in "discover" submodule'
+  - author: Kostas Lekkas
+    body: ""
+    hash: 692b91f4d32438944534aef5b3e40b343b3332f5
+    subject: Omit instead of picking .resin-sync.yml props to save to keep properties
+      from other tools like rtb
+  - author: Kostas Lekkas
+    body: ""
+    hash: f34539ade56708c15278fd018e33c6d0bb5718b3
+    subject: Add resin-toolbox sync structure
+  - author: Kostas Lekkas
+    body: ""
+    hash: 2e9f692b7d09c5c3de055c999e3cbcb649f551b1
+    subject: Generate JS
+  date: "2016-09-29T14:50:10Z"
+  version: 4.1.0
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: b3f3af2dd377650cbf38f2066fe75bce02330d29
+    subject: Integrate resin sync capitano frontend from resin-cli
+  - author: Kostas Lekkas
+    body: ""
+    hash: ec8e6f995f2cdbac858e78b49fb281b29a6fa9d8
+    subject: Generate JS
+  date: "2016-09-28T15:22:50Z"
+  version: 4.0.0
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: a68d8d80d6ded55d1ed4ca63949cd007a28fea71
+    subject: Convert older, compatible versions of resin-sync.yml to .resin-sync.yml
+      if the latter is not found in the project directory
+  date: "2016-08-30T14:05:56Z"
+  version: 3.1.6
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: 7cbac57c44bd34e6fcaef5db9eb3cf0a89fedf0c
+    subject: Permit resin sync to device owners only and fail with descriptive message
+      otherwise
+  date: "2016-08-24T19:51:14Z"
+  version: 3.1.5
+- commits:
+  - author: Kostas Lekkas
+    body: |-
+      node-rsync 0.5.0 has introduced some escaping-related changes that break resin
+      sync on Windows cmd shell. That said, the module does not claim full
+      Windows support (https://github.com/mattijs/node-rsync/issues/29)
+      Although 0.5.0 wouldn't get fetched by npm automatically, lock the version to
+      0.4.0 to avoid future confusion by making it more likely to think twice before
+      bumping the node-rsync dependency.
+    hash: 8a495b21e171ffe5feeea32ffeffeb232709746c
+    subject: Install missing resin-cli-form dependency and lock node-rsync version
+      to 0.4.0
+  - author: Kostas Lekkas
+    body: ""
+    hash: 2a912ec475e5e7f2f90e71f1d22ea1c2bc133f8a
+    subject: Fix space escaping in .gitignore patterns and write more thorough tests
+  date: "2016-08-04T11:45:19Z"
+  version: 3.1.4
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: e1565474184fdeb91c5ea40697e5e16b3f628e1b
+    subject: 'Refactor: pick (instead of omitting) sync options that will be saved
+      in .resin-syc.yml'
+  date: "2016-08-02T09:44:31Z"
+  version: 3.1.3
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: a0eaebbda0fb23308a617cc7c840eec3d34c8ef7
+    subject: Save full uuids in `.resin-sync.yml` to avoid conflicts
+  date: "2016-07-29T10:57:13Z"
+  version: 3.1.2
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: 338798efa4920998dd681f63eea3a97aa70687e8
+    subject: Fix order of app container start status messages
+  date: "2016-07-29T09:50:14Z"
+  version: 3.1.1
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: eeacde5f521ae69e3d337ca758ef92d0ea215169
+    subject: Implement after option to run command after resin sync
+  date: "2016-07-26T15:12:03Z"
+  version: 3.1.0
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: edd541c7eed0aaca5ec474ff948cb26c42d2a30d
+    subject: Fix interactive destination choose dialog
+  - author: Kostas Lekkas
+    body: ""
+    hash: 019e957e4f272f6b13a153496412d7e165c531cf
+    subject: Generate JS
+  date: "2016-07-26T05:08:35Z"
+  version: 3.0.1
+- commits:
+  - author: Kostas Lekkas
+    body: 'Closes #18'
+    hash: 53d122bb9e71295129b05d812dc70c0c46ac3ef7
+    subject: Support user-specified destination folder and improve error reporting
+  - author: Kostas Lekkas
+    body: ""
+    hash: 9d19ff032320d06b44e238bb7e316c1eabe64a49
+    subject: Extend config.load to take baseDir argument and implement .save()
+  - author: Kostas Lekkas
+    body: ""
+    hash: d55db7dcd75f7fedaedea939a268e02d0b2e820e
+    subject: Update lodash -> 4.13.1
+  - author: Kostas Lekkas
+    body: ""
+    hash: 603beb7b54904bb61ecc9bee8a587b7549af47e0
+    subject: Save options to .resin-sync.yml for next 'resin sync'
+  - author: Kostas Lekkas
+    body: 'Closes #21'
+    hash: 64322a69a901567b58d47d27f11d7b42acf6f088
+    subject: Exclude/Include files based on .gitignore if it exists
+  - author: Kostas Lekkas
+    body: ""
+    hash: 44239537ea750e9eaf2ec4a90b434812285686b0
+    subject: Run gulp coffee/lint/test serially to fix race condition with mockFs
+  - author: Kostas Lekkas
+    body: ""
+    footers:
+      references: https://github.com/resin-io/resin-cli/issues/366
+    hash: 527a7734ea6998cfb2c85c5a527f57745a4ec597
+    subject: Disable ControlMaster ssh option by default
+  - author: Kostas Lekkas
+    body: ""
+    hash: 8c750a06a5d926cc1bbf8940e470f62f4aa5e32d
+    subject: Refactoring
+  - author: Kostas Lekkas
+    body: ""
+    hash: 82e205c156871b620e817cac09b2a613db541bbb
+    subject: Generate JS
+  - author: Kostas Lekkas
+    body: ""
+    hash: 1791380890af3c54773c591411ae1c5df2c90d54
+    subject: Improve error reporting on failed 'resin sync'
+  - author: Kostas Lekkas
+    body: |-
+      Travis was failing during build tests for 0.10.x. In addition to that,
+      some `resin sync` dependencies only support >= 0.12
+    hash: 423bfc740742622b996c560addd5ebd02e226be7
+    subject: Update travis to only test most recent node versions
+  - author: Kostas Lekkas
+    body: ""
+    hash: 88b6ead5a4d7861df82fec7466bfa88181d8398e
+    subject: Add --delete rsync flag by default
+  date: "2016-07-21T11:27:55Z"
+  version: 3.0.0
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: 03c8cbca59183cde3de249494473a9ed9359cfd9
+    subject: 'Refactor: addess resin-lint warnings, only validate arguments where
+      they are used'
+  - author: Kostas Lekkas
+    body: ""
+    hash: 870a96620e78914b150663d3064d73b52ad88f59
+    subject: Support verbose flag for rsync command
+  - author: Kostas Lekkas
+    body: ""
+    hash: 9d497cff7dbb68d1b83316e8fe626157f96629d7
+    subject: Support verbose flag for remote shell ssh command
+  date: "2016-06-23T07:19:27Z"
+  version: 2.2.0
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: c488bbea4b5caccc677ee6cd5ad25683cdf74b6a
+    subject: Implement private ensureHostOSCompatibility() function
+  - author: Kostas Lekkas
+    body: ""
+    hash: 3d8d076ced55cd602e3f40c0105fa12a05d01da1
+    subject: Check HostOS version before attempting rsync
+  date: "2016-06-17T22:37:33Z"
+  version: 2.1.1
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: a4ed033035d8ae619b5076b877c0bf9fc6924cbd
+    subject: Change ssh loglevel from QUIET to ERROR
+  - author: Juan Cruz Viotti
+    body: |-
+      The following fixes were implemented for `resin-sync` to support Windows
+      (through `cmd.exe`, not Cygwin):
+      - Execute shell processes with `cmd.exe`.
+      - Set the `%HOME%` environment variable to make `openssh` read ssh keys
+      from the correct location.
+      - Lock `rsync` source to `.` and execute command in the corresponding
+      source directory since colons confuse `rsync` when passing absolute
+      paths containing a drive letter.
+    footers:
+      signed-off-by: Juan Cruz Viotti <jviottidc@gmail.com>
+    hash: 6c2c908c4e4f43c9248bc3eb8a4244864db5479e
+    subject: Add Windows support
+  date: "2016-06-16T16:23:12Z"
+  version: 2.1.0
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: 2cd89ee8f2abe3778bb300371b0dd839d2f7b1d7
+    subject: Fix UI messages on resin sync error
+  date: "2016-04-27T12:13:29Z"
+  version: 2.0.3
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: c4e76dfeb4febf8eea3fa8dc77c8e3a1837986ee
+    subject: Improve resin sync UX
+  date: "2016-04-26T22:12:53Z"
+  version: 2.0.2
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: 5fc86c1924f287c9723185908fa0e3e72ccc92f2
+    subject: Remove debug logging
+  date: "2016-04-26T12:11:27Z"
+  version: 2.0.1
+- commits:
+  - author: Kostas Lekkas
+    body: ""
+    hash: 30cf39f802f63662cee8626f3201b72640342996
+    subject: Update rsync.getCommand() to use ssh gateway 'rsync' command
+  - author: Kostas Lekkas
+    body: ""
+    hash: 3becdbaaf37daf4d94d16a2d27bed3ae43c49349
+    subject: Remove 'exec after rsync' feature and use ssh gateway 'rsync' command
+  - author: Kostas Lekkas
+    body: ""
+    hash: fc72ec228d2451572c8416b5072786acd4c96e43
+    subject: Update ssh.getConnectCommand() to use ssh gateway 'rsync' command
+  - author: Kostas Lekkas
+    body: ""
+    hash: 4c52f17f2ae91daba743786a5f99660de532dfa5
+    subject: Add jsdoc2md npm script and generated documentation
+  date: "2016-04-26T11:45:38Z"
+  version: 2.0.0
+- commits:
+  - author: Pagan Gazzard
+    body: Update balena-sdk from 14.1.0 to 15.2.1
+    footers:
+      change-type: patch
+    hash: 4da85b6a06e997efe8400bf85e4d9c66fadaee0b
+    subject: Update balena-sdk to 15.x
+  date: "2020-08-04T13:42:18Z"
+  version: 11.0.1
+- commits:
+  - author: Pagan Gazzard
+    body: ""
+    footers:
+      change-type: major
+    hash: 892160a8ce4794656c560b6137e57933a08257a3
+    subject: Update to balena-sdk 14.x
+  date: "2020-06-30T18:32:58Z"
+  version: 11.0.0
+- commits:
+  - author: Pagan Gazzard
+    body: ""
+    footers:
+      change-type: patch
+    hash: d72d221643be518749cf5790006ee0ef0a278c66
+    subject: Update dependencies
+  - author: Pagan Gazzard
+    body: ""
+    footers:
+      change-type: minor
+    hash: 80036a50d9a0a312159bd04704f42e358abbb157
+    subject: Update docker-toolbelt to 3.x
+  date: "2020-03-04T13:28:15Z"
+  version: 10.2.0
+- commits:
+  - author: Pagan Gazzard
+    body: ""
+    footers:
+      change-type: minor
+    hash: 2c35fda8d2e2182832b4f0440d1be9c92990bf77
+    subject: Update dependencies
+  date: "2020-01-24T18:26:30Z"
+  version: 10.1.0
+- commits:
+  - author: Paulo Castro
+    body: ""
+    footers:
+      change-type: patch
+      connects-to: https://github.com/balena-io/balena-cli/issues/1140
+      signed-off-by: Paulo Castro <paulo@balena.io>
+    hash: b42a81cb8c4f4096127e2869595a6c1121d2436a
+    subject: Mark sync command non-primary in balena CLI help
+  date: "2019-04-02T16:55:31Z"
+  version: 10.0.3
+- commits:
+  - author: Pagan Gazzard
+    body: ""
+    footers:
+      change-type: patch
+    hash: de14f8d4ff52db2f8b88ae7f0887449a4b0bcfe2
+    subject: Update to resin-cli-form 2.x
+  date: "2019-01-13T13:41:40Z"
+  version: 10.0.2
+- commits:
+  - author: Pagan Gazzard
+    body: ""
+    footers:
+      change-type: patch
+    hash: 5ff022f369e9bf449598ed3c952079789c1a7fce
+    subject: Lazy-load exports from the entry point to speed up startup
+  date: "2019-01-11T18:18:17Z"
+  version: 10.0.1
+- commits:
+  - author: Tim Perry
+    body: ""
+    footers:
+      change-type: major
+      signed-off-by: Tim Perry <tim@balena.io>
+    hash: 00f5a2106a1abe73bac94a6a680f2254f94e06de
+    subject: Rename everything 'resin' to 'balena'
+  date: "2018-10-29T20:05:13Z"
+  version: 10.0.0
