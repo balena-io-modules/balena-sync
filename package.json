@@ -3,6 +3,7 @@
   "version": "11.0.2",
   "description": "Watch a local project directory and sync it on the fly",
   "main": "build/index.js",
+  "types": "build/index.d.ts",
   "homepage": "https://github.com/balena-io-modules/balena-sync",
   "repository": {
     "type": "git",
@@ -17,25 +18,21 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "gulp test",
-    "prepare": "gulp build",
-    "docs": "jsdoc2md build/{,**/}*.js > DOCUMENTATION.md"
+    "clean": "rimraf build",
+    "build": "npm run clean && tsc -p tsconfig.build.json",
+    "lint": "balena-lint --typescript lib tests",
+    "test": "npm run build && npm run lint && npm run test:fast",
+    "test:fast": "mocha",
+    "docs": "jsdoc2md build/{,**/}*.js > DOCUMENTATION.md",
+    "prepack": "npm run build"
   },
-  "author": "Juan Cruz Viotti <juan@balena.io>",
+  "author": "Balena.io. <hello@balena.io>",
   "license": "Apache-2.0",
-  "devDependencies": {
-    "coffeescript": "^1.12.7",
-    "gulp": "^4.0.2",
-    "gulp-coffee": "^2.3.5",
-    "gulp-coffeelint": "^0.6.0",
-    "gulp-mocha": "^4.3.1",
-    "gulp-util": "^3.0.8",
-    "jsdoc-to-markdown": "^5.0.3",
-    "mocha": "^3.5.3",
-    "mochainon": "^2.0.0",
-    "mock-fs": "^4.12.0"
-  },
   "dependencies": {
+    "@types/jsonstream": "^0.8.30",
+    "@types/rsync": "^0.4.30",
+    "@types/ssh2": "^0.5.49",
+    "@types/tar-fs": "^2.0.1",
     "JSONStream": "^1.3.5",
     "balena-sdk": "^15.2.1",
     "balena-semver": "^2.3.0",
@@ -47,13 +44,29 @@
     "lodash": "^4.17.19",
     "resin-cli-form": "^2.0.2",
     "resin-cli-visuals": "^1.7.0",
-    "resin-discoverable-services": "git+https://github.com/resin-io-modules/resin-discoverable-services.git#find-on-all-interfaces",
+    "resin-discoverable-services": "^2.0.3",
     "revalidator": "^0.3.1",
     "rindle": "^1.3.6",
     "rsync": "^0.4.0",
     "shellwords": "^0.1.1",
     "ssh2": "^0.5.5",
     "tar-fs": "^2.1.0",
-    "typed-error": "^2.0.0"
+    "typed-error": "^3.2.1"
+  },
+  "devDependencies": {
+    "@balena/lint": "^6.1.1",
+    "@types/chai": "^4.2.22",
+    "@types/chai-as-promised": "^7.1.4",
+    "@types/mocha": "^9.0.0",
+    "@types/mock-fs": "^4.13.1",
+    "@types/sinon": "^10.0.6",
+    "chai": "^4.3.4",
+    "chai-as-promised": "^7.1.1",
+    "jsdoc-to-markdown": "^5.0.3",
+    "mocha": "^9.1.3",
+    "mock-fs": "^4.12.0",
+    "sinon": "^12.0.1",
+    "ts-node": "^10.4.0",
+    "typescript": "^4.5.2"
   }
 }
