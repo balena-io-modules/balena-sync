@@ -1,4 +1,19 @@
 - commits:
+    - subject: Upgrade to Typescript
+      hash: 32279716b412d16d5eadacf35d18f6b10996ea28
+      body: |
+        This change should have no effect on the usage or behaviour of the
+        module, but will make it more reliable and easier to refactor.
+      footer:
+        Change-type: patch
+        change-type: patch
+        Signed-off-by: Lucian Buzzo <lucian.buzzo@gmail.com>
+        signed-off-by: Lucian Buzzo <lucian.buzzo@gmail.com>
+      author: Lucian Buzzo
+      nested: []
+  version: 11.0.3
+  date: 2021-12-09T15:44:33.870Z
+- commits:
     - subject: Add .versionbot/CHANGELOG.yml for nested changelogs
       hash: e4d63ca9aa12988e95dae6d93cade9e4878f874f
       body: ''

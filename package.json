@@ -1,6 +1,6 @@
 {
   "name": "balena-sync",
-  "version": "11.0.2",
+  "version": "11.0.3",
   "description": "Watch a local project directory and sync it on the fly",
   "main": "build/index.js",
   "types": "build/index.d.ts",
@@ -68,5 +68,8 @@
     "sinon": "^12.0.1",
     "ts-node": "^10.4.0",
     "typescript": "^4.5.2"
+  },
+  "versionist": {
+    "publishedAt": "2021-12-09T15:44:33.960Z"
   }
 }
